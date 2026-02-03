@@ -1,0 +1,3 @@
+rootProject.name = 'jphira-mp'
+include 'jphira-mp-logger'
+

@@ -1,0 +1,117 @@
+package top.rymc.phira.main.game.state;
+
+import top.rymc.phira.main.data.ChartInfo;
+import top.rymc.phira.main.data.GameRecord;
+import top.rymc.phira.main.game.Player;
+import top.rymc.phira.main.util.PhiraFetcher;
+import top.rymc.phira.protocol.data.message.AbortMessage;
+import top.rymc.phira.protocol.data.message.GameEndMessage;
+import top.rymc.phira.protocol.data.message.PlayedMessage;
+import top.rymc.phira.protocol.data.state.GameState;
+import top.rymc.phira.protocol.data.state.Playing;
+import top.rymc.phira.protocol.packet.clientbound.ClientBoundMessagePacket;
+
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public final class RoomPlaying extends RoomGameState {
+    public RoomPlaying(Consumer<RoomGameState> stateUpdater) {
+        super(stateUpdater);
+    }
+
+    public RoomPlaying(Consumer<RoomGameState> stateUpdater, ChartInfo chart){
+        super(stateUpdater, chart);
+    }
+
+    private final Set<Player> donePlayers = ConcurrentHashMap.newKeySet();
+
+    @Override
+    public void handleJoin(Player player) {
+
+    }
+
+    @Override
+    public void handleLeave(Player player) {
+
+    }
+
+    @Override
+    public void requireStart(Player player, Set<Player> players, Set<Player> monitors) {
+        throw new IllegalStateException("你不能在当前状态执行这个操作");
+    }
+
+    @Override
+    public void ready(Player player, Set<Player> players, Set<Player> monitors) {
+        throw new IllegalStateException("你不能在当前状态执行这个操作");
+    }
+
+    @Override
+    public void cancelReady(Player player, Set<Player> players, Set<Player> monitors) {
+        throw new IllegalStateException("你不能在当前状态执行这个操作");
+    }
+
+    @Override
+    public void abort(Player player, Set<Player> players, Set<Player> monitors) {
+        try {
+            broadcast(players, monitors, new ClientBoundMessagePacket(new AbortMessage(player.getId())));
+        } finally {
+            updateState(player,players,monitors);
+        }
+    }
+
+    @Override
+    public void played(Player player, int recordId, Set<Player> players, Set<Player> monitors) {
+
+        try {
+            GameRecord record = PhiraFetcher.GET_RECORD_INFO.toIntFunction(e -> {
+                throw new IllegalStateException("查询记录失败");
+            }).apply(recordId);
+
+            int id = player.getId();
+            int score = record.getScore();
+            float accuracy = record.getAccuracy(); // todo
+            boolean fullCombo = record.isFullCombo();
+
+            broadcast(players, monitors, new ClientBoundMessagePacket(new PlayedMessage(id, score, accuracy, fullCombo)));
+        } finally {
+            updateState(player,players,monitors);
+        }
+    }
+
+    private void updateState(Player player, Set<Player> players, Set<Player> monitors) {
+        donePlayers.add(player);
+        if (isAllOnlinePlayersDone(players, monitors)) {
+            RoomSelectChart state = new RoomSelectChart(stateUpdater, chart);
+            updateGameState(state, players, monitors);
+            broadcast(players, monitors, new ClientBoundMessagePacket(new GameEndMessage()));
+        }
+
+    }
+
+    private boolean isAllOnlinePlayersDone(Set<Player> players, Set<Player> monitors) {
+        long onlineCount = Stream.concat(players.stream(), monitors.stream())
+                .filter(Player::isOnline)
+                .count();
+
+        if (donePlayers.size() != onlineCount) {
+            return false;
+        }
+
+        Set<Integer> onlineIds = Stream.concat(players.stream(), monitors.stream())
+                .filter(Player::isOnline)
+                .map(Player::getId)
+                .collect(Collectors.toSet());
+
+        return donePlayers.stream()
+                .map(Player::getId)
+                .allMatch(onlineIds::contains);
+    }
+
+    @Override
+    public GameState toProtocol() {
+        return new Playing();
+    }
+}

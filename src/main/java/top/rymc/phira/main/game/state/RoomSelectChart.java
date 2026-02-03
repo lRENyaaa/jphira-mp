@@ -1,0 +1,70 @@
+package top.rymc.phira.main.game.state;
+
+import top.rymc.phira.main.data.ChartInfo;
+import top.rymc.phira.main.game.Player;
+import top.rymc.phira.protocol.data.message.GameStartMessage;
+import top.rymc.phira.protocol.data.state.GameState;
+import top.rymc.phira.protocol.data.state.SelectChart;
+import top.rymc.phira.protocol.packet.clientbound.ClientBoundMessagePacket;
+
+import java.util.Set;
+import java.util.function.Consumer;
+
+public final class RoomSelectChart extends RoomGameState {
+    public RoomSelectChart(Consumer<RoomGameState> stateUpdater) {
+        super(stateUpdater);
+    }
+
+    public RoomSelectChart(Consumer<RoomGameState> stateUpdater, ChartInfo chart){
+        super(stateUpdater, chart);
+    }
+
+    @Override
+    public void handleJoin(Player player) {
+
+    }
+
+    @Override
+    public void handleLeave(Player player) {
+
+    }
+
+    @Override
+    public void requireStart(Player player, Set<Player> players, Set<Player> monitors) {
+        if (players.size() + monitors.size() == 1) {
+            RoomPlaying state = new RoomPlaying(stateUpdater, chart);
+            updateGameState(state, players, monitors);
+        } else {
+            RoomWaitForReady state = new RoomWaitForReady(stateUpdater, chart);
+            updateGameState(state, players, monitors);
+            broadcast(players, monitors, new ClientBoundMessagePacket(new GameStartMessage(player.getId())));
+        }
+
+    }
+
+    @Override
+    public void ready(Player player, Set<Player> players, Set<Player> monitors) {
+        throw new IllegalStateException("你不能在当前状态执行这个操作");
+    }
+
+    @Override
+    public void cancelReady(Player player, Set<Player> players, Set<Player> monitors) {
+        throw new IllegalStateException("你不能在当前状态执行这个操作");
+    }
+
+    @Override
+    public void abort(Player player, Set<Player> players, Set<Player> monitors) {
+        throw new IllegalStateException("你不能在当前状态执行这个操作");
+    }
+
+    @Override
+    public void played(Player player, int recordId, Set<Player> players, Set<Player> monitors) {
+        throw new IllegalStateException("你不能在当前状态执行这个操作");
+    }
+
+    @Override
+    public GameState toProtocol() {
+        Integer id = chart == null ? null : chart.getId();
+        return new SelectChart(id);
+    }
+}
