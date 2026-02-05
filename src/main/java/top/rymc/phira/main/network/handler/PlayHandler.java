@@ -3,27 +3,23 @@ package top.rymc.phira.main.network.handler;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.Room;
 import top.rymc.phira.main.game.RoomManager;
-import top.rymc.phira.protocol.data.UserProfile;
 import top.rymc.phira.protocol.handler.SimplePacketHandler;
 import top.rymc.phira.protocol.packet.ServerBoundPacket;
-import top.rymc.phira.protocol.packet.clientbound.ClientBoundCreateRoomPacket;
-import top.rymc.phira.protocol.packet.clientbound.ClientBoundJoinRoomPacket;
-import top.rymc.phira.protocol.packet.serverbound.*;
-
-import java.util.List;
+import top.rymc.phira.protocol.packet.clientbound.*;
+import top.rymc.phira.protocol.packet.serverbound.ServerBoundCreateRoomPacket;
+import top.rymc.phira.protocol.packet.serverbound.ServerBoundJoinRoomPacket;
 
 public class PlayHandler extends SimplePacketHandler {
-
     private final Player player;
 
+    /**
+     * 创建 PlayHandler
+     * @return PlayHandler 实例，如果恢复了 RoomSession 则返回 null（因为 Handler 已被替换）
+     */
     public static PlayHandler create(Player player) {
-        if (player.getRoom() != null) {
-            // TODO throw exception
-        }
-
         return new PlayHandler(player);
     }
-    
+
     private PlayHandler(Player player) {
         super(player.getConnection().getChannel());
         this.player = player;
@@ -32,30 +28,45 @@ public class PlayHandler extends SimplePacketHandler {
     @Override
     public void handle(ServerBoundCreateRoomPacket packet) {
         try {
-            String roomId = packet.getRoomId();
-            RoomManager.createRoom(roomId, player);
-            channel.writeAndFlush(new ClientBoundCreateRoomPacket.Success());
-        } catch (Exception e) {
-            channel.writeAndFlush(new ClientBoundCreateRoomPacket.Failed(e.getMessage()));
-        }
+            Room room = RoomManager.createRoom(packet.getRoomId(), player);
+            // 创建成功后切换到 RoomHandler
+            RoomHandler roomHandler = new RoomHandler(player, room, this);
+            player.getConnection().setPacketHandler(roomHandler);
 
+            player.getConnection().send(new ClientBoundCreateRoomPacket.Success());
+
+            room.getProtocolHack().forceSyncInfo(player);
+
+        } catch (Exception e) {
+            player.getConnection().send(new ClientBoundCreateRoomPacket.Failed(e.getMessage()));
+        }
     }
 
     @Override
     public void handle(ServerBoundJoinRoomPacket packet) {
         try {
-            String roomId = packet.getRoomId();
-            Room room = RoomManager.findRoom(roomId);
-            room.handleJoin(player, packet.isMonitor());
+            Room room = RoomManager.findRoom(packet.getRoomId());
+            if (room == null) {
+                throw new IllegalStateException("房间不存在");
+            }
 
-        }catch (Exception e) {
-            channel.writeAndFlush(new ClientBoundJoinRoomPacket.Failed(e.getMessage()));
+            room.join(player, packet.isMonitor());
+            // 加入成功后切换到 RoomHandler
+            RoomHandler roomHandler = new RoomHandler(player, room, this);
+            player.getConnection().setPacketHandler(roomHandler);
+
+            player.getConnection().send(room.getProtocolHack().buildJoinSuccessPacket());
+
+            room.getProtocolHack().fixClientRoomState(player);
+
+        } catch (Exception e) {
+            player.getConnection().send(new ClientBoundJoinRoomPacket.Failed(e.getMessage()));
         }
     }
 
-
     @Override
     protected void onUnhandledPacket(ServerBoundPacket packet) {
+        // 在 Play 状态下收到无法处理的包（如游戏操作），踢掉
         player.kick();
     }
 }

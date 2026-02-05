@@ -1,11 +1,13 @@
 package top.rymc.phira.main.game.state;
 
 import top.rymc.phira.main.game.Player;
+import top.rymc.phira.protocol.data.state.GameState;
+import top.rymc.phira.protocol.data.state.Playing;
 
 import java.util.function.Consumer;
 
-public final class Playing extends GameState {
-    public Playing(Consumer<GameState> stateUpdater) {
+public final class RoomPlaying extends RoomGameState {
+    public RoomPlaying(Consumer<RoomGameState> stateUpdater) {
         super(stateUpdater);
     }
 
@@ -25,7 +27,7 @@ public final class Playing extends GameState {
     }
 
     @Override
-    public top.rymc.phira.protocol.data.state.GameState toProtocolGameState() {
-        return new top.rymc.phira.protocol.data.state.Playing();
+    public GameState toProtocol() {
+        return new Playing();
     }
 }

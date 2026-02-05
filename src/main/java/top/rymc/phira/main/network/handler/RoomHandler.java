@@ -1,95 +1,91 @@
 package top.rymc.phira.main.network.handler;
 
-import lombok.RequiredArgsConstructor;
+import lombok.Getter;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.Room;
 import top.rymc.phira.protocol.handler.PacketHandler;
+import top.rymc.phira.protocol.packet.clientbound.*;
 import top.rymc.phira.protocol.packet.serverbound.*;
 
-@RequiredArgsConstructor
+@Getter
 public class RoomHandler extends PacketHandler {
-
     private final Player player;
     private final Room room;
-    private final PacketHandler previousHandler;
+    private final PacketHandler fallback; // 离开房间后回到 PlayHandler
+
+    public RoomHandler(Player player, Room room, PacketHandler fallback) {
+        this.player = player;
+        this.room = room;
+        this.fallback = fallback;
+    }
+
+    // 所有操作委托给 Room，Room 再委托给 RoomGameState
+    @Override
+    public void handle(ServerBoundChatPacket p) {
+        room.broadcast(new top.rymc.phira.protocol.packet.clientbound.ClientBoundMessagePacket(
+                new top.rymc.phira.protocol.data.message.ChatMessage(player.getId(), p.getMessage())
+        ));
+    }
+
+    @Override
+    public void handle(ServerBoundLeaveRoomPacket p) {
+        room.leave(player);
+        player.getConnection().setPacketHandler(fallback);
+        player.getConnection().send(new ClientBoundLeaveRoomPacket.Success());
+    }
+
+    @Override
+    public void handle(ServerBoundLockRoomPacket p) {
+        player.getConnection().send(new ClientBoundLockRoomPacket.Failed("当前暂未实现"));
+    }
+
+    @Override
+    public void handle(ServerBoundCycleRoomPacket p) {
+        player.getConnection().send(new ClientBoundCycleRoomPacket.Failed("当前暂未实现"));
+    }
+
+    @Override
+    public void handle(ServerBoundSelectChartPacket p) {
+        player.getConnection().send(new ClientBoundSelectChartPacket.Failed("当前暂未实现"));
+    }
+
+    @Override
+    public void handle(ServerBoundReadyPacket p) {
+        player.getConnection().send(new ClientBoundReadyPacket.Failed("当前暂未实现"));
+    }
+
+    @Override
+    public void handle(ServerBoundCancelReadyPacket p) {
+        player.getConnection().send(new ClientBoundCancelReadyPacket.Failed("当前暂未实现"));
+    }
+
+    @Override
+    public void handle(ServerBoundRequestStartPacket p) {
+        player.getConnection().send(new ClientBoundRequestStartPacket.Failed("当前暂未实现"));
+    }
+
+    @Override
+    public void handle(ServerBoundPlayedPacket p) {
+        player.getConnection().send(new ClientBoundPlayedPacket.Failed("当前暂未实现"));
+    }
+
+    @Override
+    public void handle(ServerBoundAbortPacket p) {
+        player.getConnection().send(new ClientBoundAbortPacket.Failed("当前暂未实现"));
+    }
 
     @Override
     public void handle(ServerBoundPingPacket serverBoundPingPacket) {
-
+        player.getConnection().send(ClientBoundPongPacket.INSTANCE);
     }
 
-    @Override
-    public void handle(ServerBoundAuthenticatePacket serverBoundAuthenticatePacket) {
+    @Override public void handle(ServerBoundAuthenticatePacket p) { kick(); }
+    @Override public void handle(ServerBoundTouchesPacket p) { /* 当前暂未实现 */ }
+    @Override public void handle(ServerBoundJudgesPacket p) { /* 当前暂未实现 */ }
+    @Override public void handle(ServerBoundCreateRoomPacket p) { kick(); }
+    @Override public void handle(ServerBoundJoinRoomPacket p) { kick(); }
 
-    }
-
-    @Override
-    public void handle(ServerBoundChatPacket serverBoundChatPacket) {
-
-    }
-
-    @Override
-    public void handle(ServerBoundTouchesPacket serverBoundTouchesPacket) {
-
-    }
-
-    @Override
-    public void handle(ServerBoundJudgesPacket serverBoundJudgesPacket) {
-
-    }
-
-    @Override
-    public void handle(ServerBoundCreateRoomPacket serverBoundCreateRoomPacket) {
-
-    }
-
-    @Override
-    public void handle(ServerBoundJoinRoomPacket serverBoundJoinRoomPacket) {
-
-    }
-
-    @Override
-    public void handle(ServerBoundLeaveRoomPacket serverBoundLeaveRoomPacket) {
-
-    }
-
-    @Override
-    public void handle(ServerBoundLockRoomPacket serverBoundLockRoomPacket) {
-
-    }
-
-    @Override
-    public void handle(ServerBoundCycleRoomPacket serverBoundCycleRoomPacket) {
-
-    }
-
-    @Override
-    public void handle(ServerBoundSelectChartPacket serverBoundSelectChartPacket) {
-
-    }
-
-    @Override
-    public void handle(ServerBoundRequestStartPacket serverBoundRequestStartPacket) {
-
-    }
-
-    @Override
-    public void handle(ServerBoundReadyPacket serverBoundReadyPacket) {
-
-    }
-
-    @Override
-    public void handle(ServerBoundCancelReadyPacket serverBoundCancelReadyPacket) {
-
-    }
-
-    @Override
-    public void handle(ServerBoundPlayedPacket serverBoundPlayedPacket) {
-
-    }
-
-    @Override
-    public void handle(ServerBoundAbortPacket serverBoundAbortPacket) {
-
+    private void kick() {
+        player.kick();
     }
 }

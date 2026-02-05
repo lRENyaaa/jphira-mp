@@ -44,6 +44,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (packetHandler == null) {
+            ctx.close();
             return;
         }
 

@@ -1,12 +1,14 @@
 package top.rymc.phira.main.game.state;
 
 import top.rymc.phira.main.game.Player;
+import top.rymc.phira.protocol.data.state.GameState;
+import top.rymc.phira.protocol.data.state.WaitForReady;
 
 import java.util.function.Consumer;
 
-public final class WaitForReady extends GameState {
+public final class RoomWaitForReady extends RoomGameState {
 
-    public WaitForReady(Consumer<GameState> stateUpdater) {
+    public RoomWaitForReady(Consumer<RoomGameState> stateUpdater) {
         super(stateUpdater);
     }
 
@@ -26,7 +28,7 @@ public final class WaitForReady extends GameState {
     }
 
     @Override
-    public top.rymc.phira.protocol.data.state.GameState toProtocolGameState() {
-        return new top.rymc.phira.protocol.data.state.WaitForReady();
+    public GameState toProtocol() {
+        return new WaitForReady();
     }
 }

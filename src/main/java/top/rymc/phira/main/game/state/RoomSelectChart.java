@@ -1,11 +1,13 @@
 package top.rymc.phira.main.game.state;
 
 import top.rymc.phira.main.game.Player;
+import top.rymc.phira.protocol.data.state.GameState;
+import top.rymc.phira.protocol.data.state.SelectChart;
 
 import java.util.function.Consumer;
 
-public final class SelectChart extends GameState {
-    public SelectChart(Consumer<GameState> stateUpdater) {
+public final class RoomSelectChart extends RoomGameState {
+    public RoomSelectChart(Consumer<RoomGameState> stateUpdater) {
         super(stateUpdater);
     }
 
@@ -25,8 +27,8 @@ public final class SelectChart extends GameState {
     }
 
     @Override
-    public top.rymc.phira.protocol.data.state.GameState toProtocolGameState() {
+    public GameState toProtocol() {
         Integer id = chart == null ? null : chart.getId();
-        return new top.rymc.phira.protocol.data.state.SelectChart(id);
+        return new SelectChart(id);
     }
 }

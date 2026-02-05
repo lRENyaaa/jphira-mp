@@ -1,90 +1,70 @@
 package top.rymc.phira.main.game;
 
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.network.PlayerConnection;
+import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.main.network.handler.RoomHandler;
 import top.rymc.phira.protocol.data.RoomInfo;
 import top.rymc.phira.protocol.data.UserProfile;
+import top.rymc.phira.protocol.handler.PacketHandler;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.Optional;
 import java.util.function.Consumer;
 
-@RequiredArgsConstructor
-public class Player {
-
-    @Getter
-    private final UserInfo userInfo;
-    @Getter
-    private PlayerConnection connection;
-    @Getter
-    private Room room;
-    private Consumer<Player> removeFromRoom;
-
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+public class Player implements ProtocolConvertible<UserProfile> {
+    @Getter private final UserInfo userInfo;
+    @Getter private PlayerConnection connection;
     private final Consumer<Player> removeFromManager;
 
-    private static final ScheduledExecutorService TIMER = Executors.newSingleThreadScheduledExecutor();
-    private ScheduledFuture<?> timeout;
-
-    public static Player create(UserInfo userInfo, PlayerConnection connection, Consumer<Player> removeFromManager) {
-        Player player = new Player(userInfo, removeFromManager);
-        player.bind(connection);
-        return player;
+    public static Player create(UserInfo info, PlayerConnection conn, Consumer<Player> remover) {
+        Player p = new Player(info, remover);
+        p.bind(conn);
+        return p;
     }
 
-    protected void bind(PlayerConnection connection) {
-        this.connection = connection;
-        if (timeout != null) timeout.cancel(false);
-        connection.onClose((ctx) -> {
-            if (room == null) {
-                kick();
-            } else {
-                timeout = TIMER.schedule(this::kick, 300, TimeUnit.SECONDS);
+    public void bind(PlayerConnection newConn) {
+        if (this.connection != null) {
+            this.connection.sendChat("账号在其他地方登录");
+            this.connection.close(); // 关闭旧连接
+        }
+        this.connection = newConn;
+
+        // 断线时触发挂起
+        newConn.onClose(ctx -> {
+            if (!SessionManager.suspend(this)) {
+                removeFromManager.accept(this);
             }
         });
     }
 
-    protected boolean joinRoom(Room room, Consumer<Player> removeFromRoom) {
-        boolean result = this.room == null;
-        if (result) {
-            this.room = room;
-            this.removeFromRoom = removeFromRoom;
-            connection.setPacketHandler(new RoomHandler(this, room, connection.getPacketHandler()));
-        }
-        return result;
+    public Optional<Room> getRoom() {
+        PacketHandler h = connection.getPacketHandler();
+        return (h instanceof RoomHandler rh) ? Optional.of(rh.getRoom()) : Optional.empty();
+    }
+
+    public Optional<RoomInfo> getRoomInfo() {
+        return getRoom().map(r -> r.asProtocolConvertible(this).toProtocol());
+    }
+
+    public boolean isOnline() {
+        return connection != null && !connection.isClosed();
     }
 
     public void kick() {
-        room = null;
-        if (removeFromRoom != null) removeFromRoom.accept(this);
+        getRoom().ifPresent(r -> r.leave(this));
         removeFromManager.accept(this);
-        if (isOnline()) connection.close();
+        connection.close();
     }
 
+    public int getId() { return userInfo.getId(); }
+    public String getName() { return userInfo.getName(); }
 
-    public boolean isOnline() {
-        return !connection.isClosed();
-    }
-
-    public RoomInfo getRoomInfo() {
-        return room == null ? null : room.toRoomInfo(this);
-    }
-
-    public int getId() {
-        return userInfo.getId();
-    }
-
-    public String getName() {
-        return userInfo.getName();
-    }
-
-    public UserProfile getUserProfile() {
+    @Override
+    public UserProfile toProtocol() {
         return new UserProfile(userInfo.getId(), userInfo.getName());
     }
-
-
 }
