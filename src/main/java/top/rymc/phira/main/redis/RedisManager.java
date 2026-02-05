@@ -225,6 +225,9 @@ public class RedisManager {
     // ---------- Pub/Sub ----------
 
     public void publish(PubSubEvent event) {
+        if (event.getServerId() == null) {
+            event.setServerId(config.getServerId());
+        }
         String channel = RedisKeys.eventsChannel();
         String message = GSON.toJson(event);
         try (Jedis jedis = pool.getResource()) {

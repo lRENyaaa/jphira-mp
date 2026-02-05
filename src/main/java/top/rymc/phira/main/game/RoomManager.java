@@ -16,6 +16,17 @@ public class RoomManager {
         return room;
     }
 
+    /** 收到 Redis ROOM_CREATE 时创建远端房间镜像（房主为远端占位玩家）。 */
+    public static Room createRemoteRoom(String roomId, int hostUid, String hostName) {
+        if (ROOMS.containsKey(roomId)) {
+            return ROOMS.get(roomId);
+        }
+        Player hostRemote = Player.createRemote(hostUid, hostName);
+        Room room = Room.createRemote(roomId, key -> ROOMS.remove(roomId), hostRemote);
+        ROOMS.put(roomId, room);
+        return room;
+    }
+
     public static Room findRoom(String roomId) {
         return ROOMS.get(roomId);
     }

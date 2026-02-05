@@ -15,6 +15,14 @@ public class UserInfo {
 
     private int id;
     private String name;
+
+    public UserInfo() {}
+
+    /** 仅用于 Redis 远端玩家占位（仅 id/name 有效）。 */
+    public UserInfo(int id, String name) {
+        this.id = id;
+        this.name = name != null ? name : "";
+    }
     private String avatar;
     private String language;
     private String bio;

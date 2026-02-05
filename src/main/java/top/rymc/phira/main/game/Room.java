@@ -2,7 +2,6 @@ package top.rymc.phira.main.game;
 
 import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.state.RoomGameState;
@@ -10,6 +9,7 @@ import top.rymc.phira.main.game.state.RoomSelectChart;
 import top.rymc.phira.main.game.state.RoomWaitForReady;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.ProtocolConvertible;
+import top.rymc.phira.main.network.handler.PlayHandler;
 import top.rymc.phira.main.util.PhiraFetcher;
 import top.rymc.phira.protocol.data.FullUserProfile;
 import top.rymc.phira.protocol.data.RoomInfo;
@@ -33,16 +33,18 @@ import top.rymc.phira.protocol.packet.clientbound.ClientBoundOnJoinRoomPacket;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundTouchesPacket;
 
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-@RequiredArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class Room {
     @Getter private final String roomId;
     private final Consumer<Room> onDestroy;
+    /** 来自 Redis 远端的房间（由 ROOM_CREATE 在本机创建的镜像，房主在远端）。 */
+    @Getter private final boolean remote;
 
     /** 状态变更时回调（用于 Redis 等同步），在 broadcast 之后调用。 */
     private static Consumer<Room> stateChangeCallback;
@@ -81,11 +83,27 @@ public class Room {
         private boolean chat = true;
     }
 
+    private Room(String roomId, Consumer<Room> onDestroy, boolean remote) {
+        this.roomId = roomId;
+        this.onDestroy = onDestroy;
+        this.remote = remote;
+    }
+
+    /** 本机创建的房间。 */
     public static Room create(String roomId, Consumer<Room> onDestroy, Player hostPlayer) {
-        Room room = new Room(roomId, onDestroy);
+        Room room = new Room(roomId, onDestroy, false);
         room.state = new RoomSelectChart(room::updateState);
         room.join(hostPlayer, false);
         room.host = hostPlayer;
+        return room;
+    }
+
+    /** 由 Redis ROOM_CREATE 创建的远端房间镜像，房主为远端占位玩家。 */
+    public static Room createRemote(String roomId, Consumer<Room> onDestroy, Player hostRemotePlayer) {
+        Room room = new Room(roomId, onDestroy, true);
+        room.state = new RoomSelectChart(room::updateState);
+        room.join(hostRemotePlayer, false);
+        room.host = hostRemotePlayer;
         return room;
     }
 
@@ -106,27 +124,78 @@ public class Room {
             broadcast(new ClientBoundMessagePacket(new JoinRoomMessage(player.getId(), player.getName())));
         }
 
-        handleJoin(player);
+        if (!player.isRemote()) {
+            handleJoin(player);
+        }
+    }
+
+    /** 仅添加远端占位玩家到列表（不广播、不触发 handleJoin），由 RedisEventDispatcher 负责广播。 */
+    public synchronized void joinRemote(int uid, String name, boolean isMonitor) {
+        if (players.size() >= setting.maxPlayer) return;
+        Player remotePlayer = Player.createRemote(uid, name);
+        Set<Player> set = isMonitor ? monitors : players;
+        set.add(remotePlayer);
     }
 
     public synchronized void leave(Player player) {
         if (!players.contains(player) && !monitors.contains(player)) return;
-        if (leaveCallback != null) {
+        if (!player.isRemote() && leaveCallback != null) {
             leaveCallback.accept(new LeaveContext(this, player));
         }
         if (!players.remove(player) && !monitors.remove(player)) return;
 
         broadcast(new ClientBoundMessagePacket(new LeaveRoomMessage(player.getId(), player.getName())));
-        handleLeave(player);
+        if (!player.isRemote()) {
+            handleLeave(player);
+        }
 
         if (players.isEmpty() && monitors.isEmpty()) {
             if (setting.autoDestroy) {
                 onDestroy.accept(this);
             }
         } else if (setting.host && player.equals(host)) {
-            host = players.iterator().next(); // 转移 Host 给任意剩余玩家
-            host.getConnection().send(new ClientBoundChangeHostPacket(true));
+            Player newHost = players.iterator().next();
+            host = newHost;
+            if (newHost.isOnline()) {
+                newHost.getConnection().send(new ClientBoundChangeHostPacket(true));
+            }
         }
+    }
+
+    /** 按 UID 移除远端占位玩家（收到 Redis PLAYER_LEAVE 时调用）。 */
+    public synchronized void removeRemotePlayer(int uid) {
+        Player found = null;
+        for (Player p : players) {
+            if (p.isRemote() && p.getId() == uid) { found = p; break; }
+        }
+        if (found == null) {
+            for (Player p : monitors) {
+                if (p.isRemote() && p.getId() == uid) { found = p; break; }
+            }
+        }
+        if (found != null) {
+            players.remove(found);
+            monitors.remove(found);
+            if (setting.host && host != null && host.getId() == uid) {
+                host = players.isEmpty() ? null : players.iterator().next();
+            }
+        }
+    }
+
+    /** 强制销毁房间并踢出本机玩家（收到 Redis ROOM_DELETE 时调用，不触发 leaveCallback）。 */
+    public void forceDestroy() {
+        List<Player> localPlayers = new java.util.ArrayList<>();
+        players.stream().filter(p -> !p.isRemote()).forEach(localPlayers::add);
+        monitors.stream().filter(p -> !p.isRemote()).forEach(localPlayers::add);
+        players.clear();
+        monitors.clear();
+        host = null;
+        for (Player p : localPlayers) {
+            if (p.isOnline()) {
+                p.getConnection().setPacketHandler(PlayHandler.create(p));
+            }
+        }
+        onDestroy.accept(this);
     }
 
     public boolean containsPlayer(Player player) {

@@ -64,38 +64,64 @@ public class RedisEventDispatcher {
         redis.subscribe(event -> {
             RedisManager r = RedisHolder.get();
             if (r == null) return;
+            String myServerId = r.getConfig().getServerId();
+            if (event.getServerId() != null && event.getServerId().equals(myServerId)) {
+                return;
+            }
             String roomId = event.getRoomId();
             if (roomId == null || roomId.isEmpty()) return;
-            Room room = RoomManager.findRoom(roomId);
-            if (room == null) return;
 
             String type = event.getEvent();
             Object data = event.getData();
-            if (data == null) return;
+            if (data == null && !"ROOM_CREATE".equals(type)) return;
 
-            JsonObject obj = data instanceof JsonObject ? (JsonObject) data : GSON.toJsonTree(data).getAsJsonObject();
+            JsonObject obj = data != null
+                    ? (data instanceof JsonObject ? (JsonObject) data : GSON.toJsonTree(data).getAsJsonObject())
+                    : null;
 
             switch (type == null ? "" : type) {
-                case "ROOM_CREATE" -> { /* 创建端已处理，其他服仅作通知用，可不推送 */ }
-                case "ROOM_DELETE" -> handleRoomDelete(room);
-                case "PLAYER_JOIN" -> handlePlayerJoin(room, obj);
-                case "PLAYER_LEAVE" -> handlePlayerLeave(room, obj);
-                case "STATE_CHANGE" -> handleStateChange(room, obj);
-                case "SYNC_SCORE" -> handleSyncScore(room, obj);
+                case "ROOM_CREATE" -> handleRoomCreate(roomId, obj);
+                case "ROOM_DELETE" -> {
+                    Room room = RoomManager.findRoom(roomId);
+                    if (room != null) handleRoomDelete(room);
+                }
+                case "PLAYER_JOIN" -> {
+                    Room room = RoomManager.findRoom(roomId);
+                    if (room != null) handlePlayerJoin(room, obj);
+                }
+                case "PLAYER_LEAVE" -> {
+                    Room room = RoomManager.findRoom(roomId);
+                    if (room != null) handlePlayerLeave(room, obj);
+                }
+                case "STATE_CHANGE" -> {
+                    Room room = RoomManager.findRoom(roomId);
+                    if (room != null) handleStateChange(room, obj);
+                }
+                case "SYNC_SCORE" -> {
+                    Room room = RoomManager.findRoom(roomId);
+                    if (room != null) handleSyncScore(room, obj);
+                }
                 default -> { }
             }
         });
     }
 
+    private static void handleRoomCreate(String roomId, JsonObject data) {
+        if (RoomManager.findRoom(roomId) != null) return;
+        int uid = (data != null && data.has("uid")) ? data.get("uid").getAsInt() : -1;
+        String name = (data != null && data.has("name")) ? data.get("name").getAsString() : "";
+        RoomManager.createRemoteRoom(roomId, uid, name);
+    }
+
     private static void handleRoomDelete(Room room) {
-        // 房间被删除，本机若有该房间则由上层在销毁时已处理；这里仅做广播给还在房内的本地玩家（若房间还在）
-        // 实际由 RoomManager 在收到删除逻辑时移除房间，此处只做状态同步
+        room.forceDestroy();
     }
 
     private static void handlePlayerJoin(Room room, JsonObject data) {
         int uid = data.has("uid") ? data.get("uid").getAsInt() : -1;
         String name = data.has("name") ? data.get("name").getAsString() : "";
         boolean isMonitor = data.has("is_monitor") && data.get("is_monitor").getAsBoolean();
+        room.joinRemote(uid, name, isMonitor);
         UserProfile profile = new UserProfile(uid, name);
         room.broadcast(new ClientBoundOnJoinRoomPacket(profile, isMonitor));
         room.broadcast(new ClientBoundMessagePacket(new JoinRoomMessage(uid, name)));
@@ -103,9 +129,9 @@ public class RedisEventDispatcher {
 
     private static void handlePlayerLeave(Room room, JsonObject data) {
         int uid = data.has("uid") ? data.get("uid").getAsInt() : -1;
+        room.removeRemotePlayer(uid);
         room.broadcast(new ClientBoundMessagePacket(new LeaveRoomMessage(uid, "")));
         if (data.has("is_host_changed") && data.get("is_host_changed").getAsBoolean()) {
-            int newHost = data.has("new_host") ? data.get("new_host").getAsInt() : 0;
             room.broadcast(new ClientBoundChangeHostPacket(true));
         }
     }
