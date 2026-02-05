@@ -26,7 +26,7 @@ public final class RoomPlaying extends RoomGameState {
         super(stateUpdater, chart);
     }
 
-    private static final Set<Player> donePlayers = ConcurrentHashMap.newKeySet();
+    private final Set<Player> donePlayers = ConcurrentHashMap.newKeySet();
 
     @Override
     public void handleJoin(Player player) {
