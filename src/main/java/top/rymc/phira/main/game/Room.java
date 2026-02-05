@@ -11,10 +11,14 @@ import top.rymc.phira.main.game.state.RoomWaitForReady;
 import top.rymc.phira.main.game.state.OperationType;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.ProtocolConvertible;
+import top.rymc.phira.main.util.PhiraFetcher;
 import top.rymc.phira.protocol.data.FullUserProfile;
 import top.rymc.phira.protocol.data.RoomInfo;
+import top.rymc.phira.protocol.data.message.CycleRoomMessage;
 import top.rymc.phira.protocol.data.message.JoinRoomMessage;
 import top.rymc.phira.protocol.data.message.LeaveRoomMessage;
+import top.rymc.phira.protocol.data.message.LockRoomMessage;
+import top.rymc.phira.protocol.data.message.SelectChartMessage;
 import top.rymc.phira.protocol.data.state.GameState;
 import top.rymc.phira.protocol.data.state.SelectChart;
 import top.rymc.phira.protocol.packet.ClientBoundPacket;
@@ -50,7 +54,7 @@ public class Room {
     @Setter(AccessLevel.PRIVATE)
     public static class RoomSetting {
         private boolean autoDestroy = true;
-        private boolean host = false;
+        private boolean host = true;
         private int maxPlayer = 8;
         private boolean locked = false;
         private boolean cycle = false;
@@ -83,6 +87,8 @@ public class Room {
             broadcast(new ClientBoundOnJoinRoomPacket(player.toProtocol(), isMonitor));
             broadcast(new ClientBoundMessagePacket(new JoinRoomMessage(player.getId(), player.getName())));
         }
+
+        handleJoin(player);
     }
 
     // 玩家离开（自动转移 Host 或销毁）
@@ -90,6 +96,7 @@ public class Room {
         if (!players.remove(player) && !monitors.remove(player)) return;
 
         broadcast(new ClientBoundMessagePacket(new LeaveRoomMessage(player.getId(), player.getName())));
+        handleLeave(player);
 
         if (players.isEmpty() && monitors.isEmpty()) {
             if (setting.autoDestroy) {
@@ -117,7 +124,54 @@ public class Room {
     // 状态机委托
     public void handleJoin(Player player) { state.handleJoin(player); }
     public void handleLeave(Player player) { state.handleLeave(player); }
-    public void operation(OperationType op, Player player) { state.operation(op, player); }
+    public void gameOperation(OperationType op, Player player) { state.operation(op, player); }
+
+    @Getter
+    private final Operation operation = new Operation();
+
+    public class Operation {
+
+        public void lockRoom(Player player) {
+            if (!isHost(player)) {
+                throw new IllegalStateException("你没有权限");
+            }
+
+            setting.locked = !setting.locked;
+
+            broadcast(new ClientBoundMessagePacket(new LockRoomMessage(setting.locked)));
+
+        }
+
+        public void cycleRoom(Player player) {
+            if (!isHost(player)) {
+                throw new IllegalStateException("你没有权限");
+            }
+
+            setting.cycle = !setting.cycle;
+
+            broadcast(new ClientBoundMessagePacket(new CycleRoomMessage(setting.cycle)));
+
+        }
+
+        public void selectChart(Player player, int id) {
+            if (!isHost(player)) {
+                throw new IllegalStateException("你没有权限");
+            }
+
+            if (!(state instanceof RoomSelectChart)) {
+                throw new IllegalStateException("房间不在选择谱面状态");
+            }
+
+            ChartInfo info = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
+                throw new IllegalStateException("谱面信息获取失败");
+            }).apply(id);
+
+            state.setChart(info);
+            broadcast(new ClientBoundMessagePacket(new SelectChartMessage(player.getId(), info.getName(), id)));
+
+        }
+
+    }
 
     private void updateState(RoomGameState newState) {
         this.state = newState;

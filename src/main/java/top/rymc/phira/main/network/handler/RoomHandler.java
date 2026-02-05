@@ -36,17 +36,29 @@ public class RoomHandler extends PacketHandler {
 
     @Override
     public void handle(ServerBoundLockRoomPacket p) {
-        player.getConnection().send(new ClientBoundLockRoomPacket.Failed("当前暂未实现"));
+        try {
+            room.getOperation().lockRoom(player);
+        } catch (Exception e) {
+            player.getConnection().send(new ClientBoundLockRoomPacket.Failed(e.getMessage()));
+        }
     }
 
     @Override
     public void handle(ServerBoundCycleRoomPacket p) {
-        player.getConnection().send(new ClientBoundCycleRoomPacket.Failed("当前暂未实现"));
+        try {
+            room.getOperation().cycleRoom(player);
+        } catch (Exception e) {
+            player.getConnection().send(new ClientBoundCycleRoomPacket.Failed(e.getMessage()));
+        }
     }
 
     @Override
-    public void handle(ServerBoundSelectChartPacket p) {
-        player.getConnection().send(new ClientBoundSelectChartPacket.Failed("当前暂未实现"));
+    public void handle(ServerBoundSelectChartPacket packet) {
+        try {
+            room.getOperation().selectChart(player, packet.getId());
+        } catch (Exception e) {
+            player.getConnection().send(new ClientBoundSelectChartPacket.Failed(e.getMessage()));
+        }
     }
 
     @Override
