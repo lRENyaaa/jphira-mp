@@ -25,7 +25,7 @@ public class GameRecord {
     private boolean best;
     private boolean bestStd;
     private int mods;
-    private boolean full_combo;
+    private boolean fullCombo;
     private OffsetDateTime time;
     private float std;
     private float stdScore;

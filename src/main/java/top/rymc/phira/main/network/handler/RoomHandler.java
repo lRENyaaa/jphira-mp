@@ -72,27 +72,52 @@ public class RoomHandler extends PacketHandler {
 
     @Override
     public void handle(ServerBoundReadyPacket p) {
-        player.getConnection().send(new ClientBoundReadyPacket.Failed("当前暂未实现"));
+        try {
+            room.getOperation().ready(player);
+            player.getConnection().send(new ClientBoundReadyPacket.Success());
+        } catch (Exception e) {
+            player.getConnection().send(new ClientBoundReadyPacket.Failed(e.getMessage()));
+        }
     }
 
     @Override
     public void handle(ServerBoundCancelReadyPacket p) {
-        player.getConnection().send(new ClientBoundCancelReadyPacket.Failed("当前暂未实现"));
+        try {
+            room.getOperation().cancelReady(player);
+            player.getConnection().send(new ClientBoundCancelReadyPacket.Success());
+        } catch (Exception e) {
+            player.getConnection().send(new ClientBoundCancelReadyPacket.Failed(e.getMessage()));
+        }
     }
 
     @Override
     public void handle(ServerBoundRequestStartPacket p) {
-        player.getConnection().send(new ClientBoundRequestStartPacket.Failed("当前暂未实现"));
+        try {
+            room.getOperation().requireStart(player);
+            player.getConnection().send(new ClientBoundRequestStartPacket.Success());
+        } catch (Exception e) {
+            player.getConnection().send(new ClientBoundRequestStartPacket.Failed(e.getMessage()));
+        }
     }
 
     @Override
-    public void handle(ServerBoundPlayedPacket p) {
-        player.getConnection().send(new ClientBoundPlayedPacket.Failed("当前暂未实现"));
+    public void handle(ServerBoundPlayedPacket packet) {
+        try {
+            room.getOperation().played(player, packet.getId());
+            player.getConnection().send(new ClientBoundPlayedPacket.Success());
+        } catch (Exception e) {
+            player.getConnection().send(new ClientBoundPlayedPacket.Failed(e.getMessage()));
+        }
     }
 
     @Override
     public void handle(ServerBoundAbortPacket p) {
-        player.getConnection().send(new ClientBoundAbortPacket.Failed("当前暂未实现"));
+        try {
+            room.getOperation().abort(player);
+            player.getConnection().send(new ClientBoundAbortPacket.Success());
+        } catch (Exception e) {
+            player.getConnection().send(new ClientBoundAbortPacket.Failed(e.getMessage()));
+        }
     }
 
     @Override
@@ -101,8 +126,12 @@ public class RoomHandler extends PacketHandler {
     }
 
     @Override public void handle(ServerBoundAuthenticatePacket p) { kick(); }
-    @Override public void handle(ServerBoundTouchesPacket p) { /* 当前暂未实现 */ }
-    @Override public void handle(ServerBoundJudgesPacket p) { /* 当前暂未实现 */ }
+    @Override public void handle(ServerBoundTouchesPacket p) {
+        room.getOperation().touchSend(player, p.getFrames());
+    }
+    @Override public void handle(ServerBoundJudgesPacket p) {
+        room.getOperation().judgeSend(player, p.getJudges());
+    }
     @Override public void handle(ServerBoundCreateRoomPacket p) { kick(); }
     @Override public void handle(ServerBoundJoinRoomPacket p) { kick(); }
 

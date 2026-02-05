@@ -8,7 +8,6 @@ import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.state.RoomGameState;
 import top.rymc.phira.main.game.state.RoomSelectChart;
 import top.rymc.phira.main.game.state.RoomWaitForReady;
-import top.rymc.phira.main.game.state.OperationType;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.main.util.PhiraFetcher;
@@ -20,14 +19,18 @@ import top.rymc.phira.protocol.data.message.JoinRoomMessage;
 import top.rymc.phira.protocol.data.message.LeaveRoomMessage;
 import top.rymc.phira.protocol.data.message.LockRoomMessage;
 import top.rymc.phira.protocol.data.message.SelectChartMessage;
+import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
+import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
 import top.rymc.phira.protocol.data.state.GameState;
 import top.rymc.phira.protocol.data.state.SelectChart;
 import top.rymc.phira.protocol.packet.ClientBoundPacket;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundChangeHostPacket;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundChangeStatePacket;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundJoinRoomPacket;
+import top.rymc.phira.protocol.packet.clientbound.ClientBoundJudgesPacket;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundMessagePacket;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundOnJoinRoomPacket;
+import top.rymc.phira.protocol.packet.clientbound.ClientBoundTouchesPacket;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -119,8 +122,6 @@ public class Room {
 
     public void handleJoin(Player player) { state.handleJoin(player); }
     public void handleLeave(Player player) { state.handleLeave(player); }
-    public void gameOperation(OperationType op, Player player) { state.operation(op, player); }
-
     @Getter
     private final Operation operation = new Operation();
 
@@ -163,7 +164,7 @@ public class Room {
 
             state.setChart(info);
             broadcast(new ClientBoundMessagePacket(new SelectChartMessage(player.getId(), info.getName(), id)));
-
+            broadcast(new ClientBoundChangeStatePacket(state.toProtocol()));
         }
 
         public void chat(Player player, String message) {
@@ -173,6 +174,41 @@ public class Room {
 
             broadcast(new ClientBoundMessagePacket(new ChatMessage(player.getId(), message)));
         }
+
+        public void touchSend(Player player, List<TouchFrame> touchFrames) {
+            ClientBoundTouchesPacket packet = new ClientBoundTouchesPacket(player.getId(), touchFrames);
+            monitors.forEach(p -> p.getConnection().send(packet));
+        }
+
+        public void judgeSend(Player player, List<JudgeEvent> judgeEvents) {
+            ClientBoundJudgesPacket packet = new ClientBoundJudgesPacket(player.getId(), judgeEvents);
+            monitors.forEach(p -> p.getConnection().send(packet));
+        }
+
+        public void requireStart(Player player){
+            if (!isHost(player)) {
+                throw new IllegalStateException("你没有权限");
+            }
+
+            state.requireStart(player, players, monitors);
+        }
+
+        public void ready(Player player){
+            state.ready(player, players, monitors);
+        }
+
+        public void cancelReady(Player player) {
+            state.cancelReady(player, players, monitors);
+        }
+
+        public void abort(Player player) {
+            state.abort(player, players, monitors);
+        }
+
+        public void played(Player player, int recordId) {
+            state.played(player, recordId, players, monitors);
+        }
+
 
     }
 
