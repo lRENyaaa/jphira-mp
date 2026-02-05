@@ -123,6 +123,7 @@ public class RoomHandler extends PacketHandler {
     @Override
     public void handle(ServerBoundPingPacket serverBoundPingPacket) {
         player.getConnection().send(ClientBoundPongPacket.INSTANCE);
+        top.rymc.phira.main.redis.RedisHolder.get().updatePlayerLastSeen(player.getId());
     }
 
     @Override public void handle(ServerBoundAuthenticatePacket p) { kick(); }

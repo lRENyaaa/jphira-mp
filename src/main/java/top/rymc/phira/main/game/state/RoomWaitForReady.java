@@ -3,7 +3,6 @@ package top.rymc.phira.main.game.state;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.protocol.data.message.CancelReadyMessage;
-import top.rymc.phira.protocol.data.message.GameEndMessage;
 import top.rymc.phira.protocol.data.message.ReadyMessage;
 import top.rymc.phira.protocol.data.state.GameState;
 import top.rymc.phira.protocol.data.state.WaitForReady;

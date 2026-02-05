@@ -3,6 +3,7 @@ package top.rymc.phira.main.game;
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.handler.PlayHandler;
+import top.rymc.phira.main.redis.RedisHolder;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,9 +16,12 @@ public class PlayerManager {
             if (existing != null && SessionManager.resume(existing, newConn)) {
                 return existing;
             }
-            Player newPlayer = Player.create(userInfo, newConn, key -> PLAYERS.remove(id));
-            newPlayer.getConnection().setPacketHandler(PlayHandler.create(newPlayer));
-            return newPlayer;
+            Player player = Player.create(userInfo, newConn, p -> {
+                PLAYERS.remove(p.getId());
+                RedisHolder.get().removePlayerSession(p.getId());
+            });
+            player.getConnection().setPacketHandler(PlayHandler.create(player));
+            return player;
         });
     }
 

@@ -6,11 +6,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.state.RoomGameState;
+import top.rymc.phira.main.game.state.RoomPlaying;
 import top.rymc.phira.main.game.state.RoomSelectChart;
 import top.rymc.phira.main.game.state.RoomWaitForReady;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.main.util.PhiraFetcher;
+import top.rymc.phira.main.redis.PubSubEvent;
+import top.rymc.phira.main.redis.RedisHolder;
+import top.rymc.phira.main.redis.RoomState;
 import top.rymc.phira.protocol.data.FullUserProfile;
 import top.rymc.phira.protocol.data.RoomInfo;
 import top.rymc.phira.protocol.data.message.ChatMessage;
@@ -72,6 +76,43 @@ public class Room {
         return room;
     }
 
+    /** 从 Redis 恢复的本地房间视图（跨服加入时用），不调用 join，由调用方随后 join */
+    public static Room createFromRedis(String roomId, Consumer<Room> onDestroy,
+                                       Map<String, String> redisInfo, Player localHostPlaceholder) {
+        Room room = new Room(roomId, onDestroy);
+        if (redisInfo != null) {
+            room.setting.setLocked("true".equalsIgnoreCase(redisInfo.get("is_locked")));
+            room.setting.setCycle("true".equalsIgnoreCase(redisInfo.get("is_cycle")));
+            room.initStateFromRedis(redisInfo.get("state"), redisInfo.get("chart_id"));
+        } else {
+            room.state = new RoomSelectChart(room::updateState);
+        }
+        room.host = localHostPlaceholder;
+        return room;
+    }
+
+    void initStateFromRedis(String stateCode, String chartIdStr) {
+        int code = stateCode != null && !stateCode.isEmpty() ? Integer.parseInt(stateCode, 10) : 0;
+        int chartId = 0;
+        if (chartIdStr != null && !chartIdStr.isEmpty()) {
+            try {
+                chartId = Integer.parseInt(chartIdStr, 10);
+            } catch (NumberFormatException ignored) {}
+        }
+        ChartInfo chart = chartId > 0 ? PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> null).apply(chartId) : null;
+        state = switch (code) {
+            case 1 -> new RoomWaitForReady(stateUpdater());
+        case 2 -> new RoomPlaying(stateUpdater());
+        default -> new RoomSelectChart(stateUpdater());
+        };
+        if (state != null && chart != null) state.setChart(chart);
+    }
+
+    private Consumer<RoomGameState> stateUpdater() {
+        return this::updateState;
+    }
+
+    // 玩家加入（线程安全）
     public synchronized void join(Player player, boolean isMonitor) {
         if (players.size() >= setting.maxPlayer) throw new IllegalStateException("Room is full");
         if (setting.locked && !players.isEmpty()) throw new IllegalStateException("Room is locked");
@@ -93,21 +134,50 @@ public class Room {
     }
 
     public synchronized void leave(Player player) {
+        boolean wasMonitor = monitors.contains(player);
         if (!players.remove(player) && !monitors.remove(player)) return;
 
         broadcast(new ClientBoundMessagePacket(new LeaveRoomMessage(player.getId(), player.getName())));
         handleLeave(player);
 
+        boolean hostChanged = setting.host && player.equals(host);
+        Player newHost = null;
+        if (hostChanged && !players.isEmpty()) {
+            newHost = players.iterator().next();
+            host = newHost;
+            host.getConnection().send(new ClientBoundChangeHostPacket(true));
+        }
+
+        var redis = RedisHolder.get();
+        redis.removeRoomPlayer(roomId, player.getId());
+        redis.setPlayerSession(player.getId(), redis.getServerId(), "0", player.getName(), wasMonitor);
+        redis.publishEvent(PubSubEvent.PLAYER_LEAVE, roomId,
+                Map.of("uid", player.getId(), "is_host_changed", hostChanged,
+                        "new_host", newHost != null ? newHost.getId() : 0));
+        if (hostChanged && newHost != null) {
+            redis.setRoomInfo(roomId, newHost.getId(), RoomState.fromCode(stateToRedisCode()), chartIdFromState(), setting.locked, setting.cycle);
+        }
+
         if (players.isEmpty() && monitors.isEmpty()) {
             if (setting.autoDestroy) {
                 onDestroy.accept(this);
             }
-        } else if (setting.host && player.equals(host)) {
-            host = players.iterator().next(); // 转移 Host 给任意剩余玩家
-            host.getConnection().send(new ClientBoundChangeHostPacket(true));
         }
     }
 
+    private int stateToRedisCode() {
+        if (state instanceof RoomSelectChart) return 0;
+        if (state instanceof RoomWaitForReady) return 1;
+        if (state instanceof RoomPlaying) return 2;
+        return 0;
+    }
+
+    private Integer chartIdFromState() {
+        ChartInfo c = state == null ? null : state.getChart();
+        return c != null ? c.getId() : null;
+    }
+
+    // 断线重连专用：验证玩家是否在此房间，monitor不支持断线重连
     public boolean containsPlayer(Player player) {
         return players.contains(player);
     }
@@ -215,6 +285,10 @@ public class Room {
     private void updateState(RoomGameState newState) {
         this.state = newState;
         broadcast(new ClientBoundChangeStatePacket(newState.toProtocol()));
+        var redis = RedisHolder.get();
+        redis.setRoomStateAndChart(roomId, RoomState.fromCode(stateToRedisCode()), chartIdFromState());
+        redis.publishEvent(PubSubEvent.STATE_CHANGE, roomId,
+                Map.of("new_state", stateToRedisCode(), "chart_id", chartIdFromState() != null ? chartIdFromState() : 0));
     }
 
     public void broadcast(ClientBoundPacket packet) {

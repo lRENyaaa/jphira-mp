@@ -5,6 +5,7 @@ import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.PlayerManager;
 import top.rymc.phira.main.game.Room;
 import top.rymc.phira.main.network.PlayerConnection;
+import top.rymc.phira.main.redis.RedisHolder;
 import top.rymc.phira.main.util.PhiraFetcher;
 import top.rymc.phira.protocol.data.FullUserProfile;
 import top.rymc.phira.protocol.data.RoomInfo;
@@ -47,6 +48,9 @@ public class AuthenticateHandler extends SimplePacketHandler {
 
             connection.send(new ClientBoundAuthenticatePacket.Success(new FullUserProfile(userInfo.getId(), userInfo.getName(), false), info));
 
+            String roomId = roomOptional.map(Room::getRoomId).orElse("0");
+            RedisHolder.get().setPlayerSession(userInfo.getId(), RedisHolder.get().getServerId(), roomId, userInfo.getName(), false);
+
             System.out.printf("%s has logged in as [%s] %s%n", connection.getRemoteAddressAsString(), userInfo.getId(), userInfo.getName());
 
         } catch (Exception e) {
@@ -60,4 +64,12 @@ public class AuthenticateHandler extends SimplePacketHandler {
         connection.close();
     }
 
+    private static int parseRoomId(String roomId) {
+        if (roomId == null || roomId.isEmpty()) return 0;
+        try {
+            return Integer.parseInt(roomId, 10);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
 }
