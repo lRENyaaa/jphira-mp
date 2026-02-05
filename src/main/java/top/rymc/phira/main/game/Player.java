@@ -33,9 +33,10 @@ public class Player implements ProtocolConvertible<UserProfile> {
         }
         this.connection = newConn;
 
-        // 断线时触发挂起
+        // 断线时触发挂起，否则离开房间并从管理器移除
         newConn.onClose(ctx -> {
             if (!SessionManager.suspend(this)) {
+                getRoom().ifPresent(r -> r.leave(this));
                 removeFromManager.accept(this);
             }
         });

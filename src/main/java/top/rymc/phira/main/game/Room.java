@@ -44,10 +44,27 @@ public class Room {
     @Getter private final String roomId;
     private final Consumer<Room> onDestroy;
 
+    /** 状态变更时回调（用于 Redis 等同步），在 broadcast 之后调用。 */
+    private static Consumer<Room> stateChangeCallback;
+    /** 玩家离开房间时回调（在从集合移除之前调用，用于 Redis 等同步）。 */
+    private static Consumer<LeaveContext> leaveCallback;
+
+    public static void setStateChangeCallback(Consumer<Room> callback) {
+        stateChangeCallback = callback;
+    }
+
+    public static void setLeaveCallback(Consumer<LeaveContext> callback) {
+        leaveCallback = callback;
+    }
+
+    public record LeaveContext(Room room, Player player) {}
+
+
     private final Set<Player> players = ConcurrentHashMap.newKeySet();
     private final Set<Player> monitors = ConcurrentHashMap.newKeySet();
     @Getter private Player host;
 
+    @Getter
     private volatile RoomGameState state;
     @Getter
     private final RoomSetting setting = new RoomSetting();
@@ -93,6 +110,10 @@ public class Room {
     }
 
     public synchronized void leave(Player player) {
+        if (!players.contains(player) && !monitors.contains(player)) return;
+        if (leaveCallback != null) {
+            leaveCallback.accept(new LeaveContext(this, player));
+        }
         if (!players.remove(player) && !monitors.remove(player)) return;
 
         broadcast(new ClientBoundMessagePacket(new LeaveRoomMessage(player.getId(), player.getName())));
@@ -215,6 +236,9 @@ public class Room {
     private void updateState(RoomGameState newState) {
         this.state = newState;
         broadcast(new ClientBoundChangeStatePacket(newState.toProtocol()));
+        if (stateChangeCallback != null) {
+            stateChangeCallback.accept(this);
+        }
     }
 
     public void broadcast(ClientBoundPacket packet) {
@@ -227,7 +251,18 @@ public class Room {
     }
 
     public boolean isHost(Player player) {
-        return setting.host && player.getId() == host.getId();
+        return setting.host && host != null && player.getId() == host.getId();
+    }
+
+    /** 若当前玩家离开，新房主 UID（若非房主或无下一人则 0）。 */
+    public int getNewHostIdIfLeave(Player leaver) {
+        if (!isHost(leaver)) return 0;
+        return players.stream().filter(p -> !p.equals(leaver)).mapToInt(Player::getId).findFirst().orElse(0);
+    }
+
+    /** 当前房间人数（玩家+观战）。 */
+    public int getMemberCount() {
+        return players.size() + monitors.size();
     }
 
     public ProtocolConvertible<RoomInfo> asProtocolConvertible(Player viewer) {

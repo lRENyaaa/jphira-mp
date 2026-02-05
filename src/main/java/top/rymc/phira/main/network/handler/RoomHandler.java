@@ -3,6 +3,8 @@ package top.rymc.phira.main.network.handler;
 import lombok.Getter;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.Room;
+import top.rymc.phira.main.redis.RedisHolder;
+import top.rymc.phira.main.redis.RoomStateCode;
 import top.rymc.phira.protocol.handler.PacketHandler;
 import top.rymc.phira.protocol.packet.clientbound.*;
 import top.rymc.phira.protocol.packet.serverbound.*;
@@ -35,6 +37,7 @@ public class RoomHandler extends PacketHandler {
             room.leave(player);
             player.getConnection().setPacketHandler(fallback);
             player.getConnection().send(new ClientBoundLeaveRoomPacket.Success());
+            // Redis 更新由 Room 的 leaveCallback 统一处理
         } catch (Exception e) {
             player.getConnection().send(new ClientBoundLeaveRoomPacket.Failed(e.getMessage()));
         }
@@ -44,6 +47,9 @@ public class RoomHandler extends PacketHandler {
     public void handle(ServerBoundLockRoomPacket p) {
         try {
             room.getOperation().lockRoom(player);
+            if (RedisHolder.isAvailable()) {
+                RedisHolder.get().updateRoomSettings(room.getRoomId(), room.getSetting().isLocked(), room.getSetting().isCycle());
+            }
             player.getConnection().send(new ClientBoundLockRoomPacket.Success());
         } catch (Exception e) {
             player.getConnection().send(new ClientBoundLockRoomPacket.Failed(e.getMessage()));
@@ -54,6 +60,9 @@ public class RoomHandler extends PacketHandler {
     public void handle(ServerBoundCycleRoomPacket p) {
         try {
             room.getOperation().cycleRoom(player);
+            if (RedisHolder.isAvailable()) {
+                RedisHolder.get().updateRoomSettings(room.getRoomId(), room.getSetting().isLocked(), room.getSetting().isCycle());
+            }
             player.getConnection().send(new ClientBoundCycleRoomPacket.Success());
         } catch (Exception e) {
             player.getConnection().send(new ClientBoundCycleRoomPacket.Failed(e.getMessage()));
@@ -64,6 +73,12 @@ public class RoomHandler extends PacketHandler {
     public void handle(ServerBoundSelectChartPacket packet) {
         try {
             room.getOperation().selectChart(player, packet.getId());
+            if (RedisHolder.isAvailable()) {
+                var r = RedisHolder.get();
+                int chartId = room.getState().getChart() != null ? room.getState().getChart().getId() : 0;
+                r.updateRoomState(room.getRoomId(), RoomStateCode.SELECT_CHART, chartId);
+                r.publishStateChange(room.getRoomId(), RoomStateCode.SELECT_CHART, chartId);
+            }
             player.getConnection().send(new ClientBoundSelectChartPacket.Success());
         } catch (Exception e) {
             player.getConnection().send(new ClientBoundSelectChartPacket.Failed(e.getMessage()));
@@ -104,6 +119,9 @@ public class RoomHandler extends PacketHandler {
     public void handle(ServerBoundPlayedPacket packet) {
         try {
             room.getOperation().played(player, packet.getId());
+            if (RedisHolder.isAvailable()) {
+                RedisHolder.get().publishSyncScore(room.getRoomId(), player.getId(), String.valueOf(packet.getId()));
+            }
             player.getConnection().send(new ClientBoundPlayedPacket.Success());
         } catch (Exception e) {
             player.getConnection().send(new ClientBoundPlayedPacket.Failed(e.getMessage()));
@@ -122,6 +140,9 @@ public class RoomHandler extends PacketHandler {
 
     @Override
     public void handle(ServerBoundPingPacket serverBoundPingPacket) {
+        if (RedisHolder.isAvailable()) {
+            RedisHolder.get().updateLastSeen(player.getId());
+        }
         player.getConnection().send(ClientBoundPongPacket.INSTANCE);
     }
 

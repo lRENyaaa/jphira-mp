@@ -11,7 +11,13 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.io.IoBuilder;
+import top.rymc.phira.main.game.PlayerManager;
+import top.rymc.phira.main.game.RoomManager;
 import top.rymc.phira.main.network.ServerChannelInitializer;
+import top.rymc.phira.main.redis.RedisConfig;
+import top.rymc.phira.main.redis.RedisEventDispatcher;
+import top.rymc.phira.main.redis.RedisHolder;
+import top.rymc.phira.main.redis.RedisManager;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -52,6 +58,11 @@ public class Main {
         NioEventLoopGroup workerGroup = new NioEventLoopGroup();
 
         try {
+            RedisManager redis = new RedisManager(RedisConfig.defaultConfig());
+            RedisHolder.setInstance(redis);
+            RedisEventDispatcher.start(redis);
+            logger.info("Redis connected: {}:{}, db={}", redis.getConfig().getHost(), redis.getConfig().getPort(), redis.getConfig().getDatabase());
+
             ServerBootstrap serverBootstrap = new ServerBootstrap();
             serverBootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
@@ -61,6 +72,18 @@ public class Main {
             Channel ipv4Channel = serverBootstrap.bind(new InetSocketAddress(ipv4, port)).sync().channel();
 
             shutdown = () -> {
+                if (RedisHolder.isAvailable()) {
+                    RedisManager r = RedisHolder.get();
+                    try {
+                        PlayerManager.getAllPlayers().forEach(p -> p.getRoom().ifPresent(room -> room.leave(p)));
+                        for (String uid : r.findPlayerIdsByServer()) {
+                            r.removePlayerSession(Integer.parseInt(uid));
+                        }
+                    } finally {
+                        r.close();
+                        RedisHolder.setInstance(null);
+                    }
+                }
                 bossGroup.shutdownGracefully();
                 workerGroup.shutdownGracefully();
             };

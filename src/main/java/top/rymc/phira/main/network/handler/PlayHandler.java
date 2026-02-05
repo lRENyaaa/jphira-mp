@@ -3,6 +3,8 @@ package top.rymc.phira.main.network.handler;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.Room;
 import top.rymc.phira.main.game.RoomManager;
+import top.rymc.phira.main.redis.RedisHolder;
+import top.rymc.phira.main.redis.RoomStateCode;
 import top.rymc.phira.protocol.handler.SimplePacketHandler;
 import top.rymc.phira.protocol.packet.ServerBoundPacket;
 import top.rymc.phira.protocol.packet.clientbound.*;
@@ -29,7 +31,14 @@ public class PlayHandler extends SimplePacketHandler {
     public void handle(ServerBoundCreateRoomPacket packet) {
         try {
             Room room = RoomManager.createRoom(packet.getRoomId(), player);
-            // 创建成功后切换到 RoomHandler
+            if (RedisHolder.isAvailable()) {
+                var r = RedisHolder.get();
+                r.setRoomInfo(room.getRoomId(), player.getId(), RoomStateCode.SELECT_CHART, 0,
+                        room.getSetting().isLocked(), room.getSetting().isCycle());
+                r.addRoomPlayer(room.getRoomId(), player.getId());
+                r.setPlayerSession(player.getId(), room.getRoomId(), player.getName(), false);
+                r.publishRoomCreate(room.getRoomId(), player.getId(), player.getName());
+            }
             RoomHandler roomHandler = new RoomHandler(player, room, this);
             player.getConnection().setPacketHandler(roomHandler);
 
@@ -49,9 +58,21 @@ public class PlayHandler extends SimplePacketHandler {
             if (room == null) {
                 throw new IllegalStateException("房间不存在");
             }
+            if (RedisHolder.isAvailable()) {
+                boolean added = RedisHolder.get().tryAddRoomPlayer(
+                        packet.getRoomId(), player.getId(), room.getSetting().getMaxPlayer());
+                if (!added) {
+                    throw new IllegalStateException("房间已满");
+                }
+            }
 
             room.join(player, packet.isMonitor());
-            // 加入成功后切换到 RoomHandler
+            if (RedisHolder.isAvailable()) {
+                var r = RedisHolder.get();
+                r.updatePlayerSessionRoom(player.getId(), room.getRoomId());
+                r.updatePlayerSessionMonitor(player.getId(), packet.isMonitor());
+                r.publishPlayerJoin(room.getRoomId(), player.getId(), player.getName(), packet.isMonitor());
+            }
             RoomHandler roomHandler = new RoomHandler(player, room, this);
             player.getConnection().setPacketHandler(roomHandler);
 

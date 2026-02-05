@@ -4,6 +4,7 @@ import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.handler.PlayHandler;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -28,5 +29,10 @@ public class PlayerManager {
     public static boolean isOnline(int playerId) {
         Player p = PLAYERS.get(playerId);
         return p != null && p.isOnline();
+    }
+
+    /** 当前本机所有玩家（用于关闭时清理 Redis）。 */
+    public static Collection<Player> getAllPlayers() {
+        return PLAYERS.values();
     }
 }
