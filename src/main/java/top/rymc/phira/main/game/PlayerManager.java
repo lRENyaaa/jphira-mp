@@ -11,17 +11,14 @@ public class PlayerManager {
     private static final Map<Integer, Player> PLAYERS = new ConcurrentHashMap<>();
 
     public static Player resumeOrCreate(UserInfo userInfo, PlayerConnection newConn) {
-        Player existing = PLAYERS.get(userInfo.getId());
-
-        if (existing != null && SessionManager.resume(existing, newConn)) {
-            return existing;
-        }
-
-        // 新玩家
-        Player player = Player.create(userInfo, newConn, key -> PLAYERS.remove(userInfo.getId()));
-        PLAYERS.put(userInfo.getId(), player);
-        player.getConnection().setPacketHandler(PlayHandler.create(player));
-        return player;
+        return PLAYERS.compute(userInfo.getId(), (id, existing) -> {
+            if (existing != null && SessionManager.resume(existing, newConn)) {
+                return existing;
+            }
+            Player newPlayer = Player.create(userInfo, newConn, key -> PLAYERS.remove(id));
+            newPlayer.getConnection().setPacketHandler(PlayHandler.create(newPlayer));
+            return newPlayer;
+        });
     }
 
     public static Player getPlayer(int playerId) {
