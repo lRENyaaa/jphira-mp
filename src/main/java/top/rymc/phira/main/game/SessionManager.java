@@ -11,40 +11,29 @@ public class SessionManager {
     private static final Map<Integer, SuspendedRoomSession> SUSPENDED = new ConcurrentHashMap<>();
     private static final ScheduledExecutorService TIMER = Executors.newScheduledThreadPool(1);
 
-    /**
-     * 尝试恢复玩家的房间会话
-     * @return true 如果成功恢复，false 如果没有可恢复的会话
-     */
     public static boolean resume(Player player, PlayerConnection newConn) {
         SuspendedRoomSession session = SUSPENDED.remove(player.getId());
         if (session == null) {
-            return false; // 没有挂起的会话
+            return false;
         }
 
-        // 取消超时踢出任务
         session.timeout.cancel(false);
 
-        // 验证玩家是否还在房间内（可能已被其他机制踢出）
         if (!session.room.containsPlayer(player)) {
-            return false; // 已经不在房间了
+            return false;
         }
 
-        // 绑定新连接
         player.bind(newConn);
 
-        // 创建新的 RoomHandler
         RoomHandler handler = new RoomHandler(player, session.room, PlayHandler.create(player));
         newConn.setPacketHandler(handler);
 
         return true;
     }
 
-    /**
-     * 挂起会话（断线时调用）
-     */
     public static boolean suspend(Player player) {
         if (!(player.getConnection().getPacketHandler() instanceof RoomHandler rh)) {
-            return false; // 不在房间中，无需挂起
+            return false;
         }
 
         if (rh.getRoom().containsMonitor(player)) {

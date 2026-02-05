@@ -14,6 +14,7 @@ import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.main.util.PhiraFetcher;
 import top.rymc.phira.protocol.data.FullUserProfile;
 import top.rymc.phira.protocol.data.RoomInfo;
+import top.rymc.phira.protocol.data.message.ChatMessage;
 import top.rymc.phira.protocol.data.message.CycleRoomMessage;
 import top.rymc.phira.protocol.data.message.JoinRoomMessage;
 import top.rymc.phira.protocol.data.message.LeaveRoomMessage;
@@ -40,7 +41,6 @@ public class Room {
     @Getter private final String roomId;
     private final Consumer<Room> onDestroy;
 
-    // 双向引用：Room 持有 Player，但 Player 不持有 Room
     private final Set<Player> players = ConcurrentHashMap.newKeySet();
     private final Set<Player> monitors = ConcurrentHashMap.newKeySet();
     @Getter private Player host;
@@ -48,7 +48,6 @@ public class Room {
     private volatile RoomGameState state;
     @Getter
     private final RoomSetting setting = new RoomSetting();
-
 
     @Getter
     @Setter(AccessLevel.PRIVATE)
@@ -59,9 +58,9 @@ public class Room {
         private boolean locked = false;
         private boolean cycle = false;
         private boolean live = true;
+        private boolean chat = true;
     }
 
-    // 工厂：创建即绑定 Host
     public static Room create(String roomId, Consumer<Room> onDestroy, Player hostPlayer) {
         Room room = new Room(roomId, onDestroy);
         room.state = new RoomSelectChart(room::updateState);
@@ -70,7 +69,6 @@ public class Room {
         return room;
     }
 
-    // 玩家加入（线程安全）
     public synchronized void join(Player player, boolean isMonitor) {
         if (players.size() >= setting.maxPlayer) throw new IllegalStateException("Room is full");
         if (setting.locked && !players.isEmpty()) throw new IllegalStateException("Room is locked");
@@ -91,7 +89,6 @@ public class Room {
         handleJoin(player);
     }
 
-    // 玩家离开（自动转移 Host 或销毁）
     public synchronized void leave(Player player) {
         if (!players.remove(player) && !monitors.remove(player)) return;
 
@@ -108,7 +105,6 @@ public class Room {
         }
     }
 
-    // 断线重连专用：验证玩家是否在此房间，monitor不支持断线重连
     public boolean containsPlayer(Player player) {
         return players.contains(player);
     }
@@ -121,7 +117,6 @@ public class Room {
         return monitors.contains(player);
     }
 
-    // 状态机委托
     public void handleJoin(Player player) { state.handleJoin(player); }
     public void handleLeave(Player player) { state.handleLeave(player); }
     public void gameOperation(OperationType op, Player player) { state.operation(op, player); }
@@ -171,6 +166,14 @@ public class Room {
 
         }
 
+        public void chat(Player player, String message) {
+            if (!setting.chat) {
+                throw new IllegalStateException("房间未启用聊天");
+            }
+
+            broadcast(new ClientBoundMessagePacket(new ChatMessage(player.getId(), message)));
+        }
+
     }
 
     private void updateState(RoomGameState newState) {
@@ -178,7 +181,6 @@ public class Room {
         broadcast(new ClientBoundChangeStatePacket(newState.toProtocol()));
     }
 
-    // 广播给房间内所有玩家（自动过滤离线）
     public void broadcast(ClientBoundPacket packet) {
         Consumer<Player> broadcastProcessor = p -> {
             if (p.isOnline()) p.getConnection().send(packet);
@@ -211,7 +213,6 @@ public class Room {
     public class ProtocolHack {
         public ClientBoundJoinRoomPacket.Success buildJoinSuccessPacket() {
 
-            // 这是一个客户端协议问题，我们必须构造假的状态来尽可能避免客户端崩溃
             GameState protocolState;
             ChartInfo chart = state.getChart();
             if (!(state instanceof RoomSelectChart) && chart != null) {

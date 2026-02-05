@@ -11,7 +11,7 @@ import top.rymc.phira.protocol.packet.serverbound.*;
 public class RoomHandler extends PacketHandler {
     private final Player player;
     private final Room room;
-    private final PacketHandler fallback; // 离开房间后回到 PlayHandler
+    private final PacketHandler fallback;
 
     public RoomHandler(Player player, Room room, PacketHandler fallback) {
         this.player = player;
@@ -19,25 +19,32 @@ public class RoomHandler extends PacketHandler {
         this.fallback = fallback;
     }
 
-    // 所有操作委托给 Room，Room 再委托给 RoomGameState
     @Override
-    public void handle(ServerBoundChatPacket p) {
-        room.broadcast(new top.rymc.phira.protocol.packet.clientbound.ClientBoundMessagePacket(
-                new top.rymc.phira.protocol.data.message.ChatMessage(player.getId(), p.getMessage())
-        ));
+    public void handle(ServerBoundChatPacket packet) {
+        try {
+            room.getOperation().chat(player, packet.getMessage());
+            player.getConnection().send(new ClientBoundLockRoomPacket.Success());
+        } catch (Exception e) {
+            player.getConnection().send(new ClientBoundLockRoomPacket.Failed(e.getMessage()));
+        }
     }
 
     @Override
     public void handle(ServerBoundLeaveRoomPacket p) {
-        room.leave(player);
-        player.getConnection().setPacketHandler(fallback);
-        player.getConnection().send(new ClientBoundLeaveRoomPacket.Success());
+        try {
+            room.leave(player);
+            player.getConnection().setPacketHandler(fallback);
+            player.getConnection().send(new ClientBoundLeaveRoomPacket.Success());
+        } catch (Exception e) {
+            player.getConnection().send(new ClientBoundLeaveRoomPacket.Failed(e.getMessage()));
+        }
     }
 
     @Override
     public void handle(ServerBoundLockRoomPacket p) {
         try {
             room.getOperation().lockRoom(player);
+            player.getConnection().send(new ClientBoundLockRoomPacket.Success());
         } catch (Exception e) {
             player.getConnection().send(new ClientBoundLockRoomPacket.Failed(e.getMessage()));
         }
@@ -47,6 +54,7 @@ public class RoomHandler extends PacketHandler {
     public void handle(ServerBoundCycleRoomPacket p) {
         try {
             room.getOperation().cycleRoom(player);
+            player.getConnection().send(new ClientBoundCycleRoomPacket.Success());
         } catch (Exception e) {
             player.getConnection().send(new ClientBoundCycleRoomPacket.Failed(e.getMessage()));
         }
@@ -56,6 +64,7 @@ public class RoomHandler extends PacketHandler {
     public void handle(ServerBoundSelectChartPacket packet) {
         try {
             room.getOperation().selectChart(player, packet.getId());
+            player.getConnection().send(new ClientBoundSelectChartPacket.Success());
         } catch (Exception e) {
             player.getConnection().send(new ClientBoundSelectChartPacket.Failed(e.getMessage()));
         }
