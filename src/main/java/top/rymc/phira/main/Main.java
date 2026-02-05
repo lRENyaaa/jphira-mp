@@ -12,6 +12,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.io.IoBuilder;
 import top.rymc.phira.main.network.ServerChannelInitializer;
+import top.rymc.phira.main.game.RoomManager;
+import top.rymc.phira.main.redis.RedisHolder;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -52,6 +54,13 @@ public class Main {
         NioEventLoopGroup workerGroup = new NioEventLoopGroup();
 
         try {
+            Thread sub = new Thread(() -> {
+                RedisHolder.get().subscribe((eventType, roomId, data) ->
+                        RoomManager.handleRedisEvent(roomId, eventType, data));
+            }, "redis-sub");
+            sub.setDaemon(true);
+            sub.start();
+
             ServerBootstrap serverBootstrap = new ServerBootstrap();
             serverBootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
@@ -61,6 +70,7 @@ public class Main {
             Channel ipv4Channel = serverBootstrap.bind(new InetSocketAddress(ipv4, port)).sync().channel();
 
             shutdown = () -> {
+                RedisHolder.shutdown();
                 bossGroup.shutdownGracefully();
                 workerGroup.shutdownGracefully();
             };

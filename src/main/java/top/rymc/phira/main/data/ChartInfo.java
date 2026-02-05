@@ -12,6 +12,13 @@ import java.time.OffsetDateTime;
 @SuppressWarnings("unused")
 public final class ChartInfo {
     private int id;
+
+    /** 仅用于从 Redis 恢复房间状态时构造仅含 id 的谱面引用 */
+    public static ChartInfo ofId(int chartId) {
+        ChartInfo c = new ChartInfo();
+        c.id = chartId;
+        return c;
+    }
     private String name;
     private String level;
     private float difficulty;
