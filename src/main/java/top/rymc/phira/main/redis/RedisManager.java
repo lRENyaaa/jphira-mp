@@ -236,27 +236,27 @@ public class RedisManager {
     }
 
     public void publishRoomCreate(String roomId, int uid, String name) {
-        publish(new PubSubEvent("ROOM_CREATE", roomId, Map.of("uid", uid, "name", name != null ? name : "")));
+        publish(new PubSubEvent("ROOM_CREATE", roomId, null, Map.of("uid", uid, "name", name != null ? name : "")));
     }
 
     public void publishRoomDelete(String roomId, int uid, String name) {
-        publish(new PubSubEvent("ROOM_DELETE", roomId, Map.of("uid", uid, "name", name != null ? name : "")));
+        publish(new PubSubEvent("ROOM_DELETE", roomId, null, Map.of("uid", uid, "name", name != null ? name : "")));
     }
 
     public void publishPlayerJoin(String roomId, int uid, String name, boolean isMonitor) {
-        publish(new PubSubEvent("PLAYER_JOIN", roomId, Map.of("uid", uid, "name", name != null ? name : "", "is_monitor", isMonitor)));
+        publish(new PubSubEvent("PLAYER_JOIN", roomId, null, Map.of("uid", uid, "name", name != null ? name : "", "is_monitor", isMonitor)));
     }
 
     public void publishPlayerLeave(String roomId, int uid, boolean isHostChanged, int newHost) {
-        publish(new PubSubEvent("PLAYER_LEAVE", roomId, Map.of("uid", uid, "is_host_changed", isHostChanged, "new_host", newHost)));
+        publish(new PubSubEvent("PLAYER_LEAVE", roomId, null, Map.of("uid", uid, "is_host_changed", isHostChanged, "new_host", newHost)));
     }
 
     public void publishStateChange(String roomId, int newState, int chartId) {
-        publish(new PubSubEvent("STATE_CHANGE", roomId, Map.of("new_state", newState, "chart_id", chartId)));
+        publish(new PubSubEvent("STATE_CHANGE", roomId, null, Map.of("new_state", newState, "chart_id", chartId)));
     }
 
     public void publishSyncScore(String roomId, int uid, String recordId) {
-        publish(new PubSubEvent("SYNC_SCORE", roomId, Map.of("uid", uid, "record_id", recordId)));
+        publish(new PubSubEvent("SYNC_SCORE", roomId, null, Map.of("uid", uid, "record_id", recordId)));
     }
 
     /** 在后台线程订阅 mp:events，收到消息时回调 onMessage。 */
