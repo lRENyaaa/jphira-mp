@@ -13,7 +13,7 @@ shadowJar {
 
 jar {
     manifest {
-        attributes 'Main-Class': 'top.rymc.phira.main.Main'
+        attributes 'Main-Class': 'top.rymc.phira.main.Server'
         attributes 'Multi-Release': 'true'
     }
 }
@@ -24,11 +24,12 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 group = 'top.rymc'
-version = '1.0.0'
+version = '1.0.0-dev-20260209-01'
 
 repositories {
     mavenCentral()
     maven { url 'https://jitpack.io' }
+    maven { url 'https://maven.meteordev.org/releases' }
 }
 
 dependencies {
@@ -47,6 +48,7 @@ dependencies {
     implementation 'org.apache.logging.log4j:log4j-api:2.22.1'
     implementation 'org.apache.logging.log4j:log4j-iostreams:2.22.1'
     implementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.22.1'
+    implementation 'org.apache.logging.log4j:log4j-jul:2.22.1'
 
     implementation 'net.minecrell:terminalconsoleappender:1.3.0'
     implementation 'org.jline:jline-terminal-jansi:3.20.0'
@@ -57,6 +59,6 @@ dependencies {
     compileOnly "org.projectlombok:lombok:1.18.30"
     annotationProcessor "org.projectlombok:lombok:1.18.30"
 
-    //implementation 'com.h2database:h2:2.2.224'
-    //implementation 'com.zaxxer:HikariCP:5.0.1'
+    implementation "meteordevelopment:orbit:0.2.3"
+
 }

@@ -1,5 +1,7 @@
 package top.rymc.phira.main.game;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -17,5 +19,9 @@ public class RoomManager {
 
     public static Room findRoom(String roomId) {
         return ROOMS.get(roomId);
+    }
+
+    public static List<Room> getAllRooms() {
+        return new ArrayList<>(ROOMS.values());
     }
 }

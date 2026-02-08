@@ -23,8 +23,6 @@
       <PatternLayout>
         <LoggerNamePatternSelector
                 defaultPattern="%highlightError{[%d{HH:mm:ss} %level] [%logger]: %msg%n%xEx}">
-          <PatternMatch key="Server"
-                        pattern="%highlightError{| %msg%n%xEx}"/>
         </LoggerNamePatternSelector>
       </PatternLayout>
     </TerminalConsole>

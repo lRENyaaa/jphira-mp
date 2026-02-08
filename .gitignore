@@ -40,5 +40,6 @@ bin/
 
 ### jphira-mp ###
 logs/
+plugins/
 *.log
 *.log.gz

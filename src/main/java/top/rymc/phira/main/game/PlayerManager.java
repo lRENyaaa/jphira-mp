@@ -4,7 +4,10 @@ import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.handler.PlayHandler;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerManager {
@@ -28,5 +31,18 @@ public class PlayerManager {
     public static boolean isOnline(int playerId) {
         Player p = PLAYERS.get(playerId);
         return p != null && p.isOnline();
+    }
+
+    public static List<Player> getOnlinePlayers() {
+        return PLAYERS.values()
+                .stream()
+                .filter(Player::isOnline)
+                .toList();
+    }
+
+
+    public static List<Player> getAllPlayers() {
+        return new ArrayList<>(PLAYERS.values());
+
     }
 }

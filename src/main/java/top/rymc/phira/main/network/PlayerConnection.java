@@ -8,7 +8,9 @@ import io.netty.handler.timeout.ReadTimeoutException;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.logging.log4j.Logger;
-import top.rymc.phira.main.Main;
+import top.rymc.phira.main.Server;
+import top.rymc.phira.main.event.PacketReceiveEvent;
+import top.rymc.phira.main.event.PacketSendEvent;
 import top.rymc.phira.protocol.data.message.ChatMessage;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 import top.rymc.phira.protocol.packet.ClientBoundPacket;
@@ -53,6 +55,13 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
         }
 
         ServerBoundPacket packet = (ServerBoundPacket) msg;
+
+        PacketReceiveEvent event = new PacketReceiveEvent(packet);
+
+        if (Server.postEvent(event)) {
+            return;
+        }
+
         packet.handle(packetHandler);
     }
 
@@ -64,7 +73,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
 
         ctx.close();
 
-        Logger logger = Main.getLogger();
+        Logger logger = Server.getInstance().getLogger();
 
         if (cause instanceof ReadTimeoutException) {
             logger.error("{}: read timed out", getRemoteAddressAsString());
@@ -88,6 +97,11 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
 
     public Optional<ChannelFuture> send(ClientBoundPacket packet) {
         if (this.isClosed()) {
+            return Optional.empty();
+        }
+
+        PacketSendEvent event = new PacketSendEvent(packet);
+        if (Server.postEvent(event)) {
             return Optional.empty();
         }
 

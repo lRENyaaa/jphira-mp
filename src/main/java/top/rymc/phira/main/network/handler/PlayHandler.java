@@ -1,8 +1,12 @@
 package top.rymc.phira.main.network.handler;
 
+import top.rymc.phira.main.Server;
+import top.rymc.phira.main.event.PlayerPostJoinRoomEvent;
+import top.rymc.phira.main.event.PlayerPreJoinRoomEvent;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.Room;
 import top.rymc.phira.main.game.RoomManager;
+import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.protocol.handler.server.SimpleServerBoundPacketHandler;
 import top.rymc.phira.protocol.packet.ServerBoundPacket;
 import top.rymc.phira.protocol.packet.clientbound.*;
@@ -44,23 +48,40 @@ public class PlayHandler extends SimpleServerBoundPacketHandler {
 
     @Override
     public void handle(ServerBoundJoinRoomPacket packet) {
+        PlayerConnection connection = player.getConnection();
+
         try {
+            PlayerPreJoinRoomEvent preJoinRoomEvent = new PlayerPreJoinRoomEvent(player, packet.getRoomId(), packet.isMonitor());
+            Server.postEvent(preJoinRoomEvent);
+            String preJoinCancelMessage = preJoinRoomEvent.getCancelReason();
+            if (preJoinCancelMessage != null) {
+                connection.send(ClientBoundJoinRoomPacket.failed(preJoinCancelMessage));
+                return;
+            }
+
             Room room = RoomManager.findRoom(packet.getRoomId());
             if (room == null) {
                 throw new IllegalStateException("房间不存在");
             }
 
-            room.join(player, packet.isMonitor());
-            // 加入成功后切换到 RoomHandler
-            RoomHandler roomHandler = new RoomHandler(player, room, this);
-            player.getConnection().setPacketHandler(roomHandler);
+            PlayerPostJoinRoomEvent postJoinRoomEvent = new PlayerPostJoinRoomEvent(player, room, packet.isMonitor());
+            Server.postEvent(postJoinRoomEvent);
+            String postJoinCancelMessage = postJoinRoomEvent.getCancelReason();
+            if (postJoinCancelMessage != null) {
+                connection.send(ClientBoundJoinRoomPacket.failed(postJoinCancelMessage));
+                return;
+            }
 
-            player.getConnection().send(room.getProtocolHack().buildJoinSuccessPacket());
+            room.join(player, packet.isMonitor());
+            RoomHandler roomHandler = new RoomHandler(player, room, this);
+            connection.setPacketHandler(roomHandler);
+
+            connection.send(room.getProtocolHack().buildJoinSuccessPacket());
 
             room.getProtocolHack().fixClientRoomState(player);
 
         } catch (Exception e) {
-            player.getConnection().send(ClientBoundJoinRoomPacket.failed(e.getMessage()));
+            connection.send(ClientBoundJoinRoomPacket.failed(e.getMessage()));
         }
     }
 

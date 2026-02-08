@@ -1,6 +1,9 @@
 package top.rymc.phira.main.network.handler;
 
+import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
+import top.rymc.phira.main.event.PlayerPostJoinEvent;
+import top.rymc.phira.main.event.PlayerPreJoinEvent;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.PlayerManager;
 import top.rymc.phira.main.game.Room;
@@ -35,6 +38,15 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
             System.out.printf("%s sent his token [%s]%n",connection.getRemoteAddressAsString(), packet.getToken());
             UserInfo userInfo = PhiraFetcher.GET_USER_INFO.apply(packet.getToken());
 
+            PlayerPreJoinEvent preJoinEvent = new PlayerPreJoinEvent(userInfo);
+            Server.postEvent(preJoinEvent);
+            String preJoinCancelReason = preJoinEvent.getCancelReason();
+            if (preJoinCancelReason != null) {
+                connection.send(ClientBoundAuthenticatePacket.failed(preJoinCancelReason));
+                connection.close();
+                return;
+            }
+
             Player player = PlayerManager.resumeOrCreate(userInfo, connection);
 
             Optional<Room> roomOptional = player.getRoom();
@@ -43,6 +55,15 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
                 Room room = roomOptional.get();
                 info = room.asProtocolConvertible(player).toProtocol();
                 room.getProtocolHack().forceSyncInfo(player);
+            }
+
+            PlayerPostJoinEvent postJoinEvent = new PlayerPostJoinEvent(player);
+            Server.postEvent(postJoinEvent);
+            String postJoinCancelReason = postJoinEvent.getCancelReason();
+            if (postJoinCancelReason != null) {
+                connection.send(ClientBoundAuthenticatePacket.failed(postJoinCancelReason));
+                connection.close();
+                return;
             }
 
             connection.send(ClientBoundAuthenticatePacket.success(new FullUserProfile(userInfo.getId(), userInfo.getName(), false), info));
