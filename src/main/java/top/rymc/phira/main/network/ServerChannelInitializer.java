@@ -5,9 +5,10 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import top.rymc.phira.main.network.handler.AuthenticateHandler;
 import top.rymc.phira.protocol.codec.decoder.FrameDecoder;
-import top.rymc.phira.protocol.codec.decoder.PacketDecoder;
+import top.rymc.phira.protocol.codec.decoder.HandshakeDecoder;
+import top.rymc.phira.protocol.codec.decoder.ServerPacketDecoder;
 import top.rymc.phira.protocol.codec.encoder.FrameEncoder;
-import top.rymc.phira.protocol.codec.encoder.PacketEncoder;
+import top.rymc.phira.protocol.codec.encoder.ServerPacketEncoder;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
@@ -21,10 +22,10 @@ public class ServerChannelInitializer extends ChannelInitializer<Channel> {
 
         System.out.printf("Establishing a connection from %s%n",ipPort);
 
-        FrameDecoder decoder = new FrameDecoder();
-        channel.pipeline().addLast(decoder);
+        HandshakeDecoder handshake = new HandshakeDecoder();
+        channel.pipeline().addLast(handshake);
 
-        decoder.getClientProtocolVersion().whenComplete((version,throwable) -> {
+        handshake.getClientProtocolVersion().whenComplete((version,throwable) -> {
             if (throwable != null) {
                 System.out.printf("Disconnecting %s: %s%n",ipPort,throwable.getMessage());
                 if (channel.isActive()) {
@@ -36,10 +37,11 @@ public class ServerChannelInitializer extends ChannelInitializer<Channel> {
             System.out.printf("Receive client version %s from %s%n",version,ipPort);
 
             channel.pipeline()
+                    .addLast(new FrameDecoder())
                     .addLast(new FrameEncoder())
                     .addLast(new ReadTimeoutHandler(5000, TimeUnit.MILLISECONDS))
-                    .addLast(new PacketDecoder())
-                    .addLast(new PacketEncoder());
+                    .addLast(new ServerPacketDecoder())
+                    .addLast(new ServerPacketEncoder());
 
             PlayerConnection connection = new PlayerConnection(channel, remoteAddress);
             connection.setPacketHandler(new AuthenticateHandler(connection));

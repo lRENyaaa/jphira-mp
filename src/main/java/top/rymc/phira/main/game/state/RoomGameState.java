@@ -30,7 +30,7 @@ public abstract sealed class RoomGameState implements ProtocolConvertible<GameSt
 
     protected void updateGameState(RoomGameState newRoomGameState, Set<Player> players, Set<Player> monitors) {
         stateUpdater.accept(newRoomGameState);
-        broadcast(players, monitors, new ClientBoundChangeStatePacket(newRoomGameState.toProtocol()));
+        broadcast(players, monitors, ClientBoundChangeStatePacket.create(newRoomGameState.toProtocol()));
     }
 
     protected void broadcast(Set<Player> players, Set<Player> monitors, ClientBoundPacket packet) {

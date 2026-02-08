@@ -45,14 +45,14 @@ public final class RoomWaitForReady extends RoomGameState {
     @Override
     public void ready(Player player, Set<Player> players, Set<Player> monitors) {
         readyPlayers.add(player);
-        broadcast(players, monitors, new ClientBoundMessagePacket(new ReadyMessage(player.getId())));
+        broadcast(players, monitors, ClientBoundMessagePacket.create(new ReadyMessage(player.getId())));
         updateState(players, monitors);
     }
 
     @Override
     public void cancelReady(Player player, Set<Player> players, Set<Player> monitors) {
         readyPlayers.remove(player);
-        broadcast(players, monitors, new ClientBoundMessagePacket(new CancelReadyMessage(player.getId())));
+        broadcast(players, monitors, ClientBoundMessagePacket.create(new CancelReadyMessage(player.getId())));
     }
 
     @Override

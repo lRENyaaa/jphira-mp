@@ -3,13 +3,13 @@ package top.rymc.phira.main.network.handler;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.Room;
 import top.rymc.phira.main.game.RoomManager;
-import top.rymc.phira.protocol.handler.SimplePacketHandler;
+import top.rymc.phira.protocol.handler.server.SimpleServerBoundPacketHandler;
 import top.rymc.phira.protocol.packet.ServerBoundPacket;
 import top.rymc.phira.protocol.packet.clientbound.*;
 import top.rymc.phira.protocol.packet.serverbound.ServerBoundCreateRoomPacket;
 import top.rymc.phira.protocol.packet.serverbound.ServerBoundJoinRoomPacket;
 
-public class PlayHandler extends SimplePacketHandler {
+public class PlayHandler extends SimpleServerBoundPacketHandler {
     private final Player player;
 
     /**
@@ -33,12 +33,12 @@ public class PlayHandler extends SimplePacketHandler {
             RoomHandler roomHandler = new RoomHandler(player, room, this);
             player.getConnection().setPacketHandler(roomHandler);
 
-            player.getConnection().send(new ClientBoundCreateRoomPacket.Success());
+            player.getConnection().send(ClientBoundCreateRoomPacket.success());
 
             room.getProtocolHack().forceSyncInfo(player);
 
         } catch (Exception e) {
-            player.getConnection().send(new ClientBoundCreateRoomPacket.Failed(e.getMessage()));
+            player.getConnection().send(ClientBoundCreateRoomPacket.failed(e.getMessage()));
         }
     }
 
@@ -60,7 +60,7 @@ public class PlayHandler extends SimplePacketHandler {
             room.getProtocolHack().fixClientRoomState(player);
 
         } catch (Exception e) {
-            player.getConnection().send(new ClientBoundJoinRoomPacket.Failed(e.getMessage()));
+            player.getConnection().send(ClientBoundJoinRoomPacket.failed(e.getMessage()));
         }
     }
 

@@ -85,8 +85,8 @@ public class Room {
                 host = player;
             }
         } else {
-            broadcast(new ClientBoundOnJoinRoomPacket(player.toProtocol(), isMonitor));
-            broadcast(new ClientBoundMessagePacket(new JoinRoomMessage(player.getId(), player.getName())));
+            broadcast(ClientBoundOnJoinRoomPacket.create(player.toProtocol(), isMonitor));
+            broadcast(ClientBoundMessagePacket.create(new JoinRoomMessage(player.getId(), player.getName())));
         }
 
         handleJoin(player);
@@ -95,7 +95,7 @@ public class Room {
     public synchronized void leave(Player player) {
         if (!players.remove(player) && !monitors.remove(player)) return;
 
-        broadcast(new ClientBoundMessagePacket(new LeaveRoomMessage(player.getId(), player.getName())));
+        broadcast(ClientBoundMessagePacket.create(new LeaveRoomMessage(player.getId(), player.getName())));
         handleLeave(player);
 
         if (players.isEmpty() && monitors.isEmpty()) {
@@ -104,7 +104,7 @@ public class Room {
             }
         } else if (setting.host && player.equals(host)) {
             host = players.iterator().next(); // 转移 Host 给任意剩余玩家
-            host.getConnection().send(new ClientBoundChangeHostPacket(true));
+            host.getConnection().send(ClientBoundChangeHostPacket.create(true));
         }
     }
 
@@ -134,7 +134,7 @@ public class Room {
 
             setting.locked = !setting.locked;
 
-            broadcast(new ClientBoundMessagePacket(new LockRoomMessage(setting.locked)));
+            broadcast(ClientBoundMessagePacket.create(new LockRoomMessage(setting.locked)));
 
         }
 
@@ -145,7 +145,7 @@ public class Room {
 
             setting.cycle = !setting.cycle;
 
-            broadcast(new ClientBoundMessagePacket(new CycleRoomMessage(setting.cycle)));
+            broadcast(ClientBoundMessagePacket.create(new CycleRoomMessage(setting.cycle)));
 
         }
 
@@ -163,8 +163,8 @@ public class Room {
             }).apply(id);
 
             state.setChart(info);
-            broadcast(new ClientBoundMessagePacket(new SelectChartMessage(player.getId(), info.getName(), id)));
-            broadcast(new ClientBoundChangeStatePacket(state.toProtocol()));
+            broadcast(ClientBoundMessagePacket.create(new SelectChartMessage(player.getId(), info.getName(), id)));
+            broadcast(ClientBoundChangeStatePacket.create(state.toProtocol()));
         }
 
         public void chat(Player player, String message) {
@@ -172,16 +172,16 @@ public class Room {
                 throw new IllegalStateException("房间未启用聊天");
             }
 
-            broadcast(new ClientBoundMessagePacket(new ChatMessage(player.getId(), message)));
+            broadcast(ClientBoundMessagePacket.create(new ChatMessage(player.getId(), message)));
         }
 
         public void touchSend(Player player, List<TouchFrame> touchFrames) {
-            ClientBoundTouchesPacket packet = new ClientBoundTouchesPacket(player.getId(), touchFrames);
+            ClientBoundTouchesPacket packet = ClientBoundTouchesPacket.create(player.getId(), touchFrames);
             monitors.forEach(p -> p.getConnection().send(packet));
         }
 
         public void judgeSend(Player player, List<JudgeEvent> judgeEvents) {
-            ClientBoundJudgesPacket packet = new ClientBoundJudgesPacket(player.getId(), judgeEvents);
+            ClientBoundJudgesPacket packet = ClientBoundJudgesPacket.create(player.getId(), judgeEvents);
             monitors.forEach(p -> p.getConnection().send(packet));
         }
 
@@ -214,7 +214,7 @@ public class Room {
 
     private void updateState(RoomGameState newState) {
         this.state = newState;
-        broadcast(new ClientBoundChangeStatePacket(newState.toProtocol()));
+        broadcast(ClientBoundChangeStatePacket.create(newState.toProtocol()));
     }
 
     public void broadcast(ClientBoundPacket packet) {
@@ -247,7 +247,7 @@ public class Room {
     private final ProtocolHack protocolHack = new ProtocolHack();
 
     public class ProtocolHack {
-        public ClientBoundJoinRoomPacket.Success buildJoinSuccessPacket() {
+        public ClientBoundJoinRoomPacket buildJoinSuccessPacket() {
 
             GameState protocolState;
             ChartInfo chart = state.getChart();
@@ -257,7 +257,7 @@ public class Room {
                 protocolState = state.toProtocol();
             }
 
-            return new ClientBoundJoinRoomPacket.Success(
+            return ClientBoundJoinRoomPacket.success(
                     protocolState,
                     players.stream().map(Player::toProtocol).toList(),
                     monitors.stream().map(Player::toProtocol).toList(),
@@ -274,14 +274,14 @@ public class Room {
 
             executor.execute(() -> {
                 if (!isHost(player)) {
-                    connection.send(new ClientBoundChangeHostPacket(false));
+                    connection.send(ClientBoundChangeHostPacket.create(false));
                 }
 
                 if (setting.live) {
                     String name = "录制状态设置器(请忽略该账号)";
-                    connection.send(new ClientBoundOnJoinRoomPacket(new FullUserProfile(-1, name, true)));
-                    connection.send(new ClientBoundMessagePacket(new JoinRoomMessage(-1, name)));
-                    connection.send(new ClientBoundMessagePacket(new LeaveRoomMessage(-1, name)));
+                    connection.send(ClientBoundOnJoinRoomPacket.create(new FullUserProfile(-1, name, true)));
+                    connection.send(ClientBoundMessagePacket.create(new JoinRoomMessage(-1, name)));
+                    connection.send(ClientBoundMessagePacket.create(new LeaveRoomMessage(-1, name)));
                 }
 
                 if (!(state instanceof RoomSelectChart && state.getChart() == null)) {
@@ -302,14 +302,14 @@ public class Room {
             PlayerConnection connection = player.getConnection();
             ChartInfo chart = state.getChart();
             if (chart != null) {
-                connection.send(new ClientBoundChangeStatePacket(new SelectChart(chart.getId())));
+                connection.send(ClientBoundChangeStatePacket.create(new SelectChart(chart.getId())));
             }
 
             if (state instanceof RoomSelectChart) {
                 return;
             }
 
-            executor.execute(() -> connection.send(new ClientBoundChangeStatePacket(state.toProtocol())));
+            executor.execute(() -> connection.send(ClientBoundChangeStatePacket.create(state.toProtocol())));
         }
     }
 

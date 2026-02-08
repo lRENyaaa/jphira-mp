@@ -9,7 +9,7 @@ import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.main.network.handler.RoomHandler;
 import top.rymc.phira.protocol.data.RoomInfo;
 import top.rymc.phira.protocol.data.UserProfile;
-import top.rymc.phira.protocol.handler.PacketHandler;
+import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -42,7 +42,7 @@ public class Player implements ProtocolConvertible<UserProfile> {
     }
 
     public Optional<Room> getRoom() {
-        PacketHandler h = connection.getPacketHandler();
+        ServerBoundPacketHandler h = connection.getPacketHandler();
         return (h instanceof RoomHandler rh) ? Optional.of(rh.getRoom()) : Optional.empty();
     }
 
