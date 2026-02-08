@@ -8,14 +8,14 @@ import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.util.PhiraFetcher;
 import top.rymc.phira.protocol.data.FullUserProfile;
 import top.rymc.phira.protocol.data.RoomInfo;
-import top.rymc.phira.protocol.handler.SimplePacketHandler;
+import top.rymc.phira.protocol.handler.server.SimpleServerBoundPacketHandler;
 import top.rymc.phira.protocol.packet.ServerBoundPacket;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundAuthenticatePacket;
 import top.rymc.phira.protocol.packet.serverbound.*;
 
 import java.util.Optional;
 
-public class AuthenticateHandler extends SimplePacketHandler {
+public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
 
     private final PlayerConnection connection;
 
@@ -45,12 +45,12 @@ public class AuthenticateHandler extends SimplePacketHandler {
                 room.getProtocolHack().forceSyncInfo(player);
             }
 
-            connection.send(new ClientBoundAuthenticatePacket.Success(new FullUserProfile(userInfo.getId(), userInfo.getName(), false), info));
+            connection.send(ClientBoundAuthenticatePacket.success(new FullUserProfile(userInfo.getId(), userInfo.getName(), false), info));
 
             System.out.printf("%s has logged in as [%s] %s%n", connection.getRemoteAddressAsString(), userInfo.getId(), userInfo.getName());
 
         } catch (Exception e) {
-            connection.send(new ClientBoundAuthenticatePacket.Failed(e.getMessage()));
+            connection.send(ClientBoundAuthenticatePacket.failed(e.getMessage()));
             connection.close();
         }
     }

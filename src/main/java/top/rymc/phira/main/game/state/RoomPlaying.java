@@ -56,7 +56,7 @@ public final class RoomPlaying extends RoomGameState {
     @Override
     public void abort(Player player, Set<Player> players, Set<Player> monitors) {
         try {
-            broadcast(players, monitors, new ClientBoundMessagePacket(new AbortMessage(player.getId())));
+            broadcast(players, monitors, ClientBoundMessagePacket.create(new AbortMessage(player.getId())));
         } finally {
             updateState(player,players,monitors);
         }
@@ -75,7 +75,7 @@ public final class RoomPlaying extends RoomGameState {
             float accuracy = record.getAccuracy(); // todo
             boolean fullCombo = record.isFullCombo();
 
-            broadcast(players, monitors, new ClientBoundMessagePacket(new PlayedMessage(id, score, accuracy, fullCombo)));
+            broadcast(players, monitors, ClientBoundMessagePacket.create(new PlayedMessage(id, score, accuracy, fullCombo)));
         } finally {
             updateState(player,players,monitors);
         }
@@ -86,7 +86,7 @@ public final class RoomPlaying extends RoomGameState {
         if (isAllOnlinePlayersDone(players, monitors)) {
             RoomSelectChart state = new RoomSelectChart(stateUpdater, chart);
             updateGameState(state, players, monitors);
-            broadcast(players, monitors, new ClientBoundMessagePacket(new GameEndMessage()));
+            broadcast(players, monitors, ClientBoundMessagePacket.create(GameEndMessage.INSTANCE));
         }
 
     }

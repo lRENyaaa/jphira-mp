@@ -10,7 +10,7 @@ import lombok.Setter;
 import org.apache.logging.log4j.Logger;
 import top.rymc.phira.main.Main;
 import top.rymc.phira.protocol.data.message.ChatMessage;
-import top.rymc.phira.protocol.handler.PacketHandler;
+import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 import top.rymc.phira.protocol.packet.ClientBoundPacket;
 import top.rymc.phira.protocol.packet.ServerBoundPacket;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundMessagePacket;
@@ -28,7 +28,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
     private final InetSocketAddress remoteAddress;
 
     @Setter
-    private PacketHandler packetHandler;
+    private ServerBoundPacketHandler packetHandler;
 
     private final List<Consumer<ChannelHandlerContext>> closeHandlers = new ArrayList<>();
 
@@ -95,7 +95,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
     }
 
     public void sendChat(String message) {
-        this.send(new ClientBoundMessagePacket(new ChatMessage(-1,message)));
+        this.send(ClientBoundMessagePacket.create(new ChatMessage(-1,message)));
     }
 
     public boolean isClosed() {
