@@ -35,7 +35,7 @@ public final class RoomSelectChart extends RoomGameState {
             RoomPlaying state = new RoomPlaying(stateUpdater, chart);
             updateGameState(state, players, monitors);
         } else {
-            RoomWaitForReady state = new RoomWaitForReady(stateUpdater, chart);
+            RoomWaitForReady state = new RoomWaitForReady(stateUpdater, chart, player);
             updateGameState(state, players, monitors);
             broadcast(players, monitors, ClientBoundMessagePacket.create(new GameStartMessage(player.getId())));
         }

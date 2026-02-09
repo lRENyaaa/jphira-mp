@@ -4,7 +4,9 @@ import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.protocol.data.message.CancelReadyMessage;
 import top.rymc.phira.protocol.data.message.GameEndMessage;
+import top.rymc.phira.protocol.data.message.GameStartMessage;
 import top.rymc.phira.protocol.data.message.ReadyMessage;
+import top.rymc.phira.protocol.data.message.StartPlayingMessage;
 import top.rymc.phira.protocol.data.state.GameState;
 import top.rymc.phira.protocol.data.state.WaitForReady;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundMessagePacket;
@@ -23,8 +25,9 @@ public final class RoomWaitForReady extends RoomGameState {
 
     private final Set<Player> readyPlayers = ConcurrentHashMap.newKeySet();
 
-    public RoomWaitForReady(Consumer<RoomGameState> stateUpdater, ChartInfo chart){
+    public RoomWaitForReady(Consumer<RoomGameState> stateUpdater, ChartInfo chart, Player initiator) {
         super(stateUpdater, chart);
+        readyPlayers.add(initiator);
     }
 
     @Override
@@ -69,6 +72,7 @@ public final class RoomWaitForReady extends RoomGameState {
         if (isAllOnlinePlayersDone(players, monitors)) {
             RoomPlaying state = new RoomPlaying(stateUpdater, chart);
             updateGameState(state, players, monitors);
+            broadcast(players, monitors, ClientBoundMessagePacket.create(StartPlayingMessage.INSTANCE));
         }
 
     }

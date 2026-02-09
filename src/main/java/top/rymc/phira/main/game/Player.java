@@ -29,7 +29,7 @@ public class Player implements ProtocolConvertible<UserProfile> {
     public void bind(PlayerConnection newConn) {
         if (this.connection != null) {
             this.connection.sendChat("账号在其他地方登录");
-            this.connection.close(); // 关闭旧连接
+            this.connection.close();
         }
         this.connection = newConn;
 
