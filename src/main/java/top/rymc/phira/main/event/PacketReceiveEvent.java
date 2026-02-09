@@ -2,6 +2,7 @@ package top.rymc.phira.main.event;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.plugin.event.CancellableEvent;
 import top.rymc.phira.protocol.packet.ServerBoundPacket;
 
@@ -9,6 +10,7 @@ import top.rymc.phira.protocol.packet.ServerBoundPacket;
 @Getter
 public class PacketReceiveEvent extends CancellableEvent {
 
+    private final PlayerConnection connection;
     private final ServerBoundPacket packet;
 
 }

@@ -7,6 +7,7 @@ import top.rymc.phira.main.network.handler.PlayHandler;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,8 +25,15 @@ public class PlayerManager {
         });
     }
 
-    public static Player getPlayer(int playerId) {
-        return PLAYERS.get(playerId);
+    public static Optional<Player> getPlayer(PlayerConnection connection) {
+        return PLAYERS.values()
+                .stream()
+                .filter(player -> player.getConnection() == connection)
+                .findFirst();
+    }
+
+    public static Optional<Player> getPlayer(int playerId) {
+        return Optional.ofNullable(PLAYERS.get(playerId));
     }
 
     public static boolean isOnline(int playerId) {

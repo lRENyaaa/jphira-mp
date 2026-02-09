@@ -6,7 +6,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.timeout.ReadTimeoutException;
 import lombok.Getter;
-import lombok.Setter;
 import org.apache.logging.log4j.Logger;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.event.PacketReceiveEvent;
@@ -33,7 +32,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
     private ServerBoundPacketHandler packetHandler;
 
     public void setPacketHandler(ServerBoundPacketHandler packetHandler) {
-        PlayerSwitchPacketHandlerEvent event = new PlayerSwitchPacketHandlerEvent(this.packetHandler, packetHandler);
+        PlayerSwitchPacketHandlerEvent event = new PlayerSwitchPacketHandlerEvent(this, this.packetHandler, packetHandler);
         Server.postEvent(event);
         this.packetHandler = event.getNewHandler();
     }
@@ -62,7 +61,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
 
         ServerBoundPacket packet = (ServerBoundPacket) msg;
 
-        PacketReceiveEvent event = new PacketReceiveEvent(packet);
+        PacketReceiveEvent event = new PacketReceiveEvent(this, packet);
 
         if (Server.postEvent(event)) {
             return;
@@ -106,7 +105,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
             return Optional.empty();
         }
 
-        PacketSendEvent event = new PacketSendEvent(packet);
+        PacketSendEvent event = new PacketSendEvent(this, packet);
         if (Server.postEvent(event)) {
             return Optional.empty();
         }
