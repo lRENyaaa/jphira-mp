@@ -1,5 +1,5 @@
 # jphira-mp
-Java 实现的 [phira-mp](https://github.com/TeamFlos/phira-mp) 服务端
+Java 实现的 [phira-mp](https://github.com/TeamFlos/phira-mp) 服务端，仍在早期开发中
 
 ## ⚙️ 特性
 * Java 实现
@@ -18,6 +18,37 @@ Java 实现的 [phira-mp](https://github.com/TeamFlos/phira-mp) 服务端
 ``` bash
 java -jar jphira-mp-<version>.jar --port 12346
 ```
+
+当前 jphira-mp 可用的命令行参数:
+* `--help`: 显示帮助信息
+* `--port <port>`: 指定服务器监听端口，默认为 `12345`
+* `--host <host>`: 指定服务器监听地址，默认为 `0.0.0.0`
+* `--plugin <folder>`: 指定插件目录，默认为 `plugins`
+
+关闭 jphira-mp 同样与 Minecraft 服务端类似，在控制台输入 `stop` 命令即可关闭服务器。
+
+## 🔌 插件开发
+[![](https://jitpack.io/v/lRENyaaa/jphira-mp.svg)](https://jitpack.io/#lRENyaaa/jphira-mp)  
+jphira-mp 在 [JitPack](https://jitpack.io/) 上可用
+
+```xml
+<repository>
+    <id>jitpack.io</id>
+    <url>https://jitpack.io</url>
+</repository>
+```
+
+```xml
+<dependency>
+    <groupId>com.github.lRENyaaa</groupId>
+    <artifactId>jphira-mp</artifactId>
+    <version>1.0.0-dev-20260209-07</version>
+</dependency>
+```
+
+通过 [jphira-mp-example-plugin](https://github.com/lRENyaaa/jphira-mp-example-plugin) 了解API基本用法。
+
+**请注意: jphira-mp 还在早期开发中，当前插件API可能会频繁变更**
 
 ## 📜 致谢
 jphira-mp 基于如下项目:
