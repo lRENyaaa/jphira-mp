@@ -24,7 +24,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 group = 'top.rymc'
-version = '1.0.0-dev-20260209-01'
+version = '1.0.0-dev-20260209-03'
 
 repositories {
     mavenCentral()
