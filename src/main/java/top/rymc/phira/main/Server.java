@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.io.IoBuilder;
+import top.rymc.phira.main.command.CommandService;
 import top.rymc.phira.main.network.ServerChannelInitializer;
 import top.rymc.phira.plugin.core.PluginManager;
 import top.rymc.phira.plugin.event.CancellableEvent;
@@ -91,11 +92,13 @@ public class Server {
         initPlugins();
         initNetwork();
 
+        new CommandService(LogManager.getLogger("cmd-service")).start();
+
         logger.info("Server started successfully on port {}", port);
     }
 
     private void initPlugins() {
-        logger.info("Loading plugins from: {}", pluginsDir.toAbsolutePath());
+        logger.info("Loading plugins...");
 
         pluginManager = new PluginManager(logger, pluginsDir);
         pluginManager.loadAll();

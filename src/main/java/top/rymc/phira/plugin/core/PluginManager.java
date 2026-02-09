@@ -1,9 +1,10 @@
 package top.rymc.phira.plugin.core;
 
-import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import lombok.Getter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import top.rymc.phira.main.util.GsonUtil;
 import top.rymc.phira.plugin.Listener;
 import top.rymc.phira.plugin.Plugin;
 import top.rymc.phira.plugin.PluginLifecycle;
@@ -21,7 +22,6 @@ import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 
 public class PluginManager {
-    private static final Gson GSON = new Gson();
 
     private final Map<String, PluginContainer> plugins = new ConcurrentHashMap<>();
     private final MiniInjector injector = new MiniInjector();
@@ -93,28 +93,30 @@ public class PluginManager {
     }
 
     private PluginCandidate loadCandidate(Path jar) throws Exception {
-        PluginDescription desc = readDescription(jar);
-        if (desc == null) throw new IllegalStateException("No plugin.json");
-        if (desc.main == null) throw new IllegalStateException("Missing 'main' in plugin.json");
+        String mainClassPath = readMainClassPath(jar);
+        if (mainClassPath == null) throw new IllegalStateException("Missing 'main' in plugin.json");
 
         PluginClassLoader loader = new PluginClassLoader(jar, getClass().getClassLoader());
-        Class<?> mainClass = loader.loadClass(desc.main);
+        Class<?> mainClass = loader.loadClass(mainClassPath);
 
         Plugin annotation = mainClass.getAnnotation(Plugin.class);
         if (annotation == null) {
             throw new IllegalStateException("Main class missing @Plugin annotation");
         }
 
-        return new PluginCandidate(jar, loader, mainClass, annotation, desc.dependencies);
+        return new PluginCandidate(jar, loader, mainClass, annotation, List.of(annotation.dependencies()));
     }
 
-    private PluginDescription readDescription(Path jar) {
+    private String readMainClassPath(Path jar) {
         try (JarFile jarFile = new JarFile(jar.toFile())) {
             ZipEntry entry = jarFile.getEntry("plugin.json");
-            if (entry == null) return null;
+            if (entry == null) {
+                throw new IllegalStateException("No plugin.json");
+            }
 
             try (InputStream is = jarFile.getInputStream(entry)) {
-                return GSON.fromJson(new InputStreamReader(is), PluginDescription.class);
+                JsonObject json = GsonUtil.getGson().fromJson(new InputStreamReader(is), JsonObject.class);
+                return json.has("main") ? json.get("main").getAsString() : null;
             }
         } catch (IOException e) {
             serverLogger.error("Failed to read plugin.json from {}", jar.getFileName(), e);
@@ -164,24 +166,18 @@ public class PluginManager {
         }
     }
 
-    private void tryEnablePlugin(PluginCandidate candidate) throws Exception {
+    private void tryEnablePlugin(PluginCandidate candidate) {
         checkDependencies(candidate);
 
-        // 1. 准备数据目录
         Path dataFolder = prepareDataFolder(candidate.id());
 
-        // 2. 创建临时容器（instance 为 null）并绑定到注入器
-        // 关键：必须在实例化前绑定，供 @Inject PluginContainer 使用
         PluginContainer container = bindContainerAndServices(candidate, dataFolder);
 
-        // 3. 实例化插件（此时可以注入 Container 和 Logger）
         Object instance = injector.getInstance(candidate.mainClass());
 
-        // 4. 更新容器中的实例（创建包含 instance 的新容器）
         container = createContainerWithInstance(container, instance);
         plugins.put(candidate.id(), container);
 
-        // 5. 后续初始化
         subscribeListeners(container, instance);
         fireLifecycleEvent(container, LifecycleEvent.State.ENABLE);
         callLifecycleHook(instance, PluginLifecycle::onEnable);
@@ -207,19 +203,16 @@ public class PluginManager {
     }
 
     private PluginContainer bindContainerAndServices(PluginCandidate candidate, Path dataFolder) {
-        // 创建临时容器（instance 先传 null）
         PluginContainer container = new PluginContainer(
                 candidate.id(),
-                null,  // 先不传实例
+                null,
                 candidate.loader(),
                 candidate.annotation(),
                 dataFolder
         );
 
-        // 绑定容器（供插件注入使用）
         injector.bind(PluginContainer.class, container);
 
-        // 绑定插件专属 Logger
         Logger pluginLogger = LogManager.getLogger(candidate.id());
         injector.bind(Logger.class, pluginLogger);
 
@@ -227,7 +220,6 @@ public class PluginManager {
     }
 
     private PluginContainer createContainerWithInstance(PluginContainer old, Object instance) {
-        // 创建包含实例的新容器（如果 PluginContainer 是不可变对象）
         return new PluginContainer(
                 old.getId(),
                 instance,
@@ -258,9 +250,13 @@ public class PluginManager {
     }
 
     public void disablePlugin(String id) {
-        PluginContainer container = plugins.remove(id);
-        if (container == null) return;
-        disableContainer(container);
+        try {
+            PluginContainer container = plugins.remove(id);
+            if (container == null) return;
+            disableContainer(container);
+        } catch (Exception e) {
+            serverLogger.error("Error disabling plugin {}", id, e);
+        }
     }
 
     private void disableContainer(PluginContainer container) {
@@ -292,13 +288,6 @@ public class PluginManager {
         return plugins.size();
     }
 
-    // JSON 映射类
-    private static class PluginDescription {
-        String main;
-        List<String> dependencies = Collections.emptyList();
-    }
-
-    // 候选记录类
     private record PluginCandidate(
             Path jar,
             PluginClassLoader loader,

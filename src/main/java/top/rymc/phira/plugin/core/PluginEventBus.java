@@ -34,7 +34,7 @@ public class PluginEventBus {
         for (Object listener : plugin.getListeners()) {
             orbit.unsubscribe(listener);
         }
-        plugin.getListeners().clear();
+        plugin.clearListeners();
     }
 
     public <T extends Event> T post(T event) {

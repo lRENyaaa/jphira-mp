@@ -29,7 +29,6 @@ public class PluginContainer {
     @Getter
     private volatile boolean enabled = false;
 
-    // 构造器1：用于实例化前（instance 为 null）
     public PluginContainer(String id, Object instance, ClassLoader loader, Plugin meta, Path dataFolder) {
         this.id = id;
         this.instance = instance;
@@ -43,4 +42,8 @@ public class PluginContainer {
 
     void addListener(Object listener) { listeners.add(listener); }
     Set<Object> getListeners() { return Collections.unmodifiableSet(listeners); }
+
+    void clearListeners() {
+        listeners.clear();
+    }
 }

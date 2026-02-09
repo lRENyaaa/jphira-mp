@@ -11,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.event.PacketReceiveEvent;
 import top.rymc.phira.main.event.PacketSendEvent;
+import top.rymc.phira.main.event.PlayerSwitchPacketHandlerEvent;
 import top.rymc.phira.protocol.data.message.ChatMessage;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 import top.rymc.phira.protocol.packet.ClientBoundPacket;
@@ -29,8 +30,13 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
     private final Channel channel;
     private final InetSocketAddress remoteAddress;
 
-    @Setter
     private ServerBoundPacketHandler packetHandler;
+
+    public void setPacketHandler(ServerBoundPacketHandler packetHandler) {
+        PlayerSwitchPacketHandlerEvent event = new PlayerSwitchPacketHandlerEvent(this.packetHandler, packetHandler);
+        Server.postEvent(event);
+        this.packetHandler = event.getNewHandler();
+    }
 
     private final List<Consumer<ChannelHandlerContext>> closeHandlers = new ArrayList<>();
 
