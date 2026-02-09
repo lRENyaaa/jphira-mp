@@ -2,6 +2,7 @@ import com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCach
 
 plugins {
     id 'java'
+    id 'maven-publish'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
@@ -9,13 +10,21 @@ build.dependsOn shadowJar
 
 shadowJar {
     transform Log4j2PluginsCacheFileTransformer
-}
+    archiveClassifier.set("")
 
-jar {
     manifest {
         attributes 'Main-Class': 'top.rymc.phira.main.Server'
         attributes 'Multi-Release': 'true'
     }
+}
+
+jar {
+    enabled = false
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -24,7 +33,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 group = 'top.rymc'
-version = '1.0.0-dev-20260209-03'
+version = '1.0.0-dev-20260209-05'
 
 repositories {
     mavenCentral()
@@ -61,4 +70,25 @@ dependencies {
 
     implementation "meteordevelopment:orbit:0.2.3"
 
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            project.shadow.component(it)
+
+            groupId = project.group
+            artifactId = 'jphira-mp'
+            version = project.version
+        }
+    }
+}
+
+
+tasks.withType(PublishToMavenLocal).configureEach {
+    dependsOn(tasks.shadowJar)
+}
+
+tasks.withType(PublishToMavenRepository).configureEach {
+    dependsOn(tasks.shadowJar)
 }
