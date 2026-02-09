@@ -1,4 +1,4 @@
-package top.rymc.phira.main.function.throwable;
+package top.rymc.phira.function.throwable;
 
 import java.util.Objects;
 import java.util.function.BiPredicate;

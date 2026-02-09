@@ -6,9 +6,9 @@ import lombok.Setter;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.data.GameRecord;
 import top.rymc.phira.main.data.UserInfo;
-import top.rymc.phira.main.function.throwable.ThrowableFunction;
-import top.rymc.phira.main.function.throwable.ThrowableIntFunction;
-import top.rymc.phira.main.function.throwable.ThrowableSupplier;
+import top.rymc.phira.function.throwable.ThrowableFunction;
+import top.rymc.phira.function.throwable.ThrowableIntFunction;
+import top.rymc.phira.function.throwable.ThrowableSupplier;
 
 import java.io.IOException;
 import java.net.URI;

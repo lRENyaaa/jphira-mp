@@ -1,4 +1,4 @@
-package top.rymc.phira.main.function.throwable;
+package top.rymc.phira.function.throwable;
 
 import java.util.function.Function;
 import java.util.function.IntFunction;
