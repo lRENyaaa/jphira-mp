@@ -16,10 +16,6 @@ import top.rymc.phira.protocol.packet.serverbound.ServerBoundJoinRoomPacket;
 public class PlayHandler extends SimpleServerBoundPacketHandler {
     private final Player player;
 
-    /**
-     * 创建 PlayHandler
-     * @return PlayHandler 实例，如果恢复了 RoomSession 则返回 null（因为 Handler 已被替换）
-     */
     public static PlayHandler create(Player player) {
         return new PlayHandler(player);
     }
@@ -33,7 +29,7 @@ public class PlayHandler extends SimpleServerBoundPacketHandler {
     public void handle(ServerBoundCreateRoomPacket packet) {
         try {
             Room room = RoomManager.createRoom(packet.getRoomId(), player);
-            // 创建成功后切换到 RoomHandler
+
             RoomHandler roomHandler = new RoomHandler(player, room, this);
             player.getConnection().setPacketHandler(roomHandler);
 
@@ -79,6 +75,7 @@ public class PlayHandler extends SimpleServerBoundPacketHandler {
             connection.send(room.getProtocolHack().buildJoinSuccessPacket());
 
             room.getProtocolHack().fixClientRoomState(player);
+            room.getProtocolHack().forceSyncHost(player);
 
         } catch (Exception e) {
             connection.send(ClientBoundJoinRoomPacket.failed(e.getMessage()));
@@ -87,7 +84,6 @@ public class PlayHandler extends SimpleServerBoundPacketHandler {
 
     @Override
     protected void onUnhandledPacket(ServerBoundPacket packet) {
-        // 在 Play 状态下收到无法处理的包（如游戏操作），踢掉
         player.kick();
     }
 }

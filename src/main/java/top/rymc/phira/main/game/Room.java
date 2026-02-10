@@ -50,7 +50,7 @@ public class Room {
 
     private volatile RoomGameState state;
     @Getter
-    private final RoomSetting setting = new RoomSetting();
+    private final RoomSetting setting;
 
     @Getter
     @Setter(AccessLevel.PRIVATE)
@@ -60,12 +60,30 @@ public class Room {
         private int maxPlayer = 8;
         private boolean locked = false;
         private boolean cycle = false;
-        private boolean live = true;
+        private boolean live = false;
         private boolean chat = true;
+
+        private RoomSetting() {}
+
+        public RoomSetting(boolean autoDestroy, boolean host, int maxPlayer, boolean locked, boolean cycle, boolean live, boolean chat) {
+            this.autoDestroy = autoDestroy;
+            this.host = host;
+            this.maxPlayer = maxPlayer;
+            this.locked = locked;
+            this.cycle = cycle;
+            this.live = live;
+            this.chat = chat;
+        }
+    }
+
+    public static Room create(String roomId, Consumer<Room> onDestroy, RoomSetting setting) {
+        Room room = new Room(roomId, onDestroy, setting);
+        room.state = new RoomSelectChart(room::updateState);
+        return room;
     }
 
     public static Room create(String roomId, Consumer<Room> onDestroy, Player hostPlayer) {
-        Room room = new Room(roomId, onDestroy);
+        Room room = new Room(roomId, onDestroy, new RoomSetting());
         room.state = new RoomSelectChart(room::updateState);
         room.join(hostPlayer, false);
         room.host = hostPlayer;
@@ -266,6 +284,16 @@ public class Room {
         }
 
         private static final Executor executor = CompletableFuture.delayedExecutor(1, TimeUnit.MILLISECONDS);
+
+        public void forceSyncHost(Player player) {
+            if (!isInRoom(player)) return; // TODO: Throw exception
+
+            PlayerConnection connection = player.getConnection();
+
+            executor.execute(() -> {
+                connection.send(ClientBoundChangeHostPacket.create(isHost(player)));
+            });
+        }
 
         public void forceSyncInfo(Player player) {
             if (!isInRoom(player)) return; // TODO: Throw exception

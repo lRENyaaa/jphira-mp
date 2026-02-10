@@ -1,4 +1,4 @@
-package ltd.rymc.phira.logger.util;
+package top.rymc.phira.logger.util;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LogEvent;
