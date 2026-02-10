@@ -42,5 +42,5 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           automatic_release_tag: ${{ steps.version.outputs.version }}
           prerelease: true
-          title: Pre-release ${{ steps.version.outputs.version }}
+          title: v${{ steps.version.outputs.version }}
           files: build/libs/*.jar
