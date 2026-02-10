@@ -1,11 +1,13 @@
 package top.rymc.phira.main.event;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import top.rymc.phira.main.game.Room;
 import top.rymc.phira.main.game.state.RoomGameState;
 import top.rymc.phira.plugin.event.Event;
 
 @RequiredArgsConstructor
+@Getter
 public class RoomStateChangeEvent extends Event {
     private final Room room;
     private final RoomGameState oldState;
