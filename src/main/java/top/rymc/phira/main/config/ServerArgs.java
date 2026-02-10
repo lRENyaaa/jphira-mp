@@ -1,5 +1,6 @@
 package top.rymc.phira.main.config;
 
+import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
@@ -14,6 +15,7 @@ public class ServerArgs {
     private final int port;
     private final String host;
     private final Path pluginsDir;
+    private final boolean proxyProtocol;
 
     public ServerArgs(String[] args) {
         OptionParser parser = new OptionParser();
@@ -33,6 +35,11 @@ public class ServerArgs {
                 .ofType(String.class)
                 .defaultsTo("plugins");
 
+        OptionSpec<Boolean> proxyProtocol = parser.accepts("proxy-protocol", "Enable proxy protocol support")
+                .withOptionalArg()
+                .ofType(Boolean.class)
+                .defaultsTo(false);
+
         parser.accepts("help", "Show this help message").forHelp();
 
         OptionSet options;
@@ -42,7 +49,7 @@ public class ServerArgs {
             System.err.println("Failed to parse arguments: " + e.getMessage());
             printHelp(parser);
             System.exit(1);
-            throw new AssertionError(); // unreachable
+            throw new AssertionError();
         }
 
         if (options.has("help")) {
@@ -53,6 +60,7 @@ public class ServerArgs {
         this.port = options.valueOf(portSpec);
         this.host = options.valueOf(hostSpec);
         this.pluginsDir = Paths.get(options.valueOf(pluginsSpec));
+        this.proxyProtocol = options.valueOf(proxyProtocol);
     }
 
     private void printHelp(OptionParser parser) {

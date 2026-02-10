@@ -2,8 +2,11 @@ package top.rymc.phira.main.network;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
+import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import top.rymc.phira.main.Server;
 import top.rymc.phira.main.network.handler.AuthenticateHandler;
+import top.rymc.phira.main.network.haproxy.HAProxyHandshakeHandler;
 import top.rymc.phira.protocol.codec.decoder.FrameDecoder;
 import top.rymc.phira.protocol.codec.decoder.HandshakeDecoder;
 import top.rymc.phira.protocol.codec.decoder.ServerPacketDecoder;
@@ -16,8 +19,32 @@ import java.util.concurrent.TimeUnit;
 public class ServerChannelInitializer extends ChannelInitializer<Channel> {
     @Override
     protected void initChannel(Channel channel) {
+        InetSocketAddress originalRemoteAddress = (InetSocketAddress) channel.remoteAddress();
+        if (!Server.getInstance().getArgs().isProxyProtocol()) {
+            initChannel0(channel, originalRemoteAddress);
+            return;
+        }
 
-        InetSocketAddress remoteAddress = (InetSocketAddress) channel.remoteAddress();
+        channel.pipeline().addLast(new HAProxyMessageDecoder());
+
+        HAProxyHandshakeHandler haProxyHandler = new HAProxyHandshakeHandler();
+        channel.pipeline().addLast(haProxyHandler);
+
+        haProxyHandler.getRealAddress().whenComplete((remoteAddress, throwable) -> {
+            if (throwable != null) {
+                System.out.printf("Disconnecting %s: %s%n", originalRemoteAddress, throwable.getMessage());
+                if (channel.isActive()) {
+                    channel.close();
+                }
+                return;
+            }
+
+            initChannel0(channel, remoteAddress);
+        });
+
+    }
+
+    private void initChannel0(Channel channel, InetSocketAddress remoteAddress) {
         String ipPort = remoteAddress.getAddress().getHostAddress() + ":" + remoteAddress.getPort();
 
         System.out.printf("Establishing a connection from %s%n",ipPort);
@@ -39,7 +66,7 @@ public class ServerChannelInitializer extends ChannelInitializer<Channel> {
             channel.pipeline()
                     .addLast(new FrameDecoder())
                     .addLast(new FrameEncoder())
-                    .addLast(new ReadTimeoutHandler(5000, TimeUnit.MILLISECONDS))
+                    .addLast(new ReadTimeoutHandler(5, TimeUnit.SECONDS))
                     .addLast(new ServerPacketDecoder())
                     .addLast(new ServerPacketEncoder());
 
@@ -47,6 +74,5 @@ public class ServerChannelInitializer extends ChannelInitializer<Channel> {
             connection.setPacketHandler(new AuthenticateHandler(connection));
             channel.pipeline().addLast(connection);
         });
-
     }
 }

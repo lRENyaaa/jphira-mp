@@ -49,6 +49,8 @@ public class Server {
     private Channel serverChannel;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
+
+    @Getter
     private ServerArgs args;
 
     public static void main(String[] args) {
@@ -58,7 +60,7 @@ public class Server {
         try {
             server.start(serverArgs);
         } catch (Exception e) {
-            server.getLogger().fatal("Server failed to start", e);
+            server.getLogger().throwing(e);
             System.exit(1);
         }
 
