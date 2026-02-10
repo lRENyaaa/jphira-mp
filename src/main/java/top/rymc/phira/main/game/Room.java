@@ -4,7 +4,9 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
+import top.rymc.phira.main.event.RoomStateChangeEvent;
 import top.rymc.phira.main.game.state.RoomGameState;
 import top.rymc.phira.main.game.state.RoomPlaying;
 import top.rymc.phira.main.game.state.RoomSelectChart;
@@ -285,6 +287,9 @@ public class Room {
     }
 
     private void updateState(RoomGameState newState) {
+        RoomStateChangeEvent event = new RoomStateChangeEvent(this, this.state, newState);
+        Server.postEvent(event);
+        
         this.state = newState;
         broadcast(ClientBoundChangeStatePacket.create(newState.toProtocol()));
     }
@@ -393,6 +398,14 @@ public class Room {
 
             executor.execute(() -> connection.send(ClientBoundChangeStatePacket.create(state.toProtocol())));
         }
+    }
+
+    public Set<Player> getPlayers() {
+        return Collections.unmodifiableSet(players);
+    }
+
+    public Set<Player> getMonitors() {
+        return Collections.unmodifiableSet(monitors);
     }
 
 }
