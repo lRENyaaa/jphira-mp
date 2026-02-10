@@ -18,6 +18,7 @@ import top.rymc.phira.protocol.packet.ServerBoundPacket;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundMessagePacket;
 
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -82,6 +83,11 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
 
         if (cause instanceof ReadTimeoutException) {
             logger.error("{}: read timed out", getRemoteAddressAsString());
+            return;
+        }
+
+        if (cause instanceof SocketException) {
+            logger.info("{}: {}", getRemoteAddressAsString(), cause.getMessage());
             return;
         }
 

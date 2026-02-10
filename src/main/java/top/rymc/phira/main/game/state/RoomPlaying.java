@@ -83,7 +83,7 @@ public final class RoomPlaying extends RoomGameState {
 
     private void updateState(Player player, Set<Player> players, Set<Player> monitors) {
         donePlayers.add(player);
-        if (isAllOnlinePlayersDone(players, monitors)) {
+        if (isAllOnlinePlayersDone(players)) {
             RoomSelectChart state = new RoomSelectChart(stateUpdater, chart);
             updateGameState(state, players, monitors);
             broadcast(players, monitors, ClientBoundMessagePacket.create(GameEndMessage.INSTANCE));
@@ -91,8 +91,8 @@ public final class RoomPlaying extends RoomGameState {
 
     }
 
-    private boolean isAllOnlinePlayersDone(Set<Player> players, Set<Player> monitors) {
-        long onlineCount = Stream.concat(players.stream(), monitors.stream())
+    private boolean isAllOnlinePlayersDone(Set<Player> players) {
+        long onlineCount = players.stream()
                 .filter(Player::isOnline)
                 .count();
 
@@ -100,7 +100,7 @@ public final class RoomPlaying extends RoomGameState {
             return false;
         }
 
-        Set<Integer> onlineIds = Stream.concat(players.stream(), monitors.stream())
+        Set<Integer> onlineIds = players.stream()
                 .filter(Player::isOnline)
                 .map(Player::getId)
                 .collect(Collectors.toSet());

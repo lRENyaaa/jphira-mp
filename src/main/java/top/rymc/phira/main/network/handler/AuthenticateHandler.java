@@ -51,10 +51,10 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
 
             Optional<Room> roomOptional = player.getRoom();
             RoomInfo info = null;
+            Room room = null;
             if (roomOptional.isPresent()) {
-                Room room = roomOptional.get();
+                room = roomOptional.get();
                 info = room.asProtocolConvertible(player).toProtocol();
-                room.getProtocolHack().forceSyncInfo(player);
             }
 
             PlayerPostJoinEvent postJoinEvent = new PlayerPostJoinEvent(player);
@@ -69,6 +69,10 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
             connection.send(ClientBoundAuthenticatePacket.success(new FullUserProfile(userInfo.getId(), userInfo.getName(), false), info));
 
             System.out.printf("%s has logged in as [%s] %s%n", connection.getRemoteAddressAsString(), userInfo.getId(), userInfo.getName());
+
+            if (room != null) {
+                room.getProtocolHack().forceSyncInfo(player);
+            }
 
         } catch (Exception e) {
             connection.send(ClientBoundAuthenticatePacket.failed(e.getMessage()));
