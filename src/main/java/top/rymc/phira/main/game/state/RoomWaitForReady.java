@@ -26,8 +26,12 @@ public final class RoomWaitForReady extends RoomGameState {
     private final Set<Player> readyPlayers = ConcurrentHashMap.newKeySet();
 
     public RoomWaitForReady(Consumer<RoomGameState> stateUpdater, ChartInfo chart, Player initiator) {
-        super(stateUpdater, chart);
+        this(stateUpdater, chart);
         readyPlayers.add(initiator);
+    }
+
+    public RoomWaitForReady(Consumer<RoomGameState> stateUpdater, ChartInfo chart) {
+        super(stateUpdater, chart);
     }
 
     @Override

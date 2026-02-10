@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.state.RoomGameState;
+import top.rymc.phira.main.game.state.RoomPlaying;
 import top.rymc.phira.main.game.state.RoomSelectChart;
 import top.rymc.phira.main.game.state.RoomWaitForReady;
 import top.rymc.phira.main.network.PlayerConnection;
@@ -15,10 +16,12 @@ import top.rymc.phira.protocol.data.FullUserProfile;
 import top.rymc.phira.protocol.data.RoomInfo;
 import top.rymc.phira.protocol.data.message.ChatMessage;
 import top.rymc.phira.protocol.data.message.CycleRoomMessage;
+import top.rymc.phira.protocol.data.message.GameStartMessage;
 import top.rymc.phira.protocol.data.message.JoinRoomMessage;
 import top.rymc.phira.protocol.data.message.LeaveRoomMessage;
 import top.rymc.phira.protocol.data.message.LockRoomMessage;
 import top.rymc.phira.protocol.data.message.SelectChartMessage;
+import top.rymc.phira.protocol.data.message.StartPlayingMessage;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
 import top.rymc.phira.protocol.data.state.GameState;
@@ -227,7 +230,49 @@ public class Room {
             state.played(player, recordId, players, monitors);
         }
 
+    }
 
+    @Getter
+    private final AdminOperation adminOperation = new AdminOperation();
+
+    public class AdminOperation {
+
+        public void selectChart(int id) {
+            if (!(state instanceof RoomSelectChart)) {
+                throw new IllegalStateException("房间不在选择谱面状态");
+            }
+
+            ChartInfo info = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
+                throw new IllegalStateException("谱面信息获取失败");
+            }).apply(id);
+
+            state.setChart(info);
+            broadcast(ClientBoundMessagePacket.create(new SelectChartMessage(-1, info.getName(), id)));
+            broadcast(ClientBoundChangeStatePacket.create(state.toProtocol()));
+        }
+
+        public void requireStart(){
+            if (!(state instanceof RoomSelectChart)) {
+                throw new IllegalStateException("房间不在选择谱面状态");
+            }
+
+            ChartInfo chart = state.getChart();
+            if (chart == null) {
+                throw new IllegalStateException("未选择谱面");
+            }
+            updateState(new RoomWaitForReady(Room.this::updateState, chart));
+            broadcast(ClientBoundMessagePacket.create(new GameStartMessage(-1)));
+        }
+
+        public void forceStart(){
+            ChartInfo chart = state.getChart();
+            if (chart == null) {
+                throw new IllegalStateException("未选择谱面");
+            }
+
+            updateState(new RoomPlaying(Room.this::updateState, state.getChart()));
+            broadcast(ClientBoundMessagePacket.create(StartPlayingMessage.INSTANCE));
+        }
     }
 
     private void updateState(RoomGameState newState) {
