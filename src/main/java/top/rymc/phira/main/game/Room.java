@@ -273,6 +273,15 @@ public class Room {
             updateState(new RoomPlaying(Room.this::updateState, state.getChart()));
             broadcast(ClientBoundMessagePacket.create(StartPlayingMessage.INSTANCE));
         }
+
+        public boolean destroy() {
+            if (!players.isEmpty() || !monitors.isEmpty()) {
+                return false;
+            }
+
+            onDestroy.accept(Room.this);
+            return true;
+        }
     }
 
     private void updateState(RoomGameState newState) {
