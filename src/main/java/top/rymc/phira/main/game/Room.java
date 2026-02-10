@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
+import top.rymc.phira.main.event.PlayerLeaveRoomEvent;
 import top.rymc.phira.main.event.RoomStateChangeEvent;
 import top.rymc.phira.main.game.state.RoomGameState;
 import top.rymc.phira.main.game.state.RoomPlaying;
@@ -121,12 +122,15 @@ public class Room {
         broadcast(ClientBoundMessagePacket.create(new LeaveRoomMessage(player.getId(), player.getName())));
         handleLeave(player);
 
+        PlayerLeaveRoomEvent event = new PlayerLeaveRoomEvent(player, this);
+        Server.postEvent(event);
+
         if (players.isEmpty() && monitors.isEmpty()) {
             if (setting.autoDestroy) {
                 onDestroy.accept(this);
             }
         } else if (setting.host && player.equals(host)) {
-            host = players.iterator().next(); // 转移 Host 给任意剩余玩家
+            host = players.iterator().next();
             host.getConnection().send(ClientBoundChangeHostPacket.create(true));
         }
     }

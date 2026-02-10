@@ -1,6 +1,8 @@
 package top.rymc.phira.main.game.state;
 
+import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
+import top.rymc.phira.main.event.PlayerReadyEvent;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.protocol.data.message.CancelReadyMessage;
 import top.rymc.phira.protocol.data.message.GameEndMessage;
@@ -54,6 +56,9 @@ public final class RoomWaitForReady extends RoomGameState {
         readyPlayers.add(player);
         broadcast(players, monitors, ClientBoundMessagePacket.create(new ReadyMessage(player.getId())));
         updateState(players, monitors);
+
+        PlayerReadyEvent event = new PlayerReadyEvent(player, player.getRoom().orElse(null));
+        Server.postEvent(event);
     }
 
     @Override
