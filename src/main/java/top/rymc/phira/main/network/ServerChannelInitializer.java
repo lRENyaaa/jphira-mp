@@ -2,6 +2,7 @@ package top.rymc.phira.main.network;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import top.rymc.phira.main.Server;
@@ -17,8 +18,16 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
 public class ServerChannelInitializer extends ChannelInitializer<Channel> {
+    private final ChannelGroup allChannels;
+
+    public ServerChannelInitializer(ChannelGroup allChannels) {
+        this.allChannels = allChannels;
+    }
+
     @Override
     protected void initChannel(Channel channel) {
+        allChannels.add(channel);
+
         InetSocketAddress originalRemoteAddress = (InetSocketAddress) channel.remoteAddress();
         if (!Server.getInstance().getArgs().isProxyProtocol()) {
             initChannel0(channel, originalRemoteAddress);

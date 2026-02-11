@@ -34,6 +34,7 @@ public class HAProxyHandshakeHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
+    @SuppressWarnings("resource")
     public void channelActive(ChannelHandlerContext context) throws Exception {
         timeoutTask = context.executor().schedule(() -> {
             if (!realAddressPromise.isDone()) {
@@ -47,12 +48,10 @@ public class HAProxyHandshakeHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext context, Object message) {
-        if (!(message instanceof HAProxyMessage)) {
+        if (!(message instanceof HAProxyMessage haproxyMessage)) {
             context.fireChannelRead(message);
             return;
         }
-
-        HAProxyMessage haproxyMessage = (HAProxyMessage) message;
 
         try {
             if (haproxyMessage.sourceAddress() == null) {
