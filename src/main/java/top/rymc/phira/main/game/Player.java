@@ -33,7 +33,6 @@ public class Player implements ProtocolConvertible<UserProfile> {
         }
         this.connection = newConn;
 
-        // 断线时触发挂起
         newConn.onClose(ctx -> {
             if (!SessionManager.suspend(this)) {
                 removeFromManager.accept(this);

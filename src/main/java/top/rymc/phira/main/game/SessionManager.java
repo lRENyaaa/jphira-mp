@@ -44,7 +44,6 @@ public class SessionManager {
             return false;
         }
 
-        // 如果已经有挂起的会话，先取消旧的定时器
         SuspendedRoomSession old = SUSPENDED.get(player.getId());
         if (old != null) {
             old.timeout.cancel(false);

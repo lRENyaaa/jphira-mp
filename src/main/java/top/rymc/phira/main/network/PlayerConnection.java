@@ -79,7 +79,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
 
         ctx.close();
 
-        Logger logger = Server.getInstance().getLogger();
+        Logger logger = Server.getLogger();
 
         if (cause instanceof ReadTimeoutException) {
             logger.error("{}: read timed out", getRemoteAddressAsString());
@@ -98,7 +98,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        System.out.printf("Client disconnected: %s%n", getRemoteAddressAsString());
+        Server.getLogger().info("Client disconnected: {}", getRemoteAddressAsString());
         for (Consumer<ChannelHandlerContext> handler : closeHandlers) {
             handler.accept(ctx);
         }

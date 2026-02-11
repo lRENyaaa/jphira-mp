@@ -41,7 +41,7 @@ public class ServerChannelInitializer extends ChannelInitializer<Channel> {
 
         haProxyHandler.getRealAddress().whenComplete((remoteAddress, throwable) -> {
             if (throwable != null) {
-                System.out.printf("Disconnecting %s: %s%n", originalRemoteAddress, throwable.getMessage());
+                Server.getLogger().warn("Disconnecting {} on HAProxy handshaking: {}", originalRemoteAddress, throwable.getMessage());
                 if (channel.isActive()) {
                     channel.close();
                 }
@@ -56,21 +56,21 @@ public class ServerChannelInitializer extends ChannelInitializer<Channel> {
     private void initChannel0(Channel channel, InetSocketAddress remoteAddress) {
         String ipPort = remoteAddress.getAddress().getHostAddress() + ":" + remoteAddress.getPort();
 
-        System.out.printf("Establishing a connection from %s%n",ipPort);
+        Server.getLogger().info("Establishing a connection from {}", ipPort);
 
         HandshakeDecoder handshake = new HandshakeDecoder();
         channel.pipeline().addLast(handshake);
 
         handshake.getClientProtocolVersion().whenComplete((version,throwable) -> {
             if (throwable != null) {
-                System.out.printf("Disconnecting %s: %s%n",ipPort,throwable.getMessage());
+                Server.getLogger().warn("Disconnecting {} on Phira handshaking: {}", ipPort, throwable.getMessage());
                 if (channel.isActive()) {
                     channel.close();
                 }
                 return;
             }
 
-            System.out.printf("Receive client version %s from %s%n",version,ipPort);
+            Server.getLogger().info("Receive client version {} from {}", version, ipPort);
 
             channel.pipeline()
                     .addLast(new FrameDecoder())

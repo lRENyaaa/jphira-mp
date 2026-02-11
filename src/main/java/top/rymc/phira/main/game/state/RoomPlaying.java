@@ -72,7 +72,7 @@ public final class RoomPlaying extends RoomGameState {
 
             int id = player.getId();
             int score = record.getScore();
-            float accuracy = record.getAccuracy(); // todo
+            float accuracy = record.getAccuracy();
             boolean fullCombo = record.isFullCombo();
 
             broadcast(players, monitors, ClientBoundMessagePacket.create(new PlayedMessage(id, score, accuracy, fullCombo)));

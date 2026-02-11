@@ -45,7 +45,7 @@ public class Server {
     }
 
     @Getter
-    private final Logger logger = LogManager.getLogger("Server");
+    private static final Logger logger = LogManager.getLogger("Server");
     @Getter
     private final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     @Getter
@@ -61,14 +61,15 @@ public class Server {
     private ServerArgs args;
 
     public static void main(String[] args) {
+        long bootStart = System.nanoTime();
+
         ServerArgs serverArgs = new ServerArgs(args);
         Server server = Server.getInstance();
-        long bootStart = System.nanoTime();
 
         try {
             server.start(serverArgs, bootStart);
         } catch (Exception e) {
-            server.getLogger().error("Failed to start server", e);
+            getLogger().error("Failed to start server", e);
             System.exit(1);
         }
 

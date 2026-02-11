@@ -35,7 +35,7 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
     @Override
     public void handle(ServerBoundAuthenticatePacket packet) {
         try {
-            System.out.printf("%s sent his token [%s]%n",connection.getRemoteAddressAsString(), packet.getToken());
+            Server.getLogger().info("{} sent his token [{}]", connection.getRemoteAddressAsString(), packet.getToken());
             UserInfo userInfo = PhiraFetcher.GET_USER_INFO.apply(packet.getToken());
 
             PlayerPreJoinEvent preJoinEvent = new PlayerPreJoinEvent(userInfo);
@@ -68,7 +68,7 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
 
             connection.send(ClientBoundAuthenticatePacket.success(new FullUserProfile(userInfo.getId(), userInfo.getName(), false), info));
 
-            System.out.printf("%s has logged in as [%s] %s%n", connection.getRemoteAddressAsString(), userInfo.getId(), userInfo.getName());
+            Server.getLogger().info("{} has logged in as [{}] {}", connection.getRemoteAddressAsString(), userInfo.getId(), userInfo.getName());
 
             if (room != null) {
                 room.getProtocolHack().forceSyncInfo(player);
