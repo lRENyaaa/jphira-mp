@@ -9,13 +9,16 @@ import org.junit.jupiter.api.Test;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.ReflectionUtil;
 import top.rymc.phira.main.game.TestPlayerFactory;
+import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.RoomManager;
 import top.rymc.phira.main.util.PhiraFetcher;
 import top.rymc.phira.test.MockPhiraServer;
+import top.rymc.phira.test.TestServerSetup;
 
 import java.io.IOException;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,14 +31,14 @@ class RoomPlayingTest {
 
     private RoomPlaying state;
     private RoomGameState capturedNextState;
-    private Set<Player> players;
-    private Set<Player> monitors;
+    private Room room;
 
     @BeforeAll
-    static void setUpServer() throws IOException {
+    static void setUpServer() throws Exception {
         mockServer = new MockPhiraServer();
         mockServer.start();
         PhiraFetcher.setHost(mockServer.getBaseUrl());
+        TestServerSetup.init();
     }
 
     @AfterAll
@@ -48,11 +51,12 @@ class RoomPlayingTest {
     @BeforeEach
     void setUp() {
         capturedNextState = null;
+        Map<String, Room> rooms = ReflectionUtil.getField(RoomManager.class, "ROOMS");
+        rooms.clear();
+        room = RoomManager.createRoom("test-room", new Room.RoomSetting());
         Consumer<RoomGameState> stateUpdater = s -> capturedNextState = s;
         var chart = new ChartInfo();
-        state = new RoomPlaying(null, stateUpdater, chart);
-        players = ConcurrentHashMap.newKeySet();
-        monitors = ConcurrentHashMap.newKeySet();
+        state = new RoomPlaying(room, stateUpdater, chart);
 
         PhiraFetcher.getRecordCache().clear();
         mockServer.addRecord(1001, 1, 1, 1000000, 99.5f, true);
@@ -62,6 +66,8 @@ class RoomPlayingTest {
     @AfterEach
     void tearDown() {
         PhiraFetcher.getRecordCache().clear();
+        Map<String, Room> rooms = ReflectionUtil.getField(RoomManager.class, "ROOMS");
+        rooms.clear();
     }
 
     @Test
@@ -69,11 +75,11 @@ class RoomPlayingTest {
     void shouldTransitionToRoomSelectChartWhenAllPlayersDone() {
         var player1 = TestPlayerFactory.createPlayer(1, "p1");
         var player2 = TestPlayerFactory.createPlayer(2, "p2");
-        players.add(player1);
-        players.add(player2);
+        room.join(player1, false);
+        room.join(player2, false);
 
-        state.played(player1, 1001, players, monitors);
-        state.played(player2, 1002, players, monitors);
+        state.played(player1, 1001);
+        state.played(player2, 1002);
 
         assertThat(capturedNextState).isInstanceOf(RoomSelectChart.class);
     }
@@ -83,10 +89,10 @@ class RoomPlayingTest {
     void shouldNotTransitionWhenNotAllPlayersDone() {
         var player1 = TestPlayerFactory.createPlayer(1, "p1");
         var player2 = TestPlayerFactory.createPlayer(2, "p2");
-        players.add(player1);
-        players.add(player2);
+        room.join(player1, false);
+        room.join(player2, false);
 
-        state.played(player1, 1001, players, monitors);
+        state.played(player1, 1001);
 
         assertThat(capturedNextState).isNull();
     }
@@ -95,9 +101,9 @@ class RoomPlayingTest {
     @DisplayName("should transition to RoomSelectChart on abort")
     void shouldTransitionToRoomSelectChartOnAbort() {
         var player = TestPlayerFactory.createPlayer(1, "player");
-        players.add(player);
+        room.join(player, false);
 
-        state.abort(player, players, monitors);
+        state.abort(player);
 
         assertThat(capturedNextState).isInstanceOf(RoomSelectChart.class);
     }
@@ -107,11 +113,11 @@ class RoomPlayingTest {
     void shouldAllowMultipleAborts() {
         var player1 = TestPlayerFactory.createPlayer(1, "p1");
         var player2 = TestPlayerFactory.createPlayer(2, "p2");
-        players.add(player1);
-        players.add(player2);
+        room.join(player1, false);
+        room.join(player2, false);
 
-        state.abort(player1, players, monitors);
-        state.abort(player2, players, monitors);
+        state.abort(player1);
+        state.abort(player2);
 
         assertThat(capturedNextState).isInstanceOf(RoomSelectChart.class);
     }
@@ -121,7 +127,7 @@ class RoomPlayingTest {
     void shouldThrowWhenRequireStartInPlayingState() {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
-        assertThatThrownBy(() -> state.requireStart(player, players, monitors))
+        assertThatThrownBy(() -> state.requireStart(player))
             .isInstanceOf(GameOperationException.class)
             .hasMessage("error.invalid_state");
     }
@@ -131,7 +137,7 @@ class RoomPlayingTest {
     void shouldThrowWhenReadyInPlayingState() {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
-        assertThatThrownBy(() -> state.ready(player, players, monitors))
+        assertThatThrownBy(() -> state.ready(player))
             .isInstanceOf(GameOperationException.class)
             .hasMessage("error.invalid_state");
     }
@@ -141,7 +147,7 @@ class RoomPlayingTest {
     void shouldThrowWhenCancelReadyInPlayingState() {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
-        assertThatThrownBy(() -> state.cancelReady(player, players, monitors))
+        assertThatThrownBy(() -> state.cancelReady(player))
             .isInstanceOf(GameOperationException.class)
             .hasMessage("error.invalid_state");
     }
@@ -167,12 +173,12 @@ class RoomPlayingTest {
     void shouldIgnoreOfflinePlayersWhenCheckingDoneStatus() {
         var onlinePlayer = TestPlayerFactory.createPlayer(1, "online");
         var offlinePlayer = TestPlayerFactory.createOfflinePlayer(2, "offline");
-        players.add(onlinePlayer);
-        players.add(offlinePlayer);
+        room.join(onlinePlayer, false);
+        room.join(offlinePlayer, false);
 
         mockServer.addRecord(1001, 1, 1, 1000000, 99.5f, true);
 
-        state.played(onlinePlayer, 1001, players, monitors);
+        state.played(onlinePlayer, 1001);
 
         assertThat(capturedNextState).isInstanceOf(RoomSelectChart.class);
     }
@@ -182,12 +188,12 @@ class RoomPlayingTest {
     void shouldIgnoreMonitorsWhenCheckingDoneStatus() {
         var player = TestPlayerFactory.createPlayer(1, "player");
         var monitor = TestPlayerFactory.createPlayer(2, "monitor");
-        players.add(player);
-        monitors.add(monitor);
+        room.join(player, false);
+        room.join(monitor, true);
 
         mockServer.addRecord(1001, 1, 1, 1000000, 99.5f, true);
 
-        state.played(player, 1001, players, monitors);
+        state.played(player, 1001);
 
         assertThat(capturedNextState).isInstanceOf(RoomSelectChart.class);
     }

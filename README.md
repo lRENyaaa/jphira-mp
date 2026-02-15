@@ -44,7 +44,7 @@ jphira-mp 在 [JitPack](https://jitpack.io/) 上可用
 <dependency>
     <groupId>com.github.lRENyaaa</groupId>
     <artifactId>jphira-mp</artifactId>
-    <version>1.0.0-dev-20260215-01</version>
+    <version>1.0.0-dev-20260215-04</version>
 </dependency>
 ```
 

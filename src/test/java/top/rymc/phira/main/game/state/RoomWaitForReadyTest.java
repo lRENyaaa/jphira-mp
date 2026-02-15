@@ -1,5 +1,6 @@
 package top.rymc.phira.main.game.state;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -7,11 +8,13 @@ import org.junit.jupiter.api.Test;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.ReflectionUtil;
 import top.rymc.phira.main.game.TestPlayerFactory;
+import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.RoomManager;
 import top.rymc.phira.test.TestServerSetup;
 
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,8 +25,7 @@ class RoomWaitForReadyTest {
 
     private RoomWaitForReady state;
     private RoomGameState capturedNextState;
-    private Set<Player> players;
-    private Set<Player> monitors;
+    private Room room;
 
     @BeforeAll
     static void initServer() throws Exception {
@@ -33,11 +35,18 @@ class RoomWaitForReadyTest {
     @BeforeEach
     void setUp() {
         capturedNextState = null;
+        Map<String, Room> rooms = ReflectionUtil.getField(RoomManager.class, "ROOMS");
+        rooms.clear();
+        room = RoomManager.createRoom("test-room", new Room.RoomSetting());
         Consumer<RoomGameState> stateUpdater = s -> capturedNextState = s;
         var chart = new ChartInfo();
-        state = new RoomWaitForReady(null, stateUpdater, chart);
-        players = ConcurrentHashMap.newKeySet();
-        monitors = ConcurrentHashMap.newKeySet();
+        state = new RoomWaitForReady(room, stateUpdater, chart);
+    }
+
+    @AfterEach
+    void tearDown() {
+        Map<String, Room> rooms = ReflectionUtil.getField(RoomManager.class, "ROOMS");
+        rooms.clear();
     }
 
     @Test
@@ -45,11 +54,11 @@ class RoomWaitForReadyTest {
     void shouldTransitionToRoomPlayingWhenAllPlayersReady() {
         var player1 = TestPlayerFactory.createPlayer(1, "p1");
         var player2 = TestPlayerFactory.createPlayer(2, "p2");
-        players.add(player1);
-        players.add(player2);
+        room.join(player1, false);
+        room.join(player2, false);
 
-        state.ready(player1, players, monitors);
-        state.ready(player2, players, monitors);
+        state.ready(player1);
+        state.ready(player2);
 
         assertThat(capturedNextState).isInstanceOf(RoomPlaying.class);
     }
@@ -59,10 +68,10 @@ class RoomWaitForReadyTest {
     void shouldNotTransitionWhenNotAllPlayersReady() {
         var player1 = TestPlayerFactory.createPlayer(1, "p1");
         var player2 = TestPlayerFactory.createPlayer(2, "p2");
-        players.add(player1);
-        players.add(player2);
+        room.join(player1, false);
+        room.join(player2, false);
 
-        state.ready(player1, players, monitors);
+        state.ready(player1);
 
         assertThat(capturedNextState).isNull();
     }
@@ -72,12 +81,12 @@ class RoomWaitForReadyTest {
     void shouldRemovePlayerFromReadySetOnLeave() {
         var player1 = TestPlayerFactory.createPlayer(1, "player1");
         var player2 = TestPlayerFactory.createPlayer(2, "player2");
-        players.add(player1);
-        players.add(player2);
-        state.ready(player1, players, monitors);
+        room.join(player1, false);
+        room.join(player2, false);
+        state.ready(player1);
 
         state.handleLeave(player1);
-        state.ready(player2, players, monitors);
+        state.ready(player2);
 
         assertThat(capturedNextState).isNull();
     }
@@ -87,14 +96,14 @@ class RoomWaitForReadyTest {
     void shouldAllowPlayerToCancelReady() {
         var player1 = TestPlayerFactory.createPlayer(1, "player1");
         var player2 = TestPlayerFactory.createPlayer(2, "player2");
-        players.add(player1);
-        players.add(player2);
-        state.ready(player1, players, monitors);
-        state.ready(player2, players, monitors);
+        room.join(player1, false);
+        room.join(player2, false);
+        state.ready(player1);
+        state.ready(player2);
         capturedNextState = null;
 
-        state.cancelReady(player1, players, monitors);
-        state.ready(player1, players, monitors);
+        state.cancelReady(player1);
+        state.ready(player1);
 
         assertThat(capturedNextState).isInstanceOf(RoomPlaying.class);
     }
@@ -104,7 +113,7 @@ class RoomWaitForReadyTest {
     void shouldThrowWhenRequireStartInWaitForReadyState() {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
-        assertThatThrownBy(() -> state.requireStart(player, players, monitors))
+        assertThatThrownBy(() -> state.requireStart(player))
             .isInstanceOf(GameOperationException.class)
             .hasMessage("error.invalid_state");
     }
@@ -114,7 +123,7 @@ class RoomWaitForReadyTest {
     void shouldThrowWhenAbortInWaitForReadyState() {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
-        assertThatThrownBy(() -> state.abort(player, players, monitors))
+        assertThatThrownBy(() -> state.abort(player))
             .isInstanceOf(GameOperationException.class)
             .hasMessage("error.invalid_state");
     }
@@ -124,7 +133,7 @@ class RoomWaitForReadyTest {
     void shouldThrowWhenPlayedInWaitForReadyState() {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
-        assertThatThrownBy(() -> state.played(player, 123, players, monitors))
+        assertThatThrownBy(() -> state.played(player, 123))
             .isInstanceOf(GameOperationException.class)
             .hasMessage("error.invalid_state");
     }
@@ -141,11 +150,11 @@ class RoomWaitForReadyTest {
     @DisplayName("should include initiator in ready set")
     void shouldIncludeInitiatorInReadySet() {
         var initiator = TestPlayerFactory.createPlayer(1, "initiator");
+        room.join(initiator, false);
         var chart = new ChartInfo();
-        var stateWithInitiator = new RoomWaitForReady(null, s -> capturedNextState = s, chart, initiator);
-        players.add(initiator);
+        var stateWithInitiator = new RoomWaitForReady(room, s -> capturedNextState = s, chart, initiator);
 
-        stateWithInitiator.ready(initiator, players, monitors);
+        stateWithInitiator.ready(initiator);
 
         assertThat(capturedNextState).isInstanceOf(RoomPlaying.class);
     }
@@ -155,10 +164,10 @@ class RoomWaitForReadyTest {
     void shouldIgnoreOfflinePlayersWhenCheckingReadyStatus() {
         var onlinePlayer = TestPlayerFactory.createPlayer(1, "online");
         var offlinePlayer = TestPlayerFactory.createOfflinePlayer(2, "offline");
-        players.add(onlinePlayer);
-        players.add(offlinePlayer);
+        room.join(onlinePlayer, false);
+        room.join(offlinePlayer, false);
 
-        state.ready(onlinePlayer, players, monitors);
+        state.ready(onlinePlayer);
 
         assertThat(capturedNextState).isInstanceOf(RoomPlaying.class);
     }

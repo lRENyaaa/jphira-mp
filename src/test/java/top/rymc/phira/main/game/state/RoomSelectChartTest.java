@@ -1,5 +1,7 @@
 package top.rymc.phira.main.game.state;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -8,9 +10,11 @@ import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.ReflectionUtil;
 import top.rymc.phira.main.game.TestPlayerFactory;
+import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.RoomManager;
+import top.rymc.phira.test.TestServerSetup;
 
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,25 +25,36 @@ class RoomSelectChartTest {
 
     private RoomSelectChart state;
     private RoomGameState capturedNextState;
-    private Set<Player> players;
-    private Set<Player> monitors;
+    private Room room;
+
+    @BeforeAll
+    static void initServer() throws Exception {
+        TestServerSetup.init();
+    }
 
     @BeforeEach
     void setUp() {
         capturedNextState = null;
+        Map<String, Room> rooms = ReflectionUtil.getField(RoomManager.class, "ROOMS");
+        rooms.clear();
+        room = RoomManager.createRoom("test-room", new Room.RoomSetting());
         Consumer<RoomGameState> stateUpdater = s -> capturedNextState = s;
-        state = new RoomSelectChart(null, stateUpdater);
-        players = ConcurrentHashMap.newKeySet();
-        monitors = ConcurrentHashMap.newKeySet();
+        state = new RoomSelectChart(room, stateUpdater);
+    }
+
+    @AfterEach
+    void tearDown() {
+        Map<String, Room> rooms = ReflectionUtil.getField(RoomManager.class, "ROOMS");
+        rooms.clear();
     }
 
     @Test
     @DisplayName("should transition to RoomPlaying when single player requires start")
     void shouldTransitionToRoomPlayingWhenSinglePlayerRequiresStart() {
         var player = TestPlayerFactory.createPlayer(1, "solo");
-        players.add(player);
+        room.join(player, false);
 
-        state.requireStart(player, players, monitors);
+        state.requireStart(player);
 
         assertThat(capturedNextState).isInstanceOf(RoomPlaying.class);
     }
@@ -49,10 +64,10 @@ class RoomSelectChartTest {
     void shouldTransitionToRoomWaitForReadyWhenMultiplePlayersRequireStart() {
         var host = TestPlayerFactory.createPlayer(1, "host");
         var player2 = TestPlayerFactory.createPlayer(2, "player2");
-        players.add(host);
-        players.add(player2);
+        room.join(host, false);
+        room.join(player2, false);
 
-        state.requireStart(host, players, monitors);
+        state.requireStart(host);
 
         assertThat(capturedNextState).isInstanceOf(RoomWaitForReady.class);
     }
@@ -62,7 +77,7 @@ class RoomSelectChartTest {
     void shouldThrowWhenReadyInSelectChartState() {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
-        assertThatThrownBy(() -> state.ready(player, players, monitors))
+        assertThatThrownBy(() -> state.ready(player))
             .isInstanceOf(GameOperationException.class)
             .hasMessage("error.invalid_state");
     }
@@ -72,7 +87,7 @@ class RoomSelectChartTest {
     void shouldThrowWhenCancelReadyInSelectChartState() {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
-        assertThatThrownBy(() -> state.cancelReady(player, players, monitors))
+        assertThatThrownBy(() -> state.cancelReady(player))
             .isInstanceOf(GameOperationException.class)
             .hasMessage("error.invalid_state");
     }
@@ -82,7 +97,7 @@ class RoomSelectChartTest {
     void shouldThrowWhenAbortInSelectChartState() {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
-        assertThatThrownBy(() -> state.abort(player, players, monitors))
+        assertThatThrownBy(() -> state.abort(player))
             .isInstanceOf(GameOperationException.class)
             .hasMessage("error.invalid_state");
     }
@@ -92,7 +107,7 @@ class RoomSelectChartTest {
     void shouldThrowWhenPlayedInSelectChartState() {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
-        assertThatThrownBy(() -> state.played(player, 123, players, monitors))
+        assertThatThrownBy(() -> state.played(player, 123))
             .isInstanceOf(GameOperationException.class)
             .hasMessage("error.invalid_state");
     }

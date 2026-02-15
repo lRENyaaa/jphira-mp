@@ -11,11 +11,14 @@ import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.protocol.data.message.CancelReadyMessage;
 import top.rymc.phira.protocol.data.message.ReadyMessage;
 import top.rymc.phira.protocol.data.message.StartPlayingMessage;
+import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
+import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
 import top.rymc.phira.protocol.data.state.GameState;
 import top.rymc.phira.protocol.data.state.WaitForReady;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundMessagePacket;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -49,54 +52,66 @@ public final class RoomWaitForReady extends RoomGameState {
     }
 
     @Override
-    public void requireStart(Player player, Set<Player> players, Set<Player> monitors) {
+    public void requireStart(Player player) {
         throw GameOperationException.invalidState();
     }
 
     @Override
-    public void ready(Player player, Set<Player> players, Set<Player> monitors) {
+    public void ready(Player player) {
         readyPlayers.add(player);
-        broadcast(players, monitors, ClientBoundMessagePacket.create(new ReadyMessage(player.getId())));
-        updateState(players, monitors);
+        broadcast(ClientBoundMessagePacket.create(new ReadyMessage(player.getId())));
+        updateState();
 
         PlayerReadyEvent event = new PlayerReadyEvent(player, room);
         Server.postEvent(event);
     }
 
     @Override
-    public void cancelReady(Player player, Set<Player> players, Set<Player> monitors) {
+    public void cancelReady(Player player) {
         readyPlayers.remove(player);
-        broadcast(players, monitors, ClientBoundMessagePacket.create(new CancelReadyMessage(player.getId())));
+        broadcast(ClientBoundMessagePacket.create(new CancelReadyMessage(player.getId())));
 
         PlayerCancelReadyEvent event = new PlayerCancelReadyEvent(player, room);
         Server.postEvent(event);
     }
 
     @Override
-    public void abort(Player player, Set<Player> players, Set<Player> monitors) {
+    public void touchSend(Player player, List<TouchFrame> touchFrames) {
+
+    }
+
+    @Override
+    public void judgeSend(Player player, List<JudgeEvent> judgeEvents) {
+
+    }
+
+    @Override
+    public void abort(Player player) {
         throw GameOperationException.invalidState();
     }
 
     @Override
-    public void played(Player player, int recordId, Set<Player> players, Set<Player> monitors) {
+    public void played(Player player, int recordId) {
         throw GameOperationException.invalidState();
     }
 
-    private void updateState(Set<Player> players, Set<Player> monitors) {
-        if (isAllOnlinePlayersDone(players, monitors)) {
+    private void updateState() {
+        if (isAllOnlinePlayersDone()) {
+            Set<Player> players = room.getPlayers();
+            Set<Player> monitors = room.getMonitors();
             GamePlayingStartEvent event = new GamePlayingStartEvent(room, chart, Set.copyOf(players), Set.copyOf(monitors));
             Server.postEvent(event);
 
             RoomPlaying state = new RoomPlaying(room, stateUpdater, chart);
-            updateGameState(state, players, monitors);
-            broadcast(players, monitors, ClientBoundMessagePacket.create(StartPlayingMessage.INSTANCE));
+            updateGameState(state);
+            broadcast(ClientBoundMessagePacket.create(StartPlayingMessage.INSTANCE));
         }
 
     }
 
-    private boolean isAllOnlinePlayersDone(Set<Player> players, Set<Player> monitors) {
-        Set<Player> allPlayers = new HashSet<>(players);
-        allPlayers.addAll(monitors);
+    private boolean isAllOnlinePlayersDone() {
+        Set<Player> allPlayers = new HashSet<>(room.getPlayers());
+        allPlayers.addAll(room.getMonitors());
 
         Set<Player> onlinePlayers = allPlayers.stream()
                 .filter(Player::isOnline)

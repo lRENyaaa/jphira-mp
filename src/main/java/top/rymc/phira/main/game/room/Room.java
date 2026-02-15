@@ -240,35 +240,36 @@ public class Room {
         }
 
         public void touchSend(Player player, List<TouchFrame> touchFrames) {
+            state.touchSend(player, touchFrames);
             ClientBoundTouchesPacket packet = ClientBoundTouchesPacket.create(player.getId(), touchFrames);
             monitors.forEach(p -> p.getConnection().send(packet));
         }
 
         public void judgeSend(Player player, List<JudgeEvent> judgeEvents) {
+            state.judgeSend(player, judgeEvents);
             ClientBoundJudgesPacket packet = ClientBoundJudgesPacket.create(player.getId(), judgeEvents);
             monitors.forEach(p -> p.getConnection().send(packet));
         }
 
         public void requireStart(Player player){
             validateHost(player);
-
-            state.requireStart(player, players, monitors);
+            state.requireStart(player);
         }
 
         public void ready(Player player){
-            state.ready(player, players, monitors);
+            state.ready(player);
         }
 
         public void cancelReady(Player player) {
-            state.cancelReady(player, players, monitors);
+            state.cancelReady(player);
         }
 
         public void abort(Player player) {
-            state.abort(player, players, monitors);
+            state.abort(player);
         }
 
         public void played(Player player, int recordId) {
-            state.played(player, recordId, players, monitors);
+            state.played(player, recordId);
         }
 
     }
