@@ -1,4 +1,4 @@
-package top.rymc.phira.main.event;
+package top.rymc.phira.main.event.room;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,10 @@
 package top.rymc.phira.main.network.handler;
 
 import lombok.Getter;
+import top.rymc.phira.main.Server;
+import top.rymc.phira.main.event.operation.RoomChatEvent;
+import top.rymc.phira.main.event.operation.RoomCycleChangeEvent;
+import top.rymc.phira.main.event.operation.RoomLockChangeEvent;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.Room;
@@ -27,10 +31,18 @@ public class RoomHandler extends ServerBoundPacketHandler {
 
     @Override
     public void handle(ServerBoundChatPacket packet) {
+        RoomChatEvent event = new RoomChatEvent(player, room, packet.getMessage());
+        Server.postEvent(event);
+        if (event.isCancelled()) {
+            player.getConnection().send(ClientBoundChatPacket.failed(event.getCancelReason()));
+            return;
+        }
+
+        String message = event.getMessage();
         handleWithException(
-            () -> room.getOperation().chat(player, packet.getMessage()),
-            ClientBoundLockRoomPacket::success,
-            ClientBoundLockRoomPacket::failed
+            () -> room.getOperation().chat(player, message),
+            ClientBoundChatPacket::success,
+            ClientBoundChatPacket::failed
         );
     }
 
@@ -50,7 +62,11 @@ public class RoomHandler extends ServerBoundPacketHandler {
     public void handle(ServerBoundLockRoomPacket packet) {
         handleWithException(
             () -> room.getOperation().lockRoom(player),
-            ClientBoundLockRoomPacket::success,
+            () -> {
+                RoomLockChangeEvent event = new RoomLockChangeEvent(room, player, room.getSetting().isLocked());
+                Server.postEvent(event);
+                return ClientBoundLockRoomPacket.success();
+            },
             ClientBoundLockRoomPacket::failed
         );
     }
@@ -59,7 +75,11 @@ public class RoomHandler extends ServerBoundPacketHandler {
     public void handle(ServerBoundCycleRoomPacket packet) {
         handleWithException(
             () -> room.getOperation().cycleRoom(player),
-            ClientBoundCycleRoomPacket::success,
+            () -> {
+                RoomCycleChangeEvent event = new RoomCycleChangeEvent(room, player, room.getSetting().isCycle());
+                Server.postEvent(event);
+                return ClientBoundCycleRoomPacket.success();
+            },
             ClientBoundCycleRoomPacket::failed
         );
     }

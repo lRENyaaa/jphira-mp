@@ -1,4 +1,4 @@
-package top.rymc.phira.main.event;
+package top.rymc.phira.main.event.login;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -7,9 +7,8 @@ import top.rymc.phira.plugin.event.ReasonedCancellableEvent;
 
 @RequiredArgsConstructor
 @Getter
-public class PlayerPreJoinRoomEvent extends ReasonedCancellableEvent {
+public class PlayerPostLoginEvent extends ReasonedCancellableEvent {
 
     private final Player player;
-    private final String roomId;
-    private final boolean isMonitor;
+
 }

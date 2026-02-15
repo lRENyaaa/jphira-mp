@@ -8,9 +8,11 @@ import io.netty.handler.timeout.ReadTimeoutException;
 import lombok.Getter;
 import org.apache.logging.log4j.Logger;
 import top.rymc.phira.main.Server;
-import top.rymc.phira.main.event.PacketReceiveEvent;
-import top.rymc.phira.main.event.PacketSendEvent;
-import top.rymc.phira.main.event.PlayerSwitchPacketHandlerEvent;
+import top.rymc.phira.main.event.network.PlayerSwitchPacketHandlerEvent;
+import top.rymc.phira.main.event.login.PlayerDisconnectEvent;
+import top.rymc.phira.main.event.network.PacketReceiveEvent;
+import top.rymc.phira.main.event.network.PacketSendEvent;
+import top.rymc.phira.main.game.PlayerManager;
 import top.rymc.phira.protocol.data.message.ChatMessage;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 import top.rymc.phira.protocol.packet.ClientBoundPacket;
@@ -99,11 +101,24 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         Server.getLogger().info("Client disconnected: {}", getRemoteAddressAsString());
+
+        PlayerManager.getPlayer(this).ifPresent(player -> {
+            PlayerDisconnectEvent event = new PlayerDisconnectEvent(player, determineDisconnectReason(ctx));
+            Server.postEvent(event);
+        });
+
         for (Consumer<ChannelHandlerContext> handler : closeHandlers) {
             handler.accept(ctx);
         }
 
         super.channelInactive(ctx);
+    }
+
+    private PlayerDisconnectEvent.DisconnectReason determineDisconnectReason(ChannelHandlerContext ctx) {
+        if (!ctx.channel().isActive()) {
+            return PlayerDisconnectEvent.DisconnectReason.QUIT;
+        }
+        return PlayerDisconnectEvent.DisconnectReason.ERROR;
     }
 
     public Optional<ChannelFuture> send(ClientBoundPacket packet) {

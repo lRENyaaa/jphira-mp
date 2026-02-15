@@ -6,8 +6,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
-import top.rymc.phira.main.event.PlayerLeaveRoomEvent;
-import top.rymc.phira.main.event.RoomStateChangeEvent;
+import top.rymc.phira.main.event.room.PlayerLeaveRoomEvent;
+import top.rymc.phira.main.event.room.RoomStateChangeEvent;
+import top.rymc.phira.main.event.operation.RoomChartSelectedEvent;
+import top.rymc.phira.main.event.operation.RoomSelectChartEvent;
+import top.rymc.phira.main.event.room.RoomDestroyEvent;
+import top.rymc.phira.main.event.room.RoomHostChangeEvent;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.state.RoomGameState;
 import top.rymc.phira.main.game.state.RoomPlaying;
@@ -87,13 +91,13 @@ public class Room {
 
     public static Room create(String roomId, Consumer<Room> onDestroy, RoomSetting setting) {
         Room room = new Room(roomId, onDestroy, setting);
-        room.state = new RoomSelectChart(room::updateState);
+        room.state = new RoomSelectChart(room, room::updateState);
         return room;
     }
 
     public static Room create(String roomId, Consumer<Room> onDestroy, Player hostPlayer) {
         Room room = new Room(roomId, onDestroy, new RoomSetting());
-        room.state = new RoomSelectChart(room::updateState);
+        room.state = new RoomSelectChart(room, room::updateState);
         room.join(hostPlayer, false);
         room.host = hostPlayer;
         return room;
@@ -133,7 +137,7 @@ public class Room {
 
             if (players.isEmpty() && monitors.isEmpty()) {
                 if (setting.autoDestroy) {
-                    onDestroy.accept(this);
+                    destroyRoom();
                 }
             } else if (setting.host && player.equals(host)) {
                 transferHostToNextPlayer();
@@ -141,11 +145,21 @@ public class Room {
         }
     }
 
+    private void destroyRoom() {
+        RoomDestroyEvent event = new RoomDestroyEvent(this, Set.copyOf(players), Set.copyOf(monitors));
+        Server.postEvent(event);
+        onDestroy.accept(this);
+    }
+
     private void transferHostToNextPlayer() {
+        Player previousHost = host;
         Player nextHost = players.iterator().next();
         if (nextHost != null && nextHost.isOnline()) {
             host = nextHost;
             host.getConnection().send(ClientBoundChangeHostPacket.create(true));
+
+            RoomHostChangeEvent event = new RoomHostChangeEvent(this, previousHost, nextHost);
+            Server.postEvent(event);
         }
     }
 
@@ -198,6 +212,12 @@ public class Room {
                 throw new GameOperationException("房间不在选择谱面状态");
             }
 
+            RoomSelectChartEvent selectEvent = new RoomSelectChartEvent(Room.this, player, id);
+            Server.postEvent(selectEvent);
+            if (selectEvent.isCancelled()) {
+                throw new GameOperationException(selectEvent.getCancelReason());
+            }
+
             ChartInfo info = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
                 throw GameOperationException.chartNotFound();
             }).apply(id);
@@ -205,6 +225,9 @@ public class Room {
             state.setChart(info);
             broadcast(ClientBoundMessagePacket.create(new SelectChartMessage(player.getId(), info.getName(), id)));
             broadcast(ClientBoundChangeStatePacket.create(state.toProtocol()));
+
+            RoomChartSelectedEvent selectedEvent = new RoomChartSelectedEvent(Room.this, player, info);
+            Server.postEvent(selectedEvent);
         }
 
         public void chat(Player player, String message) {
@@ -277,7 +300,7 @@ public class Room {
             if (chart == null) {
                 throw GameOperationException.chartNotSelected();
             }
-            updateState(new RoomWaitForReady(Room.this::updateState, chart));
+            updateState(new RoomWaitForReady(Room.this, Room.this::updateState, chart));
             broadcast(ClientBoundMessagePacket.create(new GameStartMessage(-1)));
         }
 
@@ -287,7 +310,7 @@ public class Room {
                 throw GameOperationException.chartNotSelected();
             }
 
-            updateState(new RoomPlaying(Room.this::updateState, state.getChart()));
+            updateState(new RoomPlaying(Room.this, Room.this::updateState, state.getChart()));
             broadcast(ClientBoundMessagePacket.create(StartPlayingMessage.INSTANCE));
         }
 
@@ -361,7 +384,7 @@ public class Room {
         private static final Executor executor = CompletableFuture.delayedExecutor(1, TimeUnit.MILLISECONDS);
 
         public void forceSyncHost(Player player) {
-            if (!isInRoom(player)) return; // TODO: Throw exception
+            if (!isInRoom(player)) return;
 
             PlayerConnection connection = player.getConnection();
 
@@ -371,7 +394,7 @@ public class Room {
         }
 
         public void forceSyncInfo(Player player) {
-            if (!isInRoom(player)) return; // TODO: Throw exception
+            if (!isInRoom(player)) return;
 
             PlayerConnection connection = player.getConnection();
 
@@ -394,7 +417,7 @@ public class Room {
         }
 
         public void fixClientRoomState(Player player) {
-            if (!isInRoom(player)) return; // TODO: Throw exception
+            if (!isInRoom(player)) return;
 
             if (!(state instanceof RoomSelectChart) && state.getChart() != null) {
                 fixClientRoomState0(player);

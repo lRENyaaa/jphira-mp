@@ -1,8 +1,11 @@
 package top.rymc.phira.main.network.handler;
 
 import top.rymc.phira.main.Server;
-import top.rymc.phira.main.event.PlayerPostJoinRoomEvent;
-import top.rymc.phira.main.event.PlayerPreJoinRoomEvent;
+import top.rymc.phira.main.event.room.PlayerPostJoinRoomEvent;
+import top.rymc.phira.main.event.room.PlayerPreJoinRoomEvent;
+import top.rymc.phira.main.event.room.PlayerJoinRoomSuccessEvent;
+import top.rymc.phira.main.event.room.RoomCreateEvent;
+import top.rymc.phira.main.event.room.RoomCreatedEvent;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.Room;
@@ -30,7 +33,18 @@ public class PlayHandler extends SimpleServerBoundPacketHandler {
     @Override
     public void handle(ServerBoundCreateRoomPacket packet) {
         try {
+            RoomCreateEvent createEvent = new RoomCreateEvent(player, packet.getRoomId(), new Room.RoomSetting());
+            Server.postEvent(createEvent);
+            String cancelReason = createEvent.getCancelReason();
+            if (cancelReason != null) {
+                player.getConnection().send(ClientBoundCreateRoomPacket.failed(cancelReason));
+                return;
+            }
+
             Room room = RoomManager.createRoom(packet.getRoomId(), player);
+
+            RoomCreatedEvent createdEvent = new RoomCreatedEvent(room, player);
+            Server.postEvent(createdEvent);
 
             RoomHandler roomHandler = new RoomHandler(player, room, this);
             player.getConnection().setPacketHandler(roomHandler);
@@ -77,6 +91,9 @@ public class PlayHandler extends SimpleServerBoundPacketHandler {
             connection.setPacketHandler(roomHandler);
 
             connection.send(room.getProtocolHack().buildJoinSuccessPacket());
+
+            PlayerJoinRoomSuccessEvent successEvent = new PlayerJoinRoomSuccessEvent(player, room, packet.isMonitor());
+            Server.postEvent(successEvent);
 
             room.getProtocolHack().fixClientRoomState(player);
             room.getProtocolHack().forceSyncHost(player);

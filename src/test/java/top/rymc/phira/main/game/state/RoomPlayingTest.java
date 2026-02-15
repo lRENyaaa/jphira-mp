@@ -50,7 +50,7 @@ class RoomPlayingTest {
         capturedNextState = null;
         Consumer<RoomGameState> stateUpdater = s -> capturedNextState = s;
         var chart = new ChartInfo();
-        state = new RoomPlaying(stateUpdater, chart);
+        state = new RoomPlaying(null, stateUpdater, chart);
         players = ConcurrentHashMap.newKeySet();
         monitors = ConcurrentHashMap.newKeySet();
 

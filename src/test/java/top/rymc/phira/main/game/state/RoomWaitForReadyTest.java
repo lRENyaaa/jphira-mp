@@ -35,7 +35,7 @@ class RoomWaitForReadyTest {
         capturedNextState = null;
         Consumer<RoomGameState> stateUpdater = s -> capturedNextState = s;
         var chart = new ChartInfo();
-        state = new RoomWaitForReady(stateUpdater, chart);
+        state = new RoomWaitForReady(null, stateUpdater, chart);
         players = ConcurrentHashMap.newKeySet();
         monitors = ConcurrentHashMap.newKeySet();
     }
@@ -142,7 +142,7 @@ class RoomWaitForReadyTest {
     void shouldIncludeInitiatorInReadySet() {
         var initiator = TestPlayerFactory.createPlayer(1, "initiator");
         var chart = new ChartInfo();
-        var stateWithInitiator = new RoomWaitForReady(s -> capturedNextState = s, chart, initiator);
+        var stateWithInitiator = new RoomWaitForReady(null, s -> capturedNextState = s, chart, initiator);
         players.add(initiator);
 
         stateWithInitiator.ready(initiator, players, monitors);

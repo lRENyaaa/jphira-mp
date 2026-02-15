@@ -1,4 +1,4 @@
-package top.rymc.phira.main.event;
+package top.rymc.phira.main.event.network;
 
 import lombok.Getter;
 import lombok.Setter;

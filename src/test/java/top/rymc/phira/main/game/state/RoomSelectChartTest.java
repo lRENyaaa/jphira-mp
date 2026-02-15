@@ -28,7 +28,7 @@ class RoomSelectChartTest {
     void setUp() {
         capturedNextState = null;
         Consumer<RoomGameState> stateUpdater = s -> capturedNextState = s;
-        state = new RoomSelectChart(stateUpdater);
+        state = new RoomSelectChart(null, stateUpdater);
         players = ConcurrentHashMap.newKeySet();
         monitors = ConcurrentHashMap.newKeySet();
     }
