@@ -167,10 +167,14 @@ public class Room {
 
     public class Operation {
 
-        public void lockRoom(Player player) {
+        private void validateHost(Player player) {
             if (!isHost(player)) {
                 throw GameOperationException.permissionDenied();
             }
+        }
+
+        public void lockRoom(Player player) {
+            validateHost(player);
 
             setting.locked = !setting.locked;
 
@@ -179,9 +183,7 @@ public class Room {
         }
 
         public void cycleRoom(Player player) {
-            if (!isHost(player)) {
-                throw GameOperationException.permissionDenied();
-            }
+            validateHost(player);
 
             setting.cycle = !setting.cycle;
 
@@ -190,9 +192,7 @@ public class Room {
         }
 
         public void selectChart(Player player, int id) {
-            if (!isHost(player)) {
-                throw GameOperationException.permissionDenied();
-            }
+            validateHost(player);
 
             if (!(state instanceof RoomSelectChart)) {
                 throw new GameOperationException("房间不在选择谱面状态");
@@ -226,9 +226,7 @@ public class Room {
         }
 
         public void requireStart(Player player){
-            if (!isHost(player)) {
-                throw GameOperationException.permissionDenied();
-            }
+            validateHost(player);
 
             state.requireStart(player, players, monitors);
         }
