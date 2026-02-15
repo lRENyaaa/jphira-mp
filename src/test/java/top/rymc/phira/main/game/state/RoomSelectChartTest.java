@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import top.rymc.phira.main.data.ChartInfo;
+import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.ReflectionUtil;
 import top.rymc.phira.main.game.TestPlayerFactory;
@@ -62,7 +63,7 @@ class RoomSelectChartTest {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
         assertThatThrownBy(() -> state.ready(player, players, monitors))
-            .isInstanceOf(IllegalStateException.class)
+            .isInstanceOf(GameOperationException.class)
             .hasMessageContaining("不能");
     }
 
@@ -72,7 +73,7 @@ class RoomSelectChartTest {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
         assertThatThrownBy(() -> state.cancelReady(player, players, monitors))
-            .isInstanceOf(IllegalStateException.class)
+            .isInstanceOf(GameOperationException.class)
             .hasMessageContaining("不能");
     }
 
@@ -82,7 +83,7 @@ class RoomSelectChartTest {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
         assertThatThrownBy(() -> state.abort(player, players, monitors))
-            .isInstanceOf(IllegalStateException.class)
+            .isInstanceOf(GameOperationException.class)
             .hasMessageContaining("不能");
     }
 
@@ -92,7 +93,7 @@ class RoomSelectChartTest {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
         assertThatThrownBy(() -> state.played(player, 123, players, monitors))
-            .isInstanceOf(IllegalStateException.class)
+            .isInstanceOf(GameOperationException.class)
             .hasMessageContaining("不能");
     }
 

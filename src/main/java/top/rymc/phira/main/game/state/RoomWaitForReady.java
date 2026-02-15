@@ -3,6 +3,7 @@ package top.rymc.phira.main.game.state;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.event.PlayerReadyEvent;
+import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.protocol.data.message.CancelReadyMessage;
 import top.rymc.phira.protocol.data.message.GameEndMessage;
@@ -48,7 +49,7 @@ public final class RoomWaitForReady extends RoomGameState {
 
     @Override
     public void requireStart(Player player, Set<Player> players, Set<Player> monitors) {
-        throw new IllegalStateException("你不能在当前状态执行这个操作");
+        throw GameOperationException.invalidState();
     }
 
     @Override
@@ -69,12 +70,12 @@ public final class RoomWaitForReady extends RoomGameState {
 
     @Override
     public void abort(Player player, Set<Player> players, Set<Player> monitors) {
-        throw new IllegalStateException("你不能在当前状态执行这个操作");
+        throw GameOperationException.invalidState();
     }
 
     @Override
     public void played(Player player, int recordId, Set<Player> players, Set<Player> monitors) {
-        throw new IllegalStateException("你不能在当前状态执行这个操作");
+        throw GameOperationException.invalidState();
     }
 
     private void updateState(Set<Player> players, Set<Player> monitors) {

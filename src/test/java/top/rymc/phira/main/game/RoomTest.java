@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.test.TestServerSetup;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,7 +76,7 @@ class RoomTest {
 
         assertThatThrownBy(() ->
             fullRoom.join(TestPlayerFactory.createPlayer(3, "p3"), false)
-        ).isInstanceOf(IllegalStateException.class)
+        ).isInstanceOf(GameOperationException.class)
          .hasMessageContaining("full");
     }
 
@@ -88,7 +89,7 @@ class RoomTest {
 
         assertThatThrownBy(() ->
             lockedRoom.join(TestPlayerFactory.createPlayer(2, "player"), false)
-        ).isInstanceOf(IllegalStateException.class)
+        ).isInstanceOf(GameOperationException.class)
          .hasMessageContaining("locked");
     }
 
@@ -176,7 +177,7 @@ class RoomTest {
 
         assertThatThrownBy(() ->
             hostRoom.getOperation().lockRoom(regular)
-        ).isInstanceOf(IllegalStateException.class)
+        ).isInstanceOf(GameOperationException.class)
          .hasMessageContaining("权限");
     }
 
@@ -201,7 +202,7 @@ class RoomTest {
 
         assertThatThrownBy(() ->
             hostRoom.getOperation().cycleRoom(regular)
-        ).isInstanceOf(IllegalStateException.class)
+        ).isInstanceOf(GameOperationException.class)
          .hasMessageContaining("权限");
     }
 
@@ -215,7 +216,7 @@ class RoomTest {
 
         assertThatThrownBy(() ->
             noChatRoom.getOperation().chat(player, "hello")
-        ).isInstanceOf(IllegalStateException.class)
+        ).isInstanceOf(GameOperationException.class)
          .hasMessageContaining("聊天");
     }
 

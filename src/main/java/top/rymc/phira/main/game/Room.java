@@ -8,6 +8,7 @@ import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.event.PlayerLeaveRoomEvent;
 import top.rymc.phira.main.event.RoomStateChangeEvent;
+import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.state.RoomGameState;
 import top.rymc.phira.main.game.state.RoomPlaying;
 import top.rymc.phira.main.game.state.RoomSelectChart;
@@ -100,8 +101,8 @@ public class Room {
 
     public void join(Player player, boolean isMonitor) {
         synchronized (stateLock) {
-            if (players.size() >= setting.maxPlayer) throw new IllegalStateException("Room is full");
-            if (setting.locked && !players.isEmpty()) throw new IllegalStateException("Room is locked");
+            if (players.size() >= setting.maxPlayer) throw GameOperationException.roomFull();
+            if (setting.locked && !players.isEmpty()) throw GameOperationException.roomLocked();
 
             boolean isInit = players.isEmpty();
             Set<Player> set = isMonitor ? monitors : players;
@@ -168,7 +169,7 @@ public class Room {
 
         public void lockRoom(Player player) {
             if (!isHost(player)) {
-                throw new IllegalStateException("你没有权限");
+                throw GameOperationException.permissionDenied();
             }
 
             setting.locked = !setting.locked;
@@ -179,7 +180,7 @@ public class Room {
 
         public void cycleRoom(Player player) {
             if (!isHost(player)) {
-                throw new IllegalStateException("你没有权限");
+                throw GameOperationException.permissionDenied();
             }
 
             setting.cycle = !setting.cycle;
@@ -190,15 +191,15 @@ public class Room {
 
         public void selectChart(Player player, int id) {
             if (!isHost(player)) {
-                throw new IllegalStateException("你没有权限");
+                throw GameOperationException.permissionDenied();
             }
 
             if (!(state instanceof RoomSelectChart)) {
-                throw new IllegalStateException("房间不在选择谱面状态");
+                throw new GameOperationException("房间不在选择谱面状态");
             }
 
             ChartInfo info = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
-                throw new IllegalStateException("谱面信息获取失败");
+                throw GameOperationException.chartNotFound();
             }).apply(id);
 
             state.setChart(info);
@@ -208,7 +209,7 @@ public class Room {
 
         public void chat(Player player, String message) {
             if (!setting.chat) {
-                throw new IllegalStateException("房间未启用聊天");
+                throw GameOperationException.chatNotEnabled();
             }
 
             broadcast(ClientBoundMessagePacket.create(new ChatMessage(player.getId(), message)));
@@ -226,7 +227,7 @@ public class Room {
 
         public void requireStart(Player player){
             if (!isHost(player)) {
-                throw new IllegalStateException("你没有权限");
+                throw GameOperationException.permissionDenied();
             }
 
             state.requireStart(player, players, monitors);
@@ -257,11 +258,11 @@ public class Room {
 
         public void selectChart(int id) {
             if (!(state instanceof RoomSelectChart)) {
-                throw new IllegalStateException("房间不在选择谱面状态");
+                throw new GameOperationException("房间不在选择谱面状态");
             }
 
             ChartInfo info = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
-                throw new IllegalStateException("谱面信息获取失败");
+                throw GameOperationException.chartNotFound();
             }).apply(id);
 
             state.setChart(info);
@@ -271,12 +272,12 @@ public class Room {
 
         public void requireStart(){
             if (!(state instanceof RoomSelectChart)) {
-                throw new IllegalStateException("房间不在选择谱面状态");
+                throw new GameOperationException("房间不在选择谱面状态");
             }
 
             ChartInfo chart = state.getChart();
             if (chart == null) {
-                throw new IllegalStateException("未选择谱面");
+                throw GameOperationException.chartNotSelected();
             }
             updateState(new RoomWaitForReady(Room.this::updateState, chart));
             broadcast(ClientBoundMessagePacket.create(new GameStartMessage(-1)));
@@ -285,7 +286,7 @@ public class Room {
         public void forceStart(){
             ChartInfo chart = state.getChart();
             if (chart == null) {
-                throw new IllegalStateException("未选择谱面");
+                throw GameOperationException.chartNotSelected();
             }
 
             updateState(new RoomPlaying(Room.this::updateState, state.getChart()));

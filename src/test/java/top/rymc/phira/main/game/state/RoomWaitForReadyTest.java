@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import top.rymc.phira.main.data.ChartInfo;
+import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.TestPlayerFactory;
 import top.rymc.phira.test.TestServerSetup;
@@ -104,7 +105,7 @@ class RoomWaitForReadyTest {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
         assertThatThrownBy(() -> state.requireStart(player, players, monitors))
-            .isInstanceOf(IllegalStateException.class)
+            .isInstanceOf(GameOperationException.class)
             .hasMessageContaining("不能");
     }
 
@@ -114,7 +115,7 @@ class RoomWaitForReadyTest {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
         assertThatThrownBy(() -> state.abort(player, players, monitors))
-            .isInstanceOf(IllegalStateException.class)
+            .isInstanceOf(GameOperationException.class)
             .hasMessageContaining("不能");
     }
 
@@ -124,7 +125,7 @@ class RoomWaitForReadyTest {
         var player = TestPlayerFactory.createPlayer(1, "player");
 
         assertThatThrownBy(() -> state.played(player, 123, players, monitors))
-            .isInstanceOf(IllegalStateException.class)
+            .isInstanceOf(GameOperationException.class)
             .hasMessageContaining("不能");
     }
 

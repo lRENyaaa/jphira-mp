@@ -3,6 +3,7 @@ package top.rymc.phira.main.network.handler;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.event.PlayerPostJoinRoomEvent;
 import top.rymc.phira.main.event.PlayerPreJoinRoomEvent;
+import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.Room;
 import top.rymc.phira.main.game.RoomManager;
@@ -57,7 +58,7 @@ public class PlayHandler extends SimpleServerBoundPacketHandler {
 
             Room room = RoomManager.findRoom(packet.getRoomId());
             if (room == null) {
-                throw new IllegalStateException("房间不存在");
+                throw GameOperationException.roomNotFound();
             }
 
             PlayerPostJoinRoomEvent postJoinRoomEvent = new PlayerPostJoinRoomEvent(player, room, packet.isMonitor());

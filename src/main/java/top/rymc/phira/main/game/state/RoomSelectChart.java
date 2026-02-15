@@ -1,6 +1,7 @@
 package top.rymc.phira.main.game.state;
 
 import top.rymc.phira.main.data.ChartInfo;
+import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.protocol.data.message.GameStartMessage;
 import top.rymc.phira.protocol.data.state.GameState;
@@ -45,22 +46,22 @@ public final class RoomSelectChart extends RoomGameState {
 
     @Override
     public void ready(Player player, Set<Player> players, Set<Player> monitors) {
-        throw new IllegalStateException("你不能在当前状态执行这个操作");
+        throw GameOperationException.invalidState();
     }
 
     @Override
     public void cancelReady(Player player, Set<Player> players, Set<Player> monitors) {
-        throw new IllegalStateException("你不能在当前状态执行这个操作");
+        throw GameOperationException.invalidState();
     }
 
     @Override
     public void abort(Player player, Set<Player> players, Set<Player> monitors) {
-        throw new IllegalStateException("你不能在当前状态执行这个操作");
+        throw GameOperationException.invalidState();
     }
 
     @Override
     public void played(Player player, int recordId, Set<Player> players, Set<Player> monitors) {
-        throw new IllegalStateException("你不能在当前状态执行这个操作");
+        throw GameOperationException.invalidState();
     }
 
     @Override

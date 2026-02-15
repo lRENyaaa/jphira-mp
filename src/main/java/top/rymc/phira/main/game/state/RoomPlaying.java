@@ -2,6 +2,7 @@ package top.rymc.phira.main.game.state;
 
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.data.GameRecord;
+import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.util.PhiraFetcher;
 import top.rymc.phira.protocol.data.message.AbortMessage;
@@ -40,17 +41,17 @@ public final class RoomPlaying extends RoomGameState {
 
     @Override
     public void requireStart(Player player, Set<Player> players, Set<Player> monitors) {
-        throw new IllegalStateException("你不能在当前状态执行这个操作");
+        throw GameOperationException.invalidState();
     }
 
     @Override
     public void ready(Player player, Set<Player> players, Set<Player> monitors) {
-        throw new IllegalStateException("你不能在当前状态执行这个操作");
+        throw GameOperationException.invalidState();
     }
 
     @Override
     public void cancelReady(Player player, Set<Player> players, Set<Player> monitors) {
-        throw new IllegalStateException("你不能在当前状态执行这个操作");
+        throw GameOperationException.invalidState();
     }
 
     @Override
@@ -67,7 +68,7 @@ public final class RoomPlaying extends RoomGameState {
 
         try {
             GameRecord record = PhiraFetcher.GET_RECORD_INFO.toIntFunction(e -> {
-                throw new IllegalStateException("查询记录失败");
+                throw GameOperationException.recordNotFound();
             }).apply(recordId);
 
             int id = player.getId();

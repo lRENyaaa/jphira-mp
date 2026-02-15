@@ -4,6 +4,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import top.rymc.phira.main.exception.GameOperationException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -55,7 +56,7 @@ class RoomManagerTest {
 
         assertThatThrownBy(() ->
             RoomManager.createRoom("duplicate-room", new Room.RoomSetting())
-        ).isInstanceOf(IllegalStateException.class)
+        ).isInstanceOf(GameOperationException.class)
          .hasMessageContaining("already exists");
     }
 

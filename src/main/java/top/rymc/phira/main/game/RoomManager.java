@@ -1,5 +1,7 @@
 package top.rymc.phira.main.game;
 
+import top.rymc.phira.main.exception.GameOperationException;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +21,7 @@ public class RoomManager {
 
     private static Room innerCreateRoom(String roomId, Function<String, Room> creator) {
         if (ROOMS.containsKey(roomId)) {
-            throw new IllegalStateException("Room already exists");
+            throw GameOperationException.roomAlreadyExists();
         }
         Room room = creator.apply(roomId);
         ROOMS.put(roomId, room);
