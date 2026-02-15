@@ -25,6 +25,7 @@ java -jar jphira-mp-<version>.jar --port 12346
 * `--host <host>`: 指定服务器监听地址，默认为 `0.0.0.0`
 * `--plugin <folder>`: 指定插件目录，默认为 `plugins`
 * `--proxy-protocol`: 启用 Proxy Protocol 支持（用于代理等，如: [此内容](https://doc.natfrp.com/bestpractice/realip.html)），默认为 `false`
+* `--language`: 设置服务器默认的玩家语言，默认为 `zh-CN`
 
 关闭 jphira-mp 同样与 Minecraft 服务端类似，在控制台输入 `stop` 命令即可关闭服务器。
 
@@ -43,7 +44,7 @@ jphira-mp 在 [JitPack](https://jitpack.io/) 上可用
 <dependency>
     <groupId>com.github.lRENyaaa</groupId>
     <artifactId>jphira-mp</artifactId>
-    <version>1.0.0-dev-20260210-08</version>
+    <version>1.0.0-dev-20260215-01</version>
 </dependency>
 ```
 
@@ -59,6 +60,6 @@ jphira-mp 基于如下项目:
 * [orbit](https://github.com/MeteorDevelopment/orbit) - 事件系统
 
 ## 💬 开源协议
-项目使用 LGPL v2.1 协议开源，见 [LICENSE](./LICENSE)  
+项目使用 LGPL v3 协议开源，见 [LICENSE](./LICENSE)  
 
 Copyright (C) 2026 lRENyaaa
