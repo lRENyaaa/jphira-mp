@@ -99,7 +99,11 @@ public class Server {
 
         logger.info("Loading plugins from: {}", args.getPluginsDir());
         pluginManager = new PluginManager(logger, args.getPluginsDir());
-        pluginManager.loadAll();
+        try {
+            pluginManager.loadAll();
+        } catch (Throwable e) {
+            logger.error("Plugin loading encountered errors, continuing startup", e);
+        }
         logger.info("Loaded {} plugin(s)", pluginManager.getPluginCount());
 
         logger.info("Initializing network...");

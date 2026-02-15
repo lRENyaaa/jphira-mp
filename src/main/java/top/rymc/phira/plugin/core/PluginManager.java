@@ -60,7 +60,16 @@ public class PluginManager {
         List<PluginCandidate> candidates = loadCandidates(jars);
         List<PluginCandidate> sorted = sortByDependencies(candidates);
 
-        sorted.forEach(this::enablePlugin);
+        List<PluginLoadResult> results = sorted.stream()
+                .map(this::enablePluginWithResult)
+                .toList();
+
+        long successCount = results.stream().filter(PluginLoadResult::success).count();
+        long failedCount = results.size() - successCount;
+
+        if (failedCount > 0) {
+            serverLogger.warn("{} plugin(s) failed to load", failedCount);
+        }
     }
 
     private List<Path> listJarFiles() {
@@ -158,11 +167,14 @@ public class PluginManager {
         return result;
     }
 
-    private void enablePlugin(PluginCandidate candidate) {
+    private PluginLoadResult enablePluginWithResult(PluginCandidate candidate) {
         try {
             tryEnablePlugin(candidate);
-        } catch (Exception e) {
+            return new PluginLoadResult(candidate.id(), true, null);
+        } catch (Throwable e) {
             serverLogger.error("Failed to enable plugin {}", candidate.id(), e);
+            cleanupFailedPlugin(candidate);
+            return new PluginLoadResult(candidate.id(), false, e);
         }
     }
 
@@ -183,6 +195,16 @@ public class PluginManager {
         callLifecycleHook(instance, PluginLifecycle::onEnable);
 
         serverLogger.info("Enabled plugin {} v{}", candidate.id(), candidate.version());
+    }
+
+    private void cleanupFailedPlugin(PluginCandidate candidate) {
+        plugins.remove(candidate.id());
+
+        try {
+            candidate.loader().close();
+        } catch (IOException e) {
+            serverLogger.warn("Failed to cleanup ClassLoader for failed plugin {}", candidate.id());
+        }
     }
 
     private void checkDependencies(PluginCandidate candidate) {
@@ -298,4 +320,6 @@ public class PluginManager {
         String id() { return annotation.id(); }
         String version() { return annotation.version(); }
     }
+
+    private record PluginLoadResult(String id, boolean success, Throwable error) {}
 }
