@@ -30,6 +30,11 @@ public class PluginEventBus {
         plugin.addListener(listener);
     }
 
+    public void unsubscribe(PluginContainer plugin, Listener listener) {
+        orbit.unsubscribe(listener);
+        plugin.removeListener(listener);
+    }
+
     public void unsubscribeAll(PluginContainer plugin) {
         for (Object listener : plugin.getListeners()) {
             orbit.unsubscribe(listener);

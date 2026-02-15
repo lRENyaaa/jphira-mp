@@ -41,6 +41,7 @@ public class PluginContainer {
     void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     void addListener(Object listener) { listeners.add(listener); }
+    void removeListener(Object listener) { listeners.remove(listener); }
     Set<Object> getListeners() { return Collections.unmodifiableSet(listeners); }
 
     void clearListeners() {

@@ -13,7 +13,6 @@ import top.rymc.phira.protocol.packet.ClientBoundPacket;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundChangeStatePacket;
 
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
 
 public abstract sealed class RoomGameState implements ProtocolConvertible<GameState> permits RoomPlaying, RoomWaitForReady, RoomSelectChart {
