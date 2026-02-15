@@ -4,6 +4,7 @@ import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.event.login.PlayerLoginSuccessEvent;
 import top.rymc.phira.main.event.login.PlayerPostLoginEvent;
+import top.rymc.phira.main.event.login.PlayerPreAuthenticateEvent;
 import top.rymc.phira.main.event.login.PlayerPreLoginEvent;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
@@ -38,8 +39,20 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
     @Override
     public void handle(ServerBoundAuthenticatePacket packet) {
         try {
-            Server.getLogger().info("{} sent his token [{}]", connection.getRemoteAddressAsString(), packet.getToken());
-            UserInfo userInfo = PhiraFetcher.GET_USER_INFO.apply(packet.getToken());
+            String token = packet.getToken();
+            Server.getLogger().info("{} sent his token [{}]", connection.getRemoteAddressAsString(), token);
+
+            PlayerPreAuthenticateEvent preAuthEvent = new PlayerPreAuthenticateEvent(connection, token);
+            Server.getInstance().getPluginManager().getEventBus().post(preAuthEvent);
+
+            String preAuthCancelReason = preAuthEvent.getCancelReason();
+            if (preAuthCancelReason != null) {
+                connection.send(ClientBoundAuthenticatePacket.failed(preAuthCancelReason));
+                connection.close();
+                return;
+            }
+            UserInfo eventUserInfo = preAuthEvent.getUserInfo();
+            UserInfo userInfo = eventUserInfo != null ? eventUserInfo : PhiraFetcher.GET_USER_INFO.apply(token);
 
             PlayerPreLoginEvent preLoginEvent = new PlayerPreLoginEvent(userInfo);
             Server.postEvent(preLoginEvent);
