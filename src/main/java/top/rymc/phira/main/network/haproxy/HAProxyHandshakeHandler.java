@@ -85,12 +85,14 @@ public class HAProxyHandshakeHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext context, Throwable throwable) {
+    public void exceptionCaught(ChannelHandlerContext context, Throwable throwable) throws Exception {
         cancelTimeout();
         if (!realAddressPromise.isDone()) {
             realAddressPromise.completeExceptionally(throwable);
+            context.close();
+            return;
         }
-        context.close();
+        super.exceptionCaught(context, throwable);
     }
 
     private void cancelTimeout() {

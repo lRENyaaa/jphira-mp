@@ -5,6 +5,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.PlayerManager;
+import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.RoomManager;
+import top.rymc.phira.main.game.session.SessionManager;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.test.TestServerSetup;
 

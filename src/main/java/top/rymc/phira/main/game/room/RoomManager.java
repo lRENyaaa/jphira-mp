@@ -1,6 +1,7 @@
-package top.rymc.phira.main.game;
+package top.rymc.phira.main.game.room;
 
 import top.rymc.phira.main.exception.GameOperationException;
+import top.rymc.phira.main.game.player.Player;
 
 import java.util.ArrayList;
 import java.util.List;

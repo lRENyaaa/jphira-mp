@@ -16,9 +16,9 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.io.IoBuilder;
 import top.rymc.phira.main.command.CommandService;
 import top.rymc.phira.main.config.ServerArgs;
-import top.rymc.phira.main.game.Player;
-import top.rymc.phira.main.game.PlayerManager;
-import top.rymc.phira.main.i18n.I18nService;
+import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.PlayerManager;
+import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.network.ServerChannelInitializer;
 import top.rymc.phira.plugin.core.PluginManager;
 import top.rymc.phira.plugin.event.CancellableEvent;
@@ -183,6 +183,7 @@ public class Server {
         logger.info("Shutdown completed in {}ms. Goodbye!", shutdownTime);
 
         LogManager.shutdown();
+        System.exit(0);
     }
 
     public boolean isRunning() {

@@ -1,6 +1,7 @@
-package top.rymc.phira.main.game;
+package top.rymc.phira.main.game.player;
 
 import top.rymc.phira.main.data.UserInfo;
+import top.rymc.phira.main.game.session.SessionManager;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.handler.PlayHandler;
 

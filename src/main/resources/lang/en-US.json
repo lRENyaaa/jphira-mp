@@ -14,5 +14,6 @@
   "error.not_host": "You are not the host",
   "error.player_not_found": "Player not found",
   "error.session_expired": "Session expired",
-  "error.authentication_failed": "Authentication failed"
+  "error.authentication_failed": "Authentication failed",
+  "error.logged_in_elsewhere": "Account logged in from another location"
 }

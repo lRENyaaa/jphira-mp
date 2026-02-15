@@ -2,8 +2,8 @@ package top.rymc.phira.main.event.operation;
 
 import lombok.Getter;
 import lombok.Setter;
-import top.rymc.phira.main.game.Player;
-import top.rymc.phira.main.game.Room;
+import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.plugin.event.ReasonedCancellableEvent;
 
 @Getter

@@ -14,5 +14,6 @@
   "error.not_host": "你不是房主",
   "error.player_not_found": "玩家不存在",
   "error.session_expired": "会话已过期",
-  "error.authentication_failed": "认证失败"
+  "error.authentication_failed": "认证失败",
+  "error.logged_in_elsewhere": "账号在其他地方登录"
 }

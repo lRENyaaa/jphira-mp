@@ -1,5 +1,9 @@
-package top.rymc.phira.main.game;
+package top.rymc.phira.main.game.session;
 
+import lombok.Getter;
+import lombok.Setter;
+import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.handler.PlayHandler;
 import top.rymc.phira.main.network.handler.RoomHandler;
@@ -8,16 +12,16 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 public class SessionManager {
+
     private static final Map<Integer, SuspendedRoomSession> SUSPENDED = new ConcurrentHashMap<>();
     private static final ScheduledExecutorService TIMER = Executors.newScheduledThreadPool(1);
+
+    @Getter
+    @Setter
     private static long suspendTimeoutMillis = TimeUnit.MINUTES.toMillis(5);
 
     public static void setSuspendTimeout(long timeout, TimeUnit unit) {
         suspendTimeoutMillis = unit.toMillis(timeout);
-    }
-
-    public static long getSuspendTimeoutMillis() {
-        return suspendTimeoutMillis;
     }
 
     public static boolean resume(Player player, PlayerConnection newConn) {
@@ -54,7 +58,7 @@ public class SessionManager {
             return false;
         }
 
-        return SUSPENDED.compute(player.getId(), (id, oldSession) -> {
+        SUSPENDED.compute(player.getId(), (id, oldSession) -> {
             if (oldSession != null) {
                 oldSession.timeout.cancel(false);
             }
@@ -63,7 +67,8 @@ public class SessionManager {
                     player,
                     TIMER.schedule(() -> forceLeave(player, room), suspendTimeoutMillis, TimeUnit.MILLISECONDS)
             );
-        }) != null;
+        });
+        return true;
     }
 
     private static void forceLeave(Player player, Room room) {

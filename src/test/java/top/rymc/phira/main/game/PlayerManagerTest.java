@@ -4,6 +4,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import top.rymc.phira.main.data.UserInfo;
+import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.network.PlayerConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;

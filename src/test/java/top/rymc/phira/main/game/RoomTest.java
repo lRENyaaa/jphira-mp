@@ -6,6 +6,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import top.rymc.phira.main.exception.GameOperationException;
+import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.RoomManager;
 import top.rymc.phira.test.TestServerSetup;
 
 import static org.assertj.core.api.Assertions.assertThat;

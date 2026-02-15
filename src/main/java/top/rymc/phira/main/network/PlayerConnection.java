@@ -12,7 +12,7 @@ import top.rymc.phira.main.event.network.PlayerSwitchPacketHandlerEvent;
 import top.rymc.phira.main.event.login.PlayerDisconnectEvent;
 import top.rymc.phira.main.event.network.PacketReceiveEvent;
 import top.rymc.phira.main.event.network.PacketSendEvent;
-import top.rymc.phira.main.game.PlayerManager;
+import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.protocol.data.message.ChatMessage;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 import top.rymc.phira.protocol.packet.ClientBoundPacket;

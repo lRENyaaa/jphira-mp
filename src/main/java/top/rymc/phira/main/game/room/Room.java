@@ -1,4 +1,4 @@
-package top.rymc.phira.main.game;
+package top.rymc.phira.main.game.room;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -13,6 +13,7 @@ import top.rymc.phira.main.event.operation.RoomSelectChartEvent;
 import top.rymc.phira.main.event.room.RoomDestroyEvent;
 import top.rymc.phira.main.event.room.RoomHostChangeEvent;
 import top.rymc.phira.main.exception.GameOperationException;
+import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.state.RoomGameState;
 import top.rymc.phira.main.game.state.RoomPlaying;
 import top.rymc.phira.main.game.state.RoomSelectChart;
@@ -388,9 +389,7 @@ public class Room {
 
             PlayerConnection connection = player.getConnection();
 
-            executor.execute(() -> {
-                connection.send(ClientBoundChangeHostPacket.create(isHost(player)));
-            });
+            executor.execute(() -> connection.send(ClientBoundChangeHostPacket.create(isHost(player))));
         }
 
         public void forceSyncInfo(Player player) {

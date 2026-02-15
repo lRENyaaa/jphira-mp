@@ -1,5 +1,8 @@
 package top.rymc.phira.main.exception;
 
+import lombok.Getter;
+
+@Getter
 public class GameOperationException extends RuntimeException {
 
     private final String messageKey;
@@ -7,10 +10,6 @@ public class GameOperationException extends RuntimeException {
     public GameOperationException(String messageKey) {
         super(messageKey);
         this.messageKey = messageKey;
-    }
-
-    public String getMessageKey() {
-        return messageKey;
     }
 
     public static GameOperationException invalidState() {

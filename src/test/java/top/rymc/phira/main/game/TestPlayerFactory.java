@@ -1,6 +1,7 @@
 package top.rymc.phira.main.game;
 
 import top.rymc.phira.main.data.UserInfo;
+import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.network.PlayerConnection;
 
 import static org.mockito.Mockito.mock;

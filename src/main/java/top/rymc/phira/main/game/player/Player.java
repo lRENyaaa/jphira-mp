@@ -1,10 +1,13 @@
-package top.rymc.phira.main.game;
+package top.rymc.phira.main.game.player;
 
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
+import top.rymc.phira.main.game.i18n.I18nService;
+import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.session.SessionManager;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.main.network.handler.RoomHandler;
@@ -29,7 +32,7 @@ public class Player implements ProtocolConvertible<UserProfile> {
 
     public void bind(PlayerConnection newConn) {
         if (this.connection != null) {
-            this.connection.sendChat("账号在其他地方登录");
+            this.connection.sendChat(I18nService.INSTANCE.getMessage(this, "error.logged_in_elsewhere"));
             this.connection.close();
         }
         this.connection = newConn;
