@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class Player implements ProtocolConvertible<UserProfile> {
     @Getter private final UserInfo userInfo;
-    @Getter private PlayerConnection connection;
+    @Getter private volatile PlayerConnection connection;
     private final Consumer<Player> removeFromManager;
 
     public static Player create(UserInfo info, PlayerConnection conn, Consumer<Player> remover) {
@@ -41,7 +41,9 @@ public class Player implements ProtocolConvertible<UserProfile> {
     }
 
     public Optional<Room> getRoom() {
-        ServerBoundPacketHandler h = connection.getPacketHandler();
+        PlayerConnection conn = this.connection;
+        if (conn == null) return Optional.empty();
+        ServerBoundPacketHandler h = conn.getPacketHandler();
         return (h instanceof RoomHandler rh) ? Optional.of(rh.getRoom()) : Optional.empty();
     }
 

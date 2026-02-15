@@ -58,6 +58,8 @@ public class Room {
     @Getter
     private final RoomSetting setting;
 
+    private final Object stateLock = new Object();
+
     @Getter
     @Setter(AccessLevel.PRIVATE)
     public static class RoomSetting {
@@ -96,41 +98,52 @@ public class Room {
         return room;
     }
 
-    public synchronized void join(Player player, boolean isMonitor) {
-        if (players.size() >= setting.maxPlayer) throw new IllegalStateException("Room is full");
-        if (setting.locked && !players.isEmpty()) throw new IllegalStateException("Room is locked");
+    public void join(Player player, boolean isMonitor) {
+        synchronized (stateLock) {
+            if (players.size() >= setting.maxPlayer) throw new IllegalStateException("Room is full");
+            if (setting.locked && !players.isEmpty()) throw new IllegalStateException("Room is locked");
 
-        boolean isInit = players.isEmpty();
-        Set<Player> set = isMonitor ? monitors : players;
-        set.add(player);
+            boolean isInit = players.isEmpty();
+            Set<Player> set = isMonitor ? monitors : players;
+            set.add(player);
 
-        if (isInit) {
-            if (setting.host) {
-                host = player;
+            if (isInit) {
+                if (setting.host) {
+                    host = player;
+                }
+            } else {
+                broadcast(ClientBoundOnJoinRoomPacket.create(player.toProtocol(), isMonitor));
+                broadcast(ClientBoundMessagePacket.create(new JoinRoomMessage(player.getId(), player.getName())));
             }
-        } else {
-            broadcast(ClientBoundOnJoinRoomPacket.create(player.toProtocol(), isMonitor));
-            broadcast(ClientBoundMessagePacket.create(new JoinRoomMessage(player.getId(), player.getName())));
-        }
 
-        handleJoin(player);
+            state.handleJoin(player);
+        }
     }
 
-    public synchronized void leave(Player player) {
-        if (!players.remove(player) && !monitors.remove(player)) return;
+    public void leave(Player player) {
+        synchronized (stateLock) {
+            if (!players.remove(player) && !monitors.remove(player)) return;
 
-        broadcast(ClientBoundMessagePacket.create(new LeaveRoomMessage(player.getId(), player.getName())));
-        handleLeave(player);
+            broadcast(ClientBoundMessagePacket.create(new LeaveRoomMessage(player.getId(), player.getName())));
+            state.handleLeave(player);
 
-        PlayerLeaveRoomEvent event = new PlayerLeaveRoomEvent(player, this);
-        Server.postEvent(event);
+            PlayerLeaveRoomEvent event = new PlayerLeaveRoomEvent(player, this);
+            Server.postEvent(event);
 
-        if (players.isEmpty() && monitors.isEmpty()) {
-            if (setting.autoDestroy) {
-                onDestroy.accept(this);
+            if (players.isEmpty() && monitors.isEmpty()) {
+                if (setting.autoDestroy) {
+                    onDestroy.accept(this);
+                }
+            } else if (setting.host && player.equals(host)) {
+                transferHostToNextPlayer();
             }
-        } else if (setting.host && player.equals(host)) {
-            host = players.iterator().next();
+        }
+    }
+
+    private void transferHostToNextPlayer() {
+        Player nextHost = players.iterator().next();
+        if (nextHost != null && nextHost.isOnline()) {
+            host = nextHost;
             host.getConnection().send(ClientBoundChangeHostPacket.create(true));
         }
     }
@@ -147,8 +160,7 @@ public class Room {
         return monitors.contains(player);
     }
 
-    public void handleJoin(Player player) { state.handleJoin(player); }
-    public void handleLeave(Player player) { state.handleLeave(player); }
+
     @Getter
     private final Operation operation = new Operation();
 
@@ -291,11 +303,12 @@ public class Room {
     }
 
     private void updateState(RoomGameState newState) {
-        RoomStateChangeEvent event = new RoomStateChangeEvent(this, this.state, newState);
-        Server.postEvent(event);
-        
-        this.state = newState;
-        broadcast(ClientBoundChangeStatePacket.create(newState.toProtocol()));
+        synchronized (stateLock) {
+            RoomGameState oldState = this.state;
+            this.state = newState;
+            Server.postEvent(new RoomStateChangeEvent(this, oldState, newState));
+            broadcast(ClientBoundChangeStatePacket.create(newState.toProtocol()));
+        }
     }
 
     public void broadcast(ClientBoundPacket packet) {

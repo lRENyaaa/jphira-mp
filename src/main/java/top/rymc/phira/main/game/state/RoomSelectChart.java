@@ -31,7 +31,9 @@ public final class RoomSelectChart extends RoomGameState {
 
     @Override
     public void requireStart(Player player, Set<Player> players, Set<Player> monitors) {
-        if (players.size() + monitors.size() == 1) {
+        int totalPlayers = players.size() + monitors.size();
+
+        if (totalPlayers == 1) {
             RoomPlaying state = new RoomPlaying(stateUpdater, chart);
             updateGameState(state, players, monitors);
         } else {
@@ -39,7 +41,6 @@ public final class RoomSelectChart extends RoomGameState {
             updateGameState(state, players, monitors);
             broadcast(players, monitors, ClientBoundMessagePacket.create(new GameStartMessage(player.getId())));
         }
-
     }
 
     @Override

@@ -92,22 +92,11 @@ public final class RoomPlaying extends RoomGameState {
     }
 
     private boolean isAllOnlinePlayersDone(Set<Player> players) {
-        long onlineCount = players.stream()
+        Set<Player> onlinePlayers = players.stream()
                 .filter(Player::isOnline)
-                .count();
-
-        if (donePlayers.size() != onlineCount) {
-            return false;
-        }
-
-        Set<Integer> onlineIds = players.stream()
-                .filter(Player::isOnline)
-                .map(Player::getId)
                 .collect(Collectors.toSet());
 
-        return donePlayers.stream()
-                .map(Player::getId)
-                .allMatch(onlineIds::contains);
+        return donePlayers.containsAll(onlinePlayers);
     }
 
     @Override

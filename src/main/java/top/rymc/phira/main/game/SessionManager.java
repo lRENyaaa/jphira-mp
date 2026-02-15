@@ -45,27 +45,25 @@ public class SessionManager {
             return false;
         }
 
-        if (rh.getRoom().containsMonitor(player)) {
-            rh.getRoom().leave(player);
+        Room room = rh.getRoom();
+        if (room.containsMonitor(player)) {
+            room.leave(player);
         }
 
-        if (!rh.getRoom().containsPlayer(player)) {
+        if (!room.containsPlayer(player)) {
             return false;
         }
 
-        SuspendedRoomSession old = SUSPENDED.get(player.getId());
-        if (old != null) {
-            old.timeout.cancel(false);
-        }
-
-        SuspendedRoomSession session = new SuspendedRoomSession(
-                rh.getRoom(),
-                player,
-                TIMER.schedule(() -> forceLeave(player, rh.getRoom()), suspendTimeoutMillis, TimeUnit.MILLISECONDS)
-        );
-
-        SUSPENDED.put(player.getId(), session);
-        return true;
+        return SUSPENDED.compute(player.getId(), (id, oldSession) -> {
+            if (oldSession != null) {
+                oldSession.timeout.cancel(false);
+            }
+            return new SuspendedRoomSession(
+                    room,
+                    player,
+                    TIMER.schedule(() -> forceLeave(player, room), suspendTimeoutMillis, TimeUnit.MILLISECONDS)
+            );
+        }) != null;
     }
 
     private static void forceLeave(Player player, Room room) {

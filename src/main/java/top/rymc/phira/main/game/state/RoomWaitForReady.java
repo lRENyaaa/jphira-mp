@@ -13,11 +13,11 @@ import top.rymc.phira.protocol.data.state.GameState;
 import top.rymc.phira.protocol.data.state.WaitForReady;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundMessagePacket;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public final class RoomWaitForReady extends RoomGameState {
 
@@ -87,22 +87,14 @@ public final class RoomWaitForReady extends RoomGameState {
     }
 
     private boolean isAllOnlinePlayersDone(Set<Player> players, Set<Player> monitors) {
-        long onlineCount = Stream.concat(players.stream(), monitors.stream())
-                .filter(Player::isOnline)
-                .count();
+        Set<Player> allPlayers = new HashSet<>(players);
+        allPlayers.addAll(monitors);
 
-        if (readyPlayers.size() != onlineCount) {
-            return false;
-        }
-
-        Set<Integer> onlineIds = Stream.concat(players.stream(), monitors.stream())
+        Set<Player> onlinePlayers = allPlayers.stream()
                 .filter(Player::isOnline)
-                .map(Player::getId)
                 .collect(Collectors.toSet());
 
-        return readyPlayers.stream()
-                .map(Player::getId)
-                .allMatch(onlineIds::contains);
+        return readyPlayers.containsAll(onlinePlayers);
     }
 
     @Override
