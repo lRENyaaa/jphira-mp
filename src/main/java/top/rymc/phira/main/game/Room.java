@@ -69,7 +69,7 @@ public class Room {
         private boolean live = false;
         private boolean chat = true;
 
-        private RoomSetting() {}
+        public RoomSetting() {}
 
         public RoomSetting(boolean autoDestroy, boolean host, int maxPlayer, boolean locked, boolean cycle, boolean live, boolean chat) {
             this.autoDestroy = autoDestroy;

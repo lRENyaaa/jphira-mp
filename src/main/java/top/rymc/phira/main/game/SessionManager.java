@@ -10,6 +10,15 @@ import java.util.concurrent.*;
 public class SessionManager {
     private static final Map<Integer, SuspendedRoomSession> SUSPENDED = new ConcurrentHashMap<>();
     private static final ScheduledExecutorService TIMER = Executors.newScheduledThreadPool(1);
+    private static long suspendTimeoutMillis = TimeUnit.MINUTES.toMillis(5);
+
+    public static void setSuspendTimeout(long timeout, TimeUnit unit) {
+        suspendTimeoutMillis = unit.toMillis(timeout);
+    }
+
+    public static long getSuspendTimeoutMillis() {
+        return suspendTimeoutMillis;
+    }
 
     public static boolean resume(Player player, PlayerConnection newConn) {
         SuspendedRoomSession session = SUSPENDED.remove(player.getId());
@@ -52,7 +61,7 @@ public class SessionManager {
         SuspendedRoomSession session = new SuspendedRoomSession(
                 rh.getRoom(),
                 player,
-                TIMER.schedule(() -> forceLeave(player, rh.getRoom()), 5, TimeUnit.MINUTES)
+                TIMER.schedule(() -> forceLeave(player, rh.getRoom()), suspendTimeoutMillis, TimeUnit.MILLISECONDS)
         );
 
         SUSPENDED.put(player.getId(), session);
