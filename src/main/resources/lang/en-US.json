@@ -1,0 +1,18 @@
+{
+  "error.invalid_state": "You cannot perform this action in current state",
+  "error.permission_denied": "Permission denied",
+  "error.room_full": "Room is full",
+  "error.room_locked": "Room is locked",
+  "error.room_not_found": "Room not found",
+  "error.room_already_exists": "Room already exists",
+  "error.chart_not_selected": "Chart not selected",
+  "error.chart_not_found": "Failed to get chart information",
+  "error.chat_not_enabled": "Chat is not enabled in this room",
+  "error.record_not_found": "Failed to query record",
+  "error.already_in_room": "You are already in a room",
+  "error.not_in_room": "You are not in a room",
+  "error.not_host": "You are not the host",
+  "error.player_not_found": "Player not found",
+  "error.session_expired": "Session expired",
+  "error.authentication_failed": "Authentication failed"
+}

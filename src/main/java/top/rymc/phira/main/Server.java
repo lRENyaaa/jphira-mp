@@ -18,6 +18,7 @@ import top.rymc.phira.main.command.CommandService;
 import top.rymc.phira.main.config.ServerArgs;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.PlayerManager;
+import top.rymc.phira.main.i18n.I18nService;
 import top.rymc.phira.main.network.ServerChannelInitializer;
 import top.rymc.phira.plugin.core.PluginManager;
 import top.rymc.phira.plugin.event.CancellableEvent;
@@ -85,6 +86,9 @@ public class Server {
         startTime.set(System.currentTimeMillis());
 
         logger.info("Booting up Phira Server...");
+
+        I18nService.INSTANCE.setDefaultLanguage(args.getDefaultLanguage());
+        logger.info("Default language: {}", args.getDefaultLanguage());
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             Thread.currentThread().setName("ShutdownThread");

@@ -106,7 +106,7 @@ class RoomWaitForReadyTest {
 
         assertThatThrownBy(() -> state.requireStart(player, players, monitors))
             .isInstanceOf(GameOperationException.class)
-            .hasMessageContaining("不能");
+            .hasMessage("error.invalid_state");
     }
 
     @Test
@@ -116,7 +116,7 @@ class RoomWaitForReadyTest {
 
         assertThatThrownBy(() -> state.abort(player, players, monitors))
             .isInstanceOf(GameOperationException.class)
-            .hasMessageContaining("不能");
+            .hasMessage("error.invalid_state");
     }
 
     @Test
@@ -126,7 +126,7 @@ class RoomWaitForReadyTest {
 
         assertThatThrownBy(() -> state.played(player, 123, players, monitors))
             .isInstanceOf(GameOperationException.class)
-            .hasMessageContaining("不能");
+            .hasMessage("error.invalid_state");
     }
 
     @Test

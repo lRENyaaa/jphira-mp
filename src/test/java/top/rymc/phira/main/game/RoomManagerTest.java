@@ -57,7 +57,7 @@ class RoomManagerTest {
         assertThatThrownBy(() ->
             RoomManager.createRoom("duplicate-room", new Room.RoomSetting())
         ).isInstanceOf(GameOperationException.class)
-         .hasMessageContaining("already exists");
+         .hasMessage("error.room_already_exists");
     }
 
     @Test

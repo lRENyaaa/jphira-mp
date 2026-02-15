@@ -1,0 +1,18 @@
+{
+  "error.invalid_state": "你不能在当前状态执行这个操作",
+  "error.permission_denied": "你没有权限",
+  "error.room_full": "房间已满",
+  "error.room_locked": "房间已锁定",
+  "error.room_not_found": "房间不存在",
+  "error.room_already_exists": "房间已存在",
+  "error.chart_not_selected": "未选择谱面",
+  "error.chart_not_found": "谱面信息获取失败",
+  "error.chat_not_enabled": "房间未启用聊天",
+  "error.record_not_found": "查询记录失败",
+  "error.already_in_room": "你已经在房间中",
+  "error.not_in_room": "你不在房间中",
+  "error.not_host": "你不是房主",
+  "error.player_not_found": "玩家不存在",
+  "error.session_expired": "会话已过期",
+  "error.authentication_failed": "认证失败"
+}

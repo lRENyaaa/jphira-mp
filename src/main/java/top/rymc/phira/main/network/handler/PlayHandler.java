@@ -7,6 +7,7 @@ import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.Room;
 import top.rymc.phira.main.game.RoomManager;
+import top.rymc.phira.main.i18n.I18nService;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.protocol.handler.server.SimpleServerBoundPacketHandler;
 import top.rymc.phira.protocol.packet.ServerBoundPacket;
@@ -38,6 +39,8 @@ public class PlayHandler extends SimpleServerBoundPacketHandler {
 
             room.getProtocolHack().forceSyncInfo(player);
 
+        } catch (GameOperationException e) {
+            player.getConnection().send(ClientBoundCreateRoomPacket.failed(I18nService.INSTANCE.getMessage(player, e.getMessageKey())));
         } catch (Exception e) {
             player.getConnection().send(ClientBoundCreateRoomPacket.failed(e.getMessage()));
         }
@@ -78,6 +81,8 @@ public class PlayHandler extends SimpleServerBoundPacketHandler {
             room.getProtocolHack().fixClientRoomState(player);
             room.getProtocolHack().forceSyncHost(player);
 
+        } catch (GameOperationException e) {
+            connection.send(ClientBoundJoinRoomPacket.failed(I18nService.INSTANCE.getMessage(player, e.getMessageKey())));
         } catch (Exception e) {
             connection.send(ClientBoundJoinRoomPacket.failed(e.getMessage()));
         }

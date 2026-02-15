@@ -3,6 +3,7 @@ package top.rymc.phira.main.game;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.ProtocolConvertible;
@@ -63,6 +64,11 @@ public class Player implements ProtocolConvertible<UserProfile> {
 
     public int getId() { return userInfo.getId(); }
     public String getName() { return userInfo.getName(); }
+
+    public String getLanguage() {
+        String lang = userInfo.getLanguage();
+        return lang != null ? lang : Server.getInstance().getArgs().getDefaultLanguage();
+    }
 
     @Override
     public UserProfile toProtocol() {

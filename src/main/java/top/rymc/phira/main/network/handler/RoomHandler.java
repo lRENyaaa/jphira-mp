@@ -1,11 +1,17 @@
 package top.rymc.phira.main.network.handler;
 
 import lombok.Getter;
+import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.Room;
+import top.rymc.phira.main.i18n.I18nService;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
+import top.rymc.phira.protocol.packet.ClientBoundPacket;
 import top.rymc.phira.protocol.packet.clientbound.*;
 import top.rymc.phira.protocol.packet.serverbound.*;
+
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 @Getter
 public class RoomHandler extends ServerBoundPacketHandler {
@@ -21,103 +27,95 @@ public class RoomHandler extends ServerBoundPacketHandler {
 
     @Override
     public void handle(ServerBoundChatPacket packet) {
-        try {
-            room.getOperation().chat(player, packet.getMessage());
-            player.getConnection().send(ClientBoundLockRoomPacket.success());
-        } catch (Exception e) {
-            player.getConnection().send(ClientBoundLockRoomPacket.failed(e.getMessage()));
-        }
+        handleWithException(
+            () -> room.getOperation().chat(player, packet.getMessage()),
+            ClientBoundLockRoomPacket::success,
+            ClientBoundLockRoomPacket::failed
+        );
     }
 
     @Override
-    public void handle(ServerBoundLeaveRoomPacket p) {
-        try {
-            room.leave(player);
-            player.getConnection().setPacketHandler(fallback);
-            player.getConnection().send(ClientBoundLeaveRoomPacket.success());
-        } catch (Exception e) {
-            player.getConnection().send(ClientBoundLeaveRoomPacket.failed(e.getMessage()));
-        }
+    public void handle(ServerBoundLeaveRoomPacket packet) {
+        handleWithException(
+            () -> {
+                room.leave(player);
+                player.getConnection().setPacketHandler(fallback);
+            },
+            ClientBoundLeaveRoomPacket::success,
+            ClientBoundLeaveRoomPacket::failed
+        );
     }
 
     @Override
-    public void handle(ServerBoundLockRoomPacket p) {
-        try {
-            room.getOperation().lockRoom(player);
-            player.getConnection().send(ClientBoundLockRoomPacket.success());
-        } catch (Exception e) {
-            player.getConnection().send(ClientBoundLockRoomPacket.failed(e.getMessage()));
-        }
+    public void handle(ServerBoundLockRoomPacket packet) {
+        handleWithException(
+            () -> room.getOperation().lockRoom(player),
+            ClientBoundLockRoomPacket::success,
+            ClientBoundLockRoomPacket::failed
+        );
     }
 
     @Override
-    public void handle(ServerBoundCycleRoomPacket p) {
-        try {
-            room.getOperation().cycleRoom(player);
-            player.getConnection().send(ClientBoundCycleRoomPacket.success());
-        } catch (Exception e) {
-            player.getConnection().send(ClientBoundCycleRoomPacket.failed(e.getMessage()));
-        }
+    public void handle(ServerBoundCycleRoomPacket packet) {
+        handleWithException(
+            () -> room.getOperation().cycleRoom(player),
+            ClientBoundCycleRoomPacket::success,
+            ClientBoundCycleRoomPacket::failed
+        );
     }
 
     @Override
     public void handle(ServerBoundSelectChartPacket packet) {
-        try {
-            room.getOperation().selectChart(player, packet.getId());
-            player.getConnection().send(ClientBoundSelectChartPacket.success());
-        } catch (Exception e) {
-            player.getConnection().send(ClientBoundSelectChartPacket.failed(e.getMessage()));
-        }
+        handleWithException(
+            () -> room.getOperation().selectChart(player, packet.getId()),
+            ClientBoundSelectChartPacket::success,
+            ClientBoundSelectChartPacket::failed
+        );
     }
 
     @Override
-    public void handle(ServerBoundReadyPacket p) {
-        try {
-            room.getOperation().ready(player);
-            player.getConnection().send(ClientBoundReadyPacket.success());
-        } catch (Exception e) {
-            player.getConnection().send(ClientBoundReadyPacket.failed(e.getMessage()));
-        }
+    public void handle(ServerBoundReadyPacket packet) {
+        handleWithException(
+            () -> room.getOperation().ready(player),
+            ClientBoundReadyPacket::success,
+            ClientBoundReadyPacket::failed
+        );
     }
 
     @Override
-    public void handle(ServerBoundCancelReadyPacket p) {
-        try {
-            room.getOperation().cancelReady(player);
-            player.getConnection().send(ClientBoundCancelReadyPacket.success());
-        } catch (Exception e) {
-            player.getConnection().send(ClientBoundCancelReadyPacket.failed(e.getMessage()));
-        }
+    public void handle(ServerBoundCancelReadyPacket packet) {
+        handleWithException(
+            () -> room.getOperation().cancelReady(player),
+            ClientBoundCancelReadyPacket::success,
+            ClientBoundCancelReadyPacket::failed
+        );
     }
 
     @Override
-    public void handle(ServerBoundRequestStartPacket p) {
-        try {
-            room.getOperation().requireStart(player);
-            player.getConnection().send(ClientBoundRequestStartPacket.success());
-        } catch (Exception e) {
-            player.getConnection().send(ClientBoundRequestStartPacket.failed(e.getMessage()));
-        }
+    public void handle(ServerBoundRequestStartPacket packet) {
+        handleWithException(
+            () -> room.getOperation().requireStart(player),
+            ClientBoundRequestStartPacket::success,
+            ClientBoundRequestStartPacket::failed
+        );
     }
 
     @Override
     public void handle(ServerBoundPlayedPacket packet) {
-        try {
-            room.getOperation().played(player, packet.getId());
-            player.getConnection().send(ClientBoundPlayedPacket.success());
-        } catch (Exception e) {
-            player.getConnection().send(ClientBoundPlayedPacket.failed(e.getMessage()));
-        }
+        handleWithException(
+            () -> room.getOperation().played(player, packet.getId()),
+            ClientBoundPlayedPacket::success,
+            ClientBoundPlayedPacket::failed
+        );
     }
 
     @Override
-    public void handle(ServerBoundAbortPacket p) {
-        try {
-            room.getOperation().abort(player);
-            player.getConnection().send(ClientBoundAbortPacket.success());
-        } catch (Exception e) {
-            player.getConnection().send(ClientBoundAbortPacket.failed(e.getMessage()));
-        }
+    public void handle(ServerBoundAbortPacket packet) {
+        handleWithException(
+            () -> room.getOperation().abort(player),
+            ClientBoundAbortPacket::success,
+            ClientBoundAbortPacket::failed
+        );
     }
 
     @Override
@@ -125,17 +123,46 @@ public class RoomHandler extends ServerBoundPacketHandler {
         player.getConnection().send(ClientBoundPongPacket.INSTANCE);
     }
 
-    @Override public void handle(ServerBoundAuthenticatePacket p) { kick(); }
-    @Override public void handle(ServerBoundTouchesPacket p) {
-        room.getOperation().touchSend(player, p.getFrames());
+    @Override
+    public void handle(ServerBoundAuthenticatePacket packet) {
+        kick();
     }
-    @Override public void handle(ServerBoundJudgesPacket p) {
-        room.getOperation().judgeSend(player, p.getJudges());
+
+    @Override
+    public void handle(ServerBoundTouchesPacket packet) {
+        room.getOperation().touchSend(player, packet.getFrames());
     }
-    @Override public void handle(ServerBoundCreateRoomPacket p) { kick(); }
-    @Override public void handle(ServerBoundJoinRoomPacket p) { kick(); }
+
+    @Override
+    public void handle(ServerBoundJudgesPacket packet) {
+        room.getOperation().judgeSend(player, packet.getJudges());
+    }
+
+    @Override
+    public void handle(ServerBoundCreateRoomPacket packet) {
+        kick();
+    }
+
+    @Override
+    public void handle(ServerBoundJoinRoomPacket packet) {
+        kick();
+    }
 
     private void kick() {
         player.kick();
+    }
+
+    private void handleWithException(
+            Runnable action,
+            Supplier<ClientBoundPacket> successPacket,
+            Function<String, ClientBoundPacket> failedPacket) {
+        try {
+            action.run();
+            player.getConnection().send(successPacket.get());
+        } catch (GameOperationException e) {
+            player.getConnection().send(failedPacket.apply(I18nService.INSTANCE.getMessage(player, e.getMessageKey())));
+        } catch (Exception e) {
+            player.getConnection().send(failedPacket.apply(e.getMessage()));
+        }
     }
 }

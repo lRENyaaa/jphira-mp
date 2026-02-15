@@ -4,9 +4,11 @@ import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.event.PlayerPostJoinEvent;
 import top.rymc.phira.main.event.PlayerPreJoinEvent;
+import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.Player;
 import top.rymc.phira.main.game.PlayerManager;
 import top.rymc.phira.main.game.Room;
+import top.rymc.phira.main.i18n.I18nService;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.util.PhiraFetcher;
 import top.rymc.phira.protocol.data.FullUserProfile;
@@ -74,6 +76,9 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
                 room.getProtocolHack().forceSyncInfo(player);
             }
 
+        } catch (GameOperationException e) {
+            connection.send(ClientBoundAuthenticatePacket.failed(I18nService.INSTANCE.getMessage(e.getMessageKey())));
+            connection.close();
         } catch (Exception e) {
             connection.send(ClientBoundAuthenticatePacket.failed(e.getMessage()));
             connection.close();

@@ -64,7 +64,7 @@ class RoomSelectChartTest {
 
         assertThatThrownBy(() -> state.ready(player, players, monitors))
             .isInstanceOf(GameOperationException.class)
-            .hasMessageContaining("不能");
+            .hasMessage("error.invalid_state");
     }
 
     @Test
@@ -74,7 +74,7 @@ class RoomSelectChartTest {
 
         assertThatThrownBy(() -> state.cancelReady(player, players, monitors))
             .isInstanceOf(GameOperationException.class)
-            .hasMessageContaining("不能");
+            .hasMessage("error.invalid_state");
     }
 
     @Test
@@ -84,7 +84,7 @@ class RoomSelectChartTest {
 
         assertThatThrownBy(() -> state.abort(player, players, monitors))
             .isInstanceOf(GameOperationException.class)
-            .hasMessageContaining("不能");
+            .hasMessage("error.invalid_state");
     }
 
     @Test
@@ -94,7 +94,7 @@ class RoomSelectChartTest {
 
         assertThatThrownBy(() -> state.played(player, 123, players, monitors))
             .isInstanceOf(GameOperationException.class)
-            .hasMessageContaining("不能");
+            .hasMessage("error.invalid_state");
     }
 
     @Test

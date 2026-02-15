@@ -1,6 +1,5 @@
 package top.rymc.phira.main.config;
 
-import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
@@ -16,6 +15,7 @@ public class ServerArgs {
     private final String host;
     private final Path pluginsDir;
     private final boolean proxyProtocol;
+    private final String defaultLanguage;
 
     public ServerArgs(String[] args) {
         OptionParser parser = new OptionParser();
@@ -40,6 +40,11 @@ public class ServerArgs {
                 .ofType(Boolean.class)
                 .defaultsTo(false);
 
+        OptionSpec<String> languageSpec = parser.accepts("language", "Default server language (e.g., zh-CN, en-US)")
+                .withRequiredArg()
+                .ofType(String.class)
+                .defaultsTo("zh-CN");
+
         parser.accepts("help", "Show this help message").forHelp();
 
         OptionSet options;
@@ -61,6 +66,7 @@ public class ServerArgs {
         this.host = options.valueOf(hostSpec);
         this.pluginsDir = Paths.get(options.valueOf(pluginsSpec));
         this.proxyProtocol = options.valueOf(proxyProtocol);
+        this.defaultLanguage = options.valueOf(languageSpec);
     }
 
     private void printHelp(OptionParser parser) {

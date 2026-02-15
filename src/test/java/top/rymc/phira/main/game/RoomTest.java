@@ -77,7 +77,7 @@ class RoomTest {
         assertThatThrownBy(() ->
             fullRoom.join(TestPlayerFactory.createPlayer(3, "p3"), false)
         ).isInstanceOf(GameOperationException.class)
-         .hasMessageContaining("full");
+         .hasMessage("error.room_full");
     }
 
     @Test
@@ -90,7 +90,7 @@ class RoomTest {
         assertThatThrownBy(() ->
             lockedRoom.join(TestPlayerFactory.createPlayer(2, "player"), false)
         ).isInstanceOf(GameOperationException.class)
-         .hasMessageContaining("locked");
+         .hasMessage("error.room_locked");
     }
 
     @Test
@@ -178,7 +178,7 @@ class RoomTest {
         assertThatThrownBy(() ->
             hostRoom.getOperation().lockRoom(regular)
         ).isInstanceOf(GameOperationException.class)
-         .hasMessageContaining("权限");
+         .hasMessage("error.permission_denied");
     }
 
     @Test
@@ -203,7 +203,7 @@ class RoomTest {
         assertThatThrownBy(() ->
             hostRoom.getOperation().cycleRoom(regular)
         ).isInstanceOf(GameOperationException.class)
-         .hasMessageContaining("权限");
+         .hasMessage("error.permission_denied");
     }
 
     @Test
@@ -217,7 +217,7 @@ class RoomTest {
         assertThatThrownBy(() ->
             noChatRoom.getOperation().chat(player, "hello")
         ).isInstanceOf(GameOperationException.class)
-         .hasMessageContaining("聊天");
+         .hasMessage("error.chat_not_enabled");
     }
 
     @Test
