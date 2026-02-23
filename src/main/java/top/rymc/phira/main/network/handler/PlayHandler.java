@@ -51,7 +51,7 @@ public class PlayHandler extends SimpleServerBoundPacketHandler {
 
             player.getConnection().send(ClientBoundCreateRoomPacket.success());
 
-            room.getProtocolHack().forceSyncInfo(player);
+            room.getProtocolHack().forceSyncInfo(player, false);
 
         } catch (GameOperationException e) {
             player.getConnection().send(ClientBoundCreateRoomPacket.failed(I18nService.INSTANCE.getMessage(player, e.getMessageKey())));
@@ -96,7 +96,7 @@ public class PlayHandler extends SimpleServerBoundPacketHandler {
             Server.postEvent(successEvent);
 
             room.getProtocolHack().fixClientRoomState(player);
-            room.getProtocolHack().forceSyncHost(player);
+            room.getProtocolHack().forceSyncHost(player, false);
 
         } catch (GameOperationException e) {
             connection.send(ClientBoundJoinRoomPacket.failed(I18nService.INSTANCE.getMessage(player, e.getMessageKey())));

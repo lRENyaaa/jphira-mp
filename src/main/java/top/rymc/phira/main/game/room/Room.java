@@ -383,22 +383,25 @@ public class Room {
             );
         }
 
-        private static final Executor executor = CompletableFuture.delayedExecutor(1, TimeUnit.MILLISECONDS);
+        private static final Executor executor = CompletableFuture.delayedExecutor(2, TimeUnit.MILLISECONDS);
 
-        public void forceSyncHost(Player player) {
+        public void forceSyncHost(Player player, boolean delay) {
             if (!isInRoom(player)) return;
 
             PlayerConnection connection = player.getConnection();
 
-            executor.execute(() -> connection.send(ClientBoundChangeHostPacket.create(isHost(player))));
+            Runnable task = () -> connection.send(ClientBoundChangeHostPacket.create(isHost(player)));
+
+            runTask(task, delay);
+
         }
 
-        public void forceSyncInfo(Player player) {
+        public void forceSyncInfo(Player player, boolean delay) {
             if (!isInRoom(player)) return;
 
             PlayerConnection connection = player.getConnection();
 
-            executor.execute(() -> {
+            Runnable task = () -> {
                 if (!isHost(player)) {
                     connection.send(ClientBoundChangeHostPacket.create(false));
                 }
@@ -413,7 +416,10 @@ public class Room {
                 if (!(state instanceof RoomSelectChart && state.getChart() == null)) {
                     fixClientRoomState0(player);
                 }
-            });
+            };
+
+            runTask(task, delay);
+
         }
 
         public void fixClientRoomState(Player player) {
@@ -435,7 +441,15 @@ public class Room {
                 return;
             }
 
-            executor.execute(() -> connection.send(ClientBoundChangeStatePacket.create(state.toProtocol())));
+            runTask(() -> connection.send(ClientBoundChangeStatePacket.create(state.toProtocol())), true);
+        }
+
+        private void runTask(Runnable task, boolean delay) {
+            if (delay) {
+                executor.execute(task);
+            } else {
+                task.run();
+            }
         }
     }
 

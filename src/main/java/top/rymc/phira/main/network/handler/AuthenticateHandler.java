@@ -91,7 +91,7 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
             Server.postEvent(successEvent);
 
             if (room != null) {
-                room.getProtocolHack().forceSyncInfo(player);
+                room.getProtocolHack().forceSyncInfo(player, true);
             }
 
         } catch (GameOperationException e) {

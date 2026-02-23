@@ -6,28 +6,55 @@ import java.nio.file.Path;
 import java.util.Set;
 
 public class PluginClassLoader extends URLClassLoader {
-    private static final Set<String> SHARED_PACKAGES = Set.of(
+    private static final Set<String> HOST_PROVIDED_PACKAGES = Set.of(
             "top.rymc.phira.",
             "meteordevelopment.orbit.",
-            "org.apache.logging.log4j."
+            "org.apache.logging.log4j.",
+            "com.google.gson."
     );
 
-    public PluginClassLoader(Path jar, ClassLoader parent) throws Exception {
-        super(new URL[]{jar.toUri().toURL()}, parent);
+    public PluginClassLoader(Path pluginJar, ClassLoader hostLoader) throws Exception {
+        super(new URL[]{pluginJar.toUri().toURL()}, hostLoader);
     }
 
     @Override
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-        for (String pkg : SHARED_PACKAGES) {
-            if (name.startsWith(pkg)) {
-                return getParent().loadClass(name);
+        synchronized (getClassLoadingLock(name)) {
+            Class<?> cached = findLoadedClass(name);
+            if (cached != null) {
+                if (resolve) resolveClass(cached);
+                return cached;
             }
-        }
 
+            Class<?> loaded = isHostProvided(name)
+                    ? tryLoadFromHostThenSelf(name)
+                    : tryLoadFromSelfThenHost(name);
+
+            if (resolve) resolveClass(loaded);
+            return loaded;
+        }
+    }
+
+    private boolean isHostProvided(String name) {
+        for (String pkg : HOST_PROVIDED_PACKAGES) {
+            if (name.startsWith(pkg)) return true;
+        }
+        return false;
+    }
+
+    private Class<?> tryLoadFromHostThenSelf(String name) throws ClassNotFoundException {
+        try {
+            return getParent().loadClass(name);
+        } catch (ClassNotFoundException hostFailed) {
+            return findClass(name);
+        }
+    }
+
+    private Class<?> tryLoadFromSelfThenHost(String name) throws ClassNotFoundException {
         try {
             return findClass(name);
-        } catch (ClassNotFoundException ignored) {
-            return super.loadClass(name, resolve);
+        } catch (ClassNotFoundException selfFailed) {
+            return getParent().loadClass(name);
         }
     }
 }
