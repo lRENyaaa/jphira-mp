@@ -21,18 +21,22 @@ import top.rymc.phira.protocol.packet.clientbound.ClientBoundMessagePacket;
 
 import java.net.InetSocketAddress;
 import java.net.SocketException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 @Getter
 public class PlayerConnection extends ChannelInboundHandlerAdapter {
 
+    private final ExecutorService packetExecutor;
+
     private final Channel channel;
     private final InetSocketAddress remoteAddress;
 
-    private ServerBoundPacketHandler packetHandler;
+    private volatile ServerBoundPacketHandler packetHandler;
 
     public void setPacketHandler(ServerBoundPacketHandler packetHandler) {
         PlayerSwitchPacketHandlerEvent event = new PlayerSwitchPacketHandlerEvent(this, this.packetHandler, packetHandler);
@@ -40,11 +44,17 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
         this.packetHandler = event.getNewHandler();
     }
 
-    private final List<Consumer<ChannelHandlerContext>> closeHandlers = new ArrayList<>();
+    private final List<Consumer<ChannelHandlerContext>> closeHandlers = new CopyOnWriteArrayList<>();
 
     public PlayerConnection(Channel channel, InetSocketAddress remoteAddress) {
         this.channel = channel;
         this.remoteAddress = remoteAddress;
+
+        this.packetExecutor = Executors.newSingleThreadExecutor(
+                Thread.ofVirtual()
+                        .name("player-" + getRemoteAddressAsString())
+                        .factory()
+        );
     }
 
     public void onClose(Consumer<ChannelHandlerContext> handler) {
@@ -70,7 +80,16 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
             return;
         }
 
-        packet.handle(packetHandler);
+        packetExecutor.execute(() -> handle(ctx, packet));
+    }
+
+    @SuppressWarnings("resource")
+    private void handle(ChannelHandlerContext ctx, ServerBoundPacket packet) {
+        try {
+            packet.handle(packetHandler);
+        } catch (Throwable t) {
+            ctx.channel().eventLoop().execute(() -> ctx.fireExceptionCaught(t));
+        }
     }
 
     @Override
@@ -100,6 +119,8 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        packetExecutor.shutdownNow();
+
         Server.getLogger().info("Client disconnected: {}", getRemoteAddressAsString());
 
         PlayerManager.getPlayer(this).ifPresent(player -> {

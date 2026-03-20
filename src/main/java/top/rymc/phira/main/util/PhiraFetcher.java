@@ -3,24 +3,31 @@ package top.rymc.phira.main.util;
 import com.google.gson.Gson;
 import lombok.Getter;
 import lombok.Setter;
-import top.rymc.phira.function.throwable.ThrowableSupplier;
+import top.rymc.phira.function.throwable.ThrowableFunction;
+import top.rymc.phira.function.throwable.ThrowableIntFunction;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.data.GameRecord;
 import top.rymc.phira.main.data.UserInfo;
-import top.rymc.phira.function.throwable.ThrowableFunction;
-import top.rymc.phira.function.throwable.ThrowableIntFunction;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 public class PhiraFetcher {
 
-    private static final HttpClient CLIENT = HttpClient.newHttpClient();
+    private static final String USER_AGENT = "JPhira/1";
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 100;
+
     private static final Gson GSON = GsonUtil.getGson();
+
+    private static final HttpClient CLIENT = createHttpClient();
 
     @Setter
     private static String host = "https://phira.5wyxi.com/";
@@ -38,66 +45,118 @@ public class PhiraFetcher {
     private static final GenericCache<Integer, UserInfo> userCache =
             GenericCache.create(10, TimeUnit.MINUTES, 5000);
 
-    private static String fetch(HttpRequest request) throws IOException {
-        return retry(() -> {
-            try {
-                HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                    throw new IOException("HTTP request failed with status code: " + response.statusCode());
-                }
-                return response.body();
-            } catch (InterruptedException e) {
-                throw new IOException(e);
-            }
-        }, 5);
-    }
-
-    @SuppressWarnings("SameParameterValue")
-    private static <T> T retry(ThrowableSupplier<T, IOException> supplier, int maxAttempts) throws IOException {
-        for (int i = 0; i < maxAttempts; i++) {
-            try {
-                return supplier.get();
-            } catch (IOException e) {
-                if (i == maxAttempts - 1) throw e;
-            }
-        }
-        throw new AssertionError();
-    }
-
     public static ThrowableFunction<String, UserInfo, IOException> GET_USER_INFO =
-            (token) -> tokenCache.get(token, t -> {
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(host + "me"))
-                        .header("Authorization", "Bearer " + t)
-                        .GET()
-                        .build();
-                return GSON.fromJson(fetch(request), UserInfo.class);
-            });
+            token -> tokenCache.get(token, PhiraFetcher::fetchUserByToken);
 
     public static ThrowableIntFunction<UserInfo, IOException> GET_USER_INFO_BY_ID =
-            (userId) -> userCache.get(userId, id -> {
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(host + "user/" + id))
-                        .GET()
-                        .build();
-                return GSON.fromJson(fetch(request), UserInfo.class);
-            });
+            id -> userCache.get(id, PhiraFetcher::fetchUserById);
 
     public static ThrowableIntFunction<ChartInfo, IOException> GET_CHART_INFO =
-            (chartId) -> chartCache.get(chartId, id -> {
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(host + "chart/" + id))
-                        .GET()
-                        .build();
-                return GSON.fromJson(fetch(request), ChartInfo.class);
-            });
+            id -> chartCache.get(id, PhiraFetcher::fetchChartById);
 
     public static ThrowableIntFunction<GameRecord, IOException> GET_RECORD_INFO =
-            (recordId) -> recordCache.get(recordId, id -> {
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(host + "record/" + id))
-                        .GET()
-                        .build();
-                return GSON.fromJson(fetch(request), GameRecord.class);
-            });
+            id -> recordCache.get(id, PhiraFetcher::fetchRecordById);
+
+    private static HttpClient createHttpClient() {
+        return HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_2)
+                .connectTimeout(CONNECT_TIMEOUT)
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+    }
+
+    private static UserInfo fetchUserByToken(String token) throws IOException {
+        HttpRequest request = createAuthRequest("me", token);
+        String response = executeWithRetry(request);
+        return GSON.fromJson(response, UserInfo.class);
+    }
+
+    private static UserInfo fetchUserById(int id) throws IOException {
+        HttpRequest request = createRequest("user/" + id);
+        String response = executeWithRetry(request);
+        return GSON.fromJson(response, UserInfo.class);
+    }
+
+    private static ChartInfo fetchChartById(int id) throws IOException {
+        HttpRequest request = createRequest("chart/" + id);
+        String response = executeWithRetry(request);
+        return GSON.fromJson(response, ChartInfo.class);
+    }
+
+    private static GameRecord fetchRecordById(int id) throws IOException {
+        HttpRequest request = createRequest("record/" + id);
+        String response = executeWithRetry(request);
+        return GSON.fromJson(response, GameRecord.class);
+    }
+
+    private static HttpRequest createRequest(String path) {
+        return HttpRequest.newBuilder()
+                .uri(URI.create(host + path))
+                .timeout(REQUEST_TIMEOUT)
+                .header("User-Agent", USER_AGENT)
+                .header("Accept", "application/json")
+                .GET()
+                .build();
+    }
+
+    private static HttpRequest createAuthRequest(String path, String token) {
+        return HttpRequest.newBuilder()
+                .uri(URI.create(host + path))
+                .timeout(REQUEST_TIMEOUT)
+                .header("User-Agent", USER_AGENT)
+                .header("Accept", "application/json")
+                .header("Authorization", "Bearer " + token)
+                .GET()
+                .build();
+    }
+
+    private static String executeWithRetry(HttpRequest request) throws IOException {
+        IOException lastError = null;
+
+        for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            try {
+                return executeOnce(request);
+            } catch (IOException error) {
+                lastError = error;
+                sleepWithBackOff(attempt);
+            }
+        }
+
+        throw lastError;
+    }
+
+    private static String executeOnce(HttpRequest request) throws IOException {
+        try {
+            HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            return validateResponse(response);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Request interrupted", e);
+        }
+    }
+
+    private static String validateResponse(HttpResponse<String> response) throws IOException {
+        int status = response.statusCode();
+
+        if (status >= 200 && status < 300) {
+            return response.body();
+        }
+
+        throw new IOException(String.format("HTTP %d: %s", status, response.body()));
+    }
+
+    private static void sleepWithBackOff(int attempt) throws IOException {
+        if (attempt >= MAX_RETRIES - 1) {
+            return;
+        }
+
+        long delay = RETRY_DELAY_MS * (attempt + 1);
+
+        try {
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Retry interrupted", e);
+        }
+    }
 }
