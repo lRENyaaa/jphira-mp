@@ -43,7 +43,7 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
             Server.getLogger().info("{} sent his token [{}]", connection.getRemoteAddressAsString(), token);
 
             PlayerPreAuthenticateEvent preAuthEvent = new PlayerPreAuthenticateEvent(connection, token);
-            Server.getInstance().getPluginManager().getEventBus().post(preAuthEvent);
+            Server.postEvent(preAuthEvent);
 
             String preAuthCancelReason = preAuthEvent.getCancelReason();
             if (preAuthCancelReason != null) {

@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.util.GsonUtil;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -16,7 +17,7 @@ public class I18nService {
 
     private static final String LANG_RESOURCE_PATH = "/lang/";
     private static final String DEFAULT_LANGUAGE = "zh-CN";
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = GsonUtil.getGson();
 
     public static final I18nService INSTANCE = new I18nService();
 

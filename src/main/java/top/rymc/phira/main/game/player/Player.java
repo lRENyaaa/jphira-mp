@@ -7,10 +7,10 @@ import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.holder.RoomHolder;
 import top.rymc.phira.main.game.session.SessionManager;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.ProtocolConvertible;
-import top.rymc.phira.main.network.handler.RoomHandler;
 import top.rymc.phira.protocol.data.RoomInfo;
 import top.rymc.phira.protocol.data.UserProfile;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
@@ -48,7 +48,7 @@ public class Player implements ProtocolConvertible<UserProfile> {
         PlayerConnection conn = this.connection;
         if (conn == null) return Optional.empty();
         ServerBoundPacketHandler h = conn.getPacketHandler();
-        return (h instanceof RoomHandler rh) ? Optional.of(rh.getRoom()) : Optional.empty();
+        return (h instanceof RoomHolder rh) ? Optional.of(rh.getRoom()) : Optional.empty();
     }
 
     public Optional<RoomInfo> getRoomInfo() {

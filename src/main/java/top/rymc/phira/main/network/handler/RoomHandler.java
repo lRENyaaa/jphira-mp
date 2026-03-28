@@ -9,6 +9,7 @@ import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.i18n.I18nService;
+import top.rymc.phira.main.game.room.holder.SuspendableRoomHolder;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 import top.rymc.phira.protocol.packet.ClientBoundPacket;
 import top.rymc.phira.protocol.packet.clientbound.*;
@@ -18,7 +19,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 @Getter
-public class RoomHandler extends ServerBoundPacketHandler {
+public class RoomHandler extends ServerBoundPacketHandler implements SuspendableRoomHolder {
     private final Player player;
     private final Room room;
     private final ServerBoundPacketHandler fallback;
