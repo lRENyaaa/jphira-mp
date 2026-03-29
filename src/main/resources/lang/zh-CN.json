@@ -15,5 +15,6 @@
   "error.player_not_found": "玩家不存在",
   "error.session_expired": "会话已过期",
   "error.authentication_failed": "认证失败",
-  "error.logged_in_elsewhere": "账号在其他地方登录"
+  "error.logged_in_elsewhere": "账号在其他地方登录",
+  "system.live_recorder_name": "录制状态设置器(请忽略该账号)"
 }

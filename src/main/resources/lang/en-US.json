@@ -15,5 +15,6 @@
   "error.player_not_found": "Player not found",
   "error.session_expired": "Session expired",
   "error.authentication_failed": "Authentication failed",
-  "error.logged_in_elsewhere": "Account logged in from another location"
+  "error.logged_in_elsewhere": "Account logged in from another location",
+  "system.live_recorder_name": "Live Recorder (Please ignore this account)"
 }

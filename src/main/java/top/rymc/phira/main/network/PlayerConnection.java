@@ -38,6 +38,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
     private final InetSocketAddress remoteAddress;
 
     private volatile ServerBoundPacketHandler packetHandler;
+    private volatile ConnectState connectState = ConnectState.ACTIVE;
 
     public void setPacketHandler(ServerBoundPacketHandler packetHandler) {
         PlayerSwitchPacketHandlerEvent event = new PlayerSwitchPacketHandlerEvent(this, this.packetHandler, packetHandler);
@@ -97,23 +98,20 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
             return;
         }
 
-        ctx.close();
-
         Logger logger = Server.getLogger();
 
         if (cause instanceof ReadTimeoutException) {
             logger.error("{}: read timed out", getRemoteAddressAsString());
-            return;
-        }
-
-        if (cause instanceof SocketException) {
+            connectState = ConnectState.TIMEOUT;
+        } else if (cause instanceof SocketException) {
             logger.info("{}: {}", getRemoteAddressAsString(), cause.getMessage());
-            return;
+            connectState = ConnectState.ERROR;
+        } else {
+            logger.atError().withThrowable(cause).log("{}: exception encountered", getRemoteAddressAsString());
+            connectState = ConnectState.ERROR;
         }
 
-        logger.atError().withThrowable(cause).log("{}: exception encountered", getRemoteAddressAsString());
-
-
+        ctx.close();
     }
 
     @Override
@@ -123,7 +121,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
         Server.getLogger().info("Client disconnected: {}", getRemoteAddressAsString());
 
         PlayerManager.getPlayer(this).ifPresent(player -> {
-            PlayerDisconnectEvent event = new PlayerDisconnectEvent(player, determineDisconnectReason(ctx));
+            PlayerDisconnectEvent event = new PlayerDisconnectEvent(player, determineDisconnectReason());
             Server.postEvent(event);
         });
 
@@ -134,11 +132,13 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
         super.channelInactive(ctx);
     }
 
-    private PlayerDisconnectEvent.DisconnectReason determineDisconnectReason(ChannelHandlerContext ctx) {
-        if (!ctx.channel().isActive()) {
-            return PlayerDisconnectEvent.DisconnectReason.QUIT;
-        }
-        return PlayerDisconnectEvent.DisconnectReason.ERROR;
+    private PlayerDisconnectEvent.DisconnectReason determineDisconnectReason() {
+        return switch (connectState) {
+            case ACTIVE -> PlayerDisconnectEvent.DisconnectReason.QUIT;
+            case TIMEOUT -> PlayerDisconnectEvent.DisconnectReason.TIMEOUT;
+            case DUPLICATE -> PlayerDisconnectEvent.DisconnectReason.DUPLICATE;
+            case ERROR -> PlayerDisconnectEvent.DisconnectReason.ERROR;
+        };
     }
 
     public Optional<ChannelFuture> send(ClientBoundPacket packet) {
@@ -170,5 +170,17 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
 
     public String getRemoteAddressAsString() {
         return remoteAddress.getAddress().getHostAddress() + ":" + remoteAddress.getPort();
+    }
+
+    public void markDuplicateLogin() {
+        this.connectState = ConnectState.DUPLICATE;
+        this.close();
+    }
+
+    private enum ConnectState {
+        ACTIVE,
+        TIMEOUT,
+        DUPLICATE,
+        ERROR
     }
 }

@@ -13,6 +13,7 @@ import top.rymc.phira.main.event.operation.RoomSelectChartEvent;
 import top.rymc.phira.main.event.room.RoomDestroyEvent;
 import top.rymc.phira.main.event.room.RoomHostChangeEvent;
 import top.rymc.phira.main.exception.GameOperationException;
+import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.state.RoomGameState;
 import top.rymc.phira.main.game.state.RoomPlaying;
@@ -210,7 +211,7 @@ public class Room {
             validateHost(player);
 
             if (!(state instanceof RoomSelectChart)) {
-                throw new GameOperationException("房间不在选择谱面状态");
+                throw GameOperationException.invalidState();
             }
 
             RoomSelectChartEvent selectEvent = new RoomSelectChartEvent(Room.this, player, id);
@@ -281,7 +282,7 @@ public class Room {
 
         public void selectChart(int id) {
             if (!(state instanceof RoomSelectChart)) {
-                throw new GameOperationException("房间不在选择谱面状态");
+                throw GameOperationException.invalidState();
             }
 
             ChartInfo info = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
@@ -295,7 +296,7 @@ public class Room {
 
         public void requireStart(){
             if (!(state instanceof RoomSelectChart)) {
-                throw new GameOperationException("房间不在选择谱面状态");
+                throw GameOperationException.invalidState();
             }
 
             ChartInfo chart = state.getChart();
@@ -407,7 +408,7 @@ public class Room {
                 }
 
                 if (setting.live) {
-                    String name = "录制状态设置器(请忽略该账号)";
+                    String name = I18nService.INSTANCE.getMessage(player, "system.live_recorder_name");
                     connection.send(ClientBoundOnJoinRoomPacket.create(new FullUserProfile(-1, name, true)));
                     connection.send(ClientBoundMessagePacket.create(new JoinRoomMessage(-1, name)));
                     connection.send(ClientBoundMessagePacket.create(new LeaveRoomMessage(-1, name)));

@@ -9,7 +9,7 @@ import com.google.gson.JsonSerializer;
 
 import java.time.OffsetDateTime;
 
-public class GsonUtil {
+public final class GsonUtil {
 
     private static final Gson GSON = new GsonBuilder()
             .registerTypeAdapter(OffsetDateTime.class,

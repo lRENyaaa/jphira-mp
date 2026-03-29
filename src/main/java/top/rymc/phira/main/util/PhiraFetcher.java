@@ -17,7 +17,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-public class PhiraFetcher {
+public final class PhiraFetcher {
 
     private static final String USER_AGENT = "JPhira/1";
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);

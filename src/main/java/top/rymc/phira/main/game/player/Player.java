@@ -33,7 +33,7 @@ public class Player implements ProtocolConvertible<UserProfile> {
     public void bind(PlayerConnection newConn) {
         if (this.connection != null) {
             this.connection.sendChat(I18nService.INSTANCE.getMessage(this, "error.logged_in_elsewhere"));
-            this.connection.close();
+            this.connection.markDuplicateLogin();
         }
         this.connection = newConn;
 
