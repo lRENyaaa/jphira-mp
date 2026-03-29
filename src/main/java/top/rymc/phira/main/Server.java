@@ -16,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.io.IoBuilder;
 import top.rymc.phira.main.command.CommandService;
 import top.rymc.phira.main.config.ServerArgs;
+import top.rymc.phira.main.event.server.ServerLifecycleEvent;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.i18n.I18nService;
@@ -124,6 +125,8 @@ public class Server {
 
         new CommandService(logger).start();
 
+        postEvent(new ServerLifecycleEvent(ServerLifecycleEvent.State.STARTED));
+
         long totalTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - bootStart);
         logger.info("Done ({}s)!", String.format("%.3f", totalTime / 1000.0));
     }
@@ -142,6 +145,8 @@ public class Server {
 
     public void shutdown() {
         if (!running.compareAndSet(true, false)) return;
+
+        postEvent(new ServerLifecycleEvent(ServerLifecycleEvent.State.STOPPING));
 
         long shutdownStart = System.nanoTime();
         int onlineCount = PlayerManager.getOnlinePlayers().size();
@@ -181,6 +186,8 @@ public class Server {
                 TimeUnit.MILLISECONDS.toMinutes(uptime),
                 TimeUnit.MILLISECONDS.toSeconds(uptime) % 60);
         logger.info("Shutdown completed in {}ms. Goodbye!", shutdownTime);
+
+        postEvent(new ServerLifecycleEvent(ServerLifecycleEvent.State.STOPPED));
 
         LogManager.shutdown();
         System.exit(0);

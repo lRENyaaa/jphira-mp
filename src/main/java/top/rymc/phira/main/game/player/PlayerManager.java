@@ -1,6 +1,8 @@
 package top.rymc.phira.main.game.player;
 
+import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
+import top.rymc.phira.main.event.player.PlayerCreateEvent;
 import top.rymc.phira.main.game.session.SessionManager;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.handler.PlayHandler;
@@ -19,6 +21,10 @@ public class PlayerManager {
             if (existing != null && SessionManager.resume(existing, newConn)) {
                 return existing;
             }
+
+            PlayerCreateEvent createEvent = new PlayerCreateEvent(userInfo, newConn);
+            Server.postEvent(createEvent);
+
             Player newPlayer = Player.create(userInfo, newConn, key -> PLAYERS.remove(id));
             newPlayer.getConnection().setPacketHandler(PlayHandler.create(newPlayer));
             return newPlayer;

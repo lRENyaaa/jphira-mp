@@ -1,7 +1,6 @@
 package top.rymc.phira.test;
 
 import top.rymc.phira.main.Server;
-import top.rymc.phira.plugin.core.PluginEventBus;
 import top.rymc.phira.plugin.core.PluginManager;
 
 import java.lang.reflect.Field;

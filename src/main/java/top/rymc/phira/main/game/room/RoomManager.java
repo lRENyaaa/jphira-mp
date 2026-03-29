@@ -20,6 +20,10 @@ public class RoomManager {
         return innerCreateRoom(roomId, id -> Room.create(id, key -> ROOMS.remove(roomId), host));
     }
 
+    public static Room createRoom(String roomId, Player host, Room.RoomSetting setting) {
+        return innerCreateRoom(roomId, id -> Room.create(id, key -> ROOMS.remove(roomId), host, setting));
+    }
+
     private static Room innerCreateRoom(String roomId, Function<String, Room> creator) {
         if (ROOMS.containsKey(roomId)) {
             throw GameOperationException.roomAlreadyExists();

@@ -1,12 +1,14 @@
 package top.rymc.phira.main.game;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.network.PlayerConnection;
+import top.rymc.phira.test.TestServerSetup;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -14,6 +16,11 @@ import static org.mockito.Mockito.when;
 
 @DisplayName("PlayerManager")
 class PlayerManagerTest {
+
+    @BeforeAll
+    static void setUp() throws Exception {
+        TestServerSetup.init();
+    }
 
     @AfterEach
     void tearDown() {

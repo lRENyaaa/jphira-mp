@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
+import top.rymc.phira.main.event.player.PlayerConnectionBindEvent;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.holder.RoomHolder;
@@ -31,11 +32,17 @@ public class Player implements ProtocolConvertible<UserProfile> {
     }
 
     public void bind(PlayerConnection newConn) {
-        if (this.connection != null) {
+        boolean duplicate = this.connection != null;
+        PlayerConnection oldConn = this.connection;
+
+        if (duplicate) {
             this.connection.sendChat(I18nService.INSTANCE.getMessage(this, "error.logged_in_elsewhere"));
             this.connection.markDuplicateLogin();
         }
         this.connection = newConn;
+
+        PlayerConnectionBindEvent bindEvent = new PlayerConnectionBindEvent(newConn, oldConn, duplicate);
+        Server.postEvent(bindEvent);
 
         newConn.onClose(ctx -> {
             if (!SessionManager.suspend(this)) {
@@ -62,7 +69,7 @@ public class Player implements ProtocolConvertible<UserProfile> {
     public void kick() {
         getRoom().ifPresent(r -> r.leave(this));
         removeFromManager.accept(this);
-        connection.close();
+        connection.markAsKicked();
     }
 
     public int getId() { return userInfo.getId(); }

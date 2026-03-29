@@ -1,4 +1,4 @@
-package top.rymc.phira.main.event.room;
+package top.rymc.phira.main.event.session;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -6,11 +6,9 @@ import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.plugin.event.Event;
 
-@RequiredArgsConstructor
 @Getter
-public class RoomCreatedEvent extends Event {
-
+@RequiredArgsConstructor
+public class PlayerSessionTimeoutEvent extends Event {
+    private final Player player;
     private final Room room;
-    private final Player creator;
-
 }

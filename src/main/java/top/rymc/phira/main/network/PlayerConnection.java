@@ -9,7 +9,7 @@ import lombok.Getter;
 import org.apache.logging.log4j.Logger;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.event.network.PlayerSwitchPacketHandlerEvent;
-import top.rymc.phira.main.event.login.PlayerDisconnectEvent;
+import top.rymc.phira.main.event.player.PlayerDisconnectEvent;
 import top.rymc.phira.main.event.network.PacketReceiveEvent;
 import top.rymc.phira.main.event.network.PacketSendEvent;
 import top.rymc.phira.main.game.player.PlayerManager;
@@ -135,6 +135,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
     private PlayerDisconnectEvent.DisconnectReason determineDisconnectReason() {
         return switch (connectState) {
             case ACTIVE -> PlayerDisconnectEvent.DisconnectReason.QUIT;
+            case KICK -> PlayerDisconnectEvent.DisconnectReason.KICK;
             case TIMEOUT -> PlayerDisconnectEvent.DisconnectReason.TIMEOUT;
             case DUPLICATE -> PlayerDisconnectEvent.DisconnectReason.DUPLICATE;
             case ERROR -> PlayerDisconnectEvent.DisconnectReason.ERROR;
@@ -177,8 +178,14 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
         this.close();
     }
 
+    public void markAsKicked() {
+        this.connectState = ConnectState.KICK;
+        this.close();
+    }
+
     private enum ConnectState {
         ACTIVE,
+        KICK,
         TIMEOUT,
         DUPLICATE,
         ERROR

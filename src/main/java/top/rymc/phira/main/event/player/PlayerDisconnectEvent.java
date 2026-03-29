@@ -1,4 +1,4 @@
-package top.rymc.phira.main.event.login;
+package top.rymc.phira.main.event.player;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +14,7 @@ public class PlayerDisconnectEvent extends Event {
 
     public enum DisconnectReason {
         QUIT,
+        KICK,
         TIMEOUT,
         ERROR,
         DUPLICATE

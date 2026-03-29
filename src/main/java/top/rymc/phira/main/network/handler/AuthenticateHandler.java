@@ -2,10 +2,10 @@ package top.rymc.phira.main.network.handler;
 
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
-import top.rymc.phira.main.event.login.PlayerLoginSuccessEvent;
-import top.rymc.phira.main.event.login.PlayerPostLoginEvent;
-import top.rymc.phira.main.event.login.PlayerPreAuthenticateEvent;
-import top.rymc.phira.main.event.login.PlayerPreLoginEvent;
+import top.rymc.phira.main.event.player.PlayerLoginSuccessEvent;
+import top.rymc.phira.main.event.player.PlayerPostLoginEvent;
+import top.rymc.phira.main.event.player.PlayerPreAuthenticateEvent;
+import top.rymc.phira.main.event.player.PlayerPreLoginEvent;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.PlayerManager;

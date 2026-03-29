@@ -3,8 +3,10 @@ package top.rymc.phira.main.game.session;
 import lombok.Getter;
 import lombok.Setter;
 import top.rymc.phira.main.Server;
-import top.rymc.phira.main.event.login.PlayerPostResumeEvent;
-import top.rymc.phira.main.event.login.PlayerPreResumeEvent;
+import top.rymc.phira.main.event.player.PlayerPostResumeEvent;
+import top.rymc.phira.main.event.player.PlayerPreResumeEvent;
+import top.rymc.phira.main.event.session.PlayerSessionSuspendEvent;
+import top.rymc.phira.main.event.session.PlayerSessionTimeoutEvent;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.holder.SuspendableRoomHolder;
@@ -84,6 +86,12 @@ public class SessionManager {
             return false;
         }
 
+        PlayerSessionSuspendEvent suspendEvent = new PlayerSessionSuspendEvent(player, room);
+        Server.postEvent(suspendEvent);
+        if (suspendEvent.isCancelled()) {
+            return false;
+        }
+
         SUSPENDED.compute(player.getId(), (id, oldSession) -> {
             if (oldSession != null && oldSession.timeout != null) {
                 oldSession.timeout.cancel(false);
@@ -111,6 +119,9 @@ public class SessionManager {
         if (!SUSPENDED.remove(playerId, session)) {
             return;
         }
+
+        PlayerSessionTimeoutEvent timeoutEvent = new PlayerSessionTimeoutEvent(session.player, session.room);
+        Server.postEvent(timeoutEvent);
 
         if (session.room.containsPlayer(session.player)) {
             session.room.leave(session.player);

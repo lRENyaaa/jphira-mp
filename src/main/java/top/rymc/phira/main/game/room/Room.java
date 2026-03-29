@@ -6,10 +6,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
+import top.rymc.phira.main.event.operation.RoomAdminDestroyEvent;
+import top.rymc.phira.main.event.operation.RoomAdminForceStartEvent;
+import top.rymc.phira.main.event.operation.RoomAdminPostSelectChartEvent;
+import top.rymc.phira.main.event.operation.RoomAdminPreSelectChartEvent;
+import top.rymc.phira.main.event.operation.RoomAdminRequireStartEvent;
 import top.rymc.phira.main.event.room.PlayerLeaveRoomEvent;
 import top.rymc.phira.main.event.room.RoomStateChangeEvent;
-import top.rymc.phira.main.event.operation.RoomChartSelectedEvent;
-import top.rymc.phira.main.event.operation.RoomSelectChartEvent;
+import top.rymc.phira.main.event.operation.RoomPostSelectChartEvent;
+import top.rymc.phira.main.event.operation.RoomPreSelectChartEvent;
 import top.rymc.phira.main.event.room.RoomDestroyEvent;
 import top.rymc.phira.main.event.room.RoomHostChangeEvent;
 import top.rymc.phira.main.exception.GameOperationException;
@@ -51,6 +56,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.IntFunction;
 
 @RequiredArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class Room {
@@ -99,6 +105,14 @@ public class Room {
 
     public static Room create(String roomId, Consumer<Room> onDestroy, Player hostPlayer) {
         Room room = new Room(roomId, onDestroy, new RoomSetting());
+        room.state = new RoomSelectChart(room, room::updateState);
+        room.join(hostPlayer, false);
+        room.host = hostPlayer;
+        return room;
+    }
+
+    public static Room create(String roomId, Consumer<Room> onDestroy, Player hostPlayer, RoomSetting setting) {
+        Room room = new Room(roomId, onDestroy, setting);
         room.state = new RoomSelectChart(room, room::updateState);
         room.join(hostPlayer, false);
         room.host = hostPlayer;
@@ -214,22 +228,26 @@ public class Room {
                 throw GameOperationException.invalidState();
             }
 
-            RoomSelectChartEvent selectEvent = new RoomSelectChartEvent(Room.this, player, id);
-            Server.postEvent(selectEvent);
-            if (selectEvent.isCancelled()) {
-                throw new GameOperationException(selectEvent.getCancelReason());
+            RoomPreSelectChartEvent preEvent = new RoomPreSelectChartEvent(Room.this, player, id);
+            Server.postEvent(preEvent);
+            if (preEvent.isCancelled()) {
+                throw new GameOperationException(preEvent.getCancelReason());
             }
 
-            ChartInfo info = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
+            IntFunction<ChartInfo> getInfoFunc = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
                 throw GameOperationException.chartNotFound();
-            }).apply(id);
+            });
+
+            ChartInfo eventChartInfo = preEvent.getChartInfo();
+
+            ChartInfo info = eventChartInfo != null ? eventChartInfo : getInfoFunc.apply(id);
 
             state.setChart(info);
             broadcast(ClientBoundMessagePacket.create(new SelectChartMessage(player.getId(), info.getName(), id)));
             broadcast(ClientBoundChangeStatePacket.create(state.toProtocol()));
 
-            RoomChartSelectedEvent selectedEvent = new RoomChartSelectedEvent(Room.this, player, info);
-            Server.postEvent(selectedEvent);
+            RoomPostSelectChartEvent postEvent = new RoomPostSelectChartEvent(Room.this, player, info);
+            Server.postEvent(postEvent);
         }
 
         public void chat(Player player, String message) {
@@ -285,13 +303,26 @@ public class Room {
                 throw GameOperationException.invalidState();
             }
 
-            ChartInfo info = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
-                throw GameOperationException.chartNotFound();
-            }).apply(id);
+            RoomAdminPreSelectChartEvent preEvent = new RoomAdminPreSelectChartEvent(Room.this, id);
+            Server.postEvent(preEvent);
+            String cancelReason = preEvent.getCancelReason();
+            if (cancelReason != null) {
+                throw new GameOperationException(cancelReason);
+            }
 
+            IntFunction<ChartInfo> getInfoFunc = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
+                throw GameOperationException.chartNotFound();
+            });
+
+            ChartInfo eventChartInfo = preEvent.getChartInfo();
+
+            ChartInfo info = eventChartInfo != null ? eventChartInfo : getInfoFunc.apply(id);
             state.setChart(info);
-            broadcast(ClientBoundMessagePacket.create(new SelectChartMessage(-1, info.getName(), id)));
+            broadcast(ClientBoundMessagePacket.create(new SelectChartMessage(-1, info.getName(), info.getId())));
             broadcast(ClientBoundChangeStatePacket.create(state.toProtocol()));
+
+            RoomAdminPostSelectChartEvent postEvent = new RoomAdminPostSelectChartEvent(Room.this, info);
+            Server.postEvent(postEvent);
         }
 
         public void requireStart(){
@@ -303,6 +334,14 @@ public class Room {
             if (chart == null) {
                 throw GameOperationException.chartNotSelected();
             }
+
+            RoomAdminRequireStartEvent event = new RoomAdminRequireStartEvent(Room.this);
+            Server.postEvent(event);
+            String cancelReason = event.getCancelReason();
+            if (cancelReason != null) {
+                throw new GameOperationException(cancelReason);
+            }
+
             updateState(new RoomWaitForReady(Room.this, Room.this::updateState, chart));
             broadcast(ClientBoundMessagePacket.create(new GameStartMessage(-1)));
         }
@@ -313,6 +352,13 @@ public class Room {
                 throw GameOperationException.chartNotSelected();
             }
 
+            RoomAdminForceStartEvent event = new RoomAdminForceStartEvent(Room.this);
+            Server.postEvent(event);
+            String cancelReason = event.getCancelReason();
+            if (cancelReason != null) {
+                throw new GameOperationException(cancelReason);
+            }
+
             updateState(new RoomPlaying(Room.this, Room.this::updateState, state.getChart()));
             broadcast(ClientBoundMessagePacket.create(StartPlayingMessage.INSTANCE));
         }
@@ -320,6 +366,13 @@ public class Room {
         public boolean destroy() {
             if (!players.isEmpty() || !monitors.isEmpty()) {
                 return false;
+            }
+
+            RoomAdminDestroyEvent event = new RoomAdminDestroyEvent(Room.this);
+            Server.postEvent(event);
+            String cancelReason = event.getCancelReason();
+            if (cancelReason != null) {
+                throw new GameOperationException(cancelReason);
             }
 
             onDestroy.accept(Room.this);
