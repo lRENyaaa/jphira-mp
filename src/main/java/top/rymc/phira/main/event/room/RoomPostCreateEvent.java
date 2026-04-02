@@ -2,7 +2,7 @@ package top.rymc.phira.main.event.room;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.LocalPlayer;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.plugin.event.Event;
 
@@ -11,6 +11,6 @@ import top.rymc.phira.plugin.event.Event;
 public class RoomPostCreateEvent extends Event {
 
     private final Room room;
-    private final Player creator;
+    private final LocalPlayer creator;
 
 }

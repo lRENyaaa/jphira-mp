@@ -1,5 +1,6 @@
 package top.rymc.phira.main.network.handler;
 
+import lombok.Getter;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.event.room.PlayerPostJoinRoomEvent;
 import top.rymc.phira.main.event.room.PlayerPreJoinRoomEvent;
@@ -7,26 +8,33 @@ import top.rymc.phira.main.event.room.PlayerJoinRoomSuccessEvent;
 import top.rymc.phira.main.event.room.RoomPreCreateEvent;
 import top.rymc.phira.main.event.room.RoomPostCreateEvent;
 import top.rymc.phira.main.exception.GameOperationException;
-import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.LocalPlayer;
+import top.rymc.phira.main.game.player.holder.PlayerHolder;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.RoomManager;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.protocol.handler.server.SimpleServerBoundPacketHandler;
+import top.rymc.phira.protocol.packet.ClientBoundPacket;
 import top.rymc.phira.protocol.packet.ServerBoundPacket;
 import top.rymc.phira.protocol.packet.clientbound.*;
 import top.rymc.phira.protocol.packet.serverbound.ServerBoundCreateRoomPacket;
 import top.rymc.phira.protocol.packet.serverbound.ServerBoundJoinRoomPacket;
 
-public class PlayHandler extends SimpleServerBoundPacketHandler {
-    private final Player player;
+public class PlayHandler extends SimpleServerBoundPacketHandler implements PlayerHolder {
 
-    public static PlayHandler create(Player player) {
+    @Getter
+    private final LocalPlayer player;
+
+    protected void sendPacket(ClientBoundPacket packet) {
+        player.getConnection().send(packet);
+    }
+
+    public static PlayHandler create(LocalPlayer player) {
         return new PlayHandler(player);
     }
 
-    private PlayHandler(Player player) {
-        super(player.getConnection().getChannel());
+    private PlayHandler(LocalPlayer player) {
         this.player = player;
     }
 

@@ -3,7 +3,7 @@ package top.rymc.phira.main.game.state;
 import lombok.Getter;
 import lombok.Setter;
 import top.rymc.phira.main.data.ChartInfo;
-import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.LocalPlayer;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
@@ -40,7 +40,7 @@ public abstract sealed class RoomGameState implements ProtocolConvertible<GameSt
     }
 
     protected void broadcast(ClientBoundPacket packet) {
-        Consumer<Player> broadcastProcessor = p -> {
+        Consumer<LocalPlayer> broadcastProcessor = p -> {
             if (p.isOnline()) p.getConnection().send(packet);
         };
 
@@ -48,22 +48,22 @@ public abstract sealed class RoomGameState implements ProtocolConvertible<GameSt
         room.getMonitors().forEach(broadcastProcessor);
     }
 
-    public abstract void handleJoin(Player player);
+    public abstract void handleJoin(LocalPlayer player);
 
-    public abstract void handleLeave(Player player);
+    public abstract void handleLeave(LocalPlayer player);
 
-    public abstract void requireStart(Player player);
+    public abstract void requireStart(LocalPlayer player);
 
-    public abstract void ready(Player player);
+    public abstract void ready(LocalPlayer player);
 
-    public abstract void cancelReady(Player player);
+    public abstract void cancelReady(LocalPlayer player);
 
-    public abstract void touchSend(Player player, List<TouchFrame> touchFrames);
+    public abstract void touchSend(LocalPlayer player, List<TouchFrame> touchFrames);
 
-    public abstract void judgeSend(Player player, List<JudgeEvent> judgeEvents);
+    public abstract void judgeSend(LocalPlayer player, List<JudgeEvent> judgeEvents);
 
-    public abstract void abort(Player player);
+    public abstract void abort(LocalPlayer player);
 
-    public abstract void played(Player player, int recordId);
+    public abstract void played(LocalPlayer player, int recordId);
 
 }

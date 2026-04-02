@@ -1,87 +1,33 @@
 package top.rymc.phira.main.game.player;
 
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
-import top.rymc.phira.main.event.player.PlayerConnectionBindEvent;
-import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.room.Room;
-import top.rymc.phira.main.game.room.holder.RoomHolder;
-import top.rymc.phira.main.game.session.SessionManager;
-import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.ProtocolConvertible;
-import top.rymc.phira.protocol.data.RoomInfo;
+// TODO import top.rymc.phira.protocol.data.RoomInfo;
 import top.rymc.phira.protocol.data.UserProfile;
-import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 
 import java.util.Optional;
-import java.util.function.Consumer;
 
-@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
-public class Player implements ProtocolConvertible<UserProfile> {
-    @Getter private final UserInfo userInfo;
-    @Getter private volatile PlayerConnection connection;
-    private final Consumer<Player> removeFromManager;
+public interface Player extends ProtocolConvertible<UserProfile> {
 
-    public static Player create(UserInfo info, PlayerConnection conn, Consumer<Player> remover) {
-        Player p = new Player(info, remover);
-        p.bind(conn);
-        return p;
-    }
+    Optional<Room> getRoom();
 
-    public void bind(PlayerConnection newConn) {
-        boolean duplicate = this.connection != null;
-        PlayerConnection oldConn = this.connection;
-
-        if (duplicate) {
-            this.connection.sendChat(I18nService.INSTANCE.getMessage(this, "error.logged_in_elsewhere"));
-            this.connection.markDuplicateLogin();
-        }
-        this.connection = newConn;
-
-        PlayerConnectionBindEvent bindEvent = new PlayerConnectionBindEvent(newConn, oldConn, duplicate);
-        Server.postEvent(bindEvent);
-
-        newConn.onClose(ctx -> {
-            if (!SessionManager.suspend(this)) {
-                removeFromManager.accept(this);
-            }
-        });
-    }
-
-    public Optional<Room> getRoom() {
-        PlayerConnection conn = this.connection;
-        if (conn == null) return Optional.empty();
-        ServerBoundPacketHandler h = conn.getPacketHandler();
-        return (h instanceof RoomHolder rh) ? Optional.of(rh.getRoom()) : Optional.empty();
-    }
-
-    public Optional<RoomInfo> getRoomInfo() {
+    /* // TODO using player interface in room
+    default Optional<RoomInfo> getRoomInfo() {
         return getRoom().map(r -> r.asProtocolConvertible(this).toProtocol());
     }
+     */
 
-    public boolean isOnline() {
-        return connection != null && !connection.isClosed();
-    }
+    void kick();
 
-    public void kick() {
-        getRoom().ifPresent(r -> r.leave(this));
-        removeFromManager.accept(this);
-        connection.markAsKicked();
-    }
+    UserInfo getUserInfo();
 
-    public int getId() { return userInfo.getId(); }
-    public String getName() { return userInfo.getName(); }
+    default int getId() { return getUserInfo().getId(); }
+    default String getName() { return getUserInfo().getName(); }
 
-    public String getLanguage() {
-        String lang = userInfo.getLanguage();
+    default String getLanguage() {
+        String lang = getUserInfo().getLanguage();
         return lang != null ? lang : Server.getInstance().getArgs().getDefaultLanguage();
-    }
-
-    @Override
-    public UserProfile toProtocol() {
-        return new UserProfile(userInfo.getId(), userInfo.getName());
     }
 }

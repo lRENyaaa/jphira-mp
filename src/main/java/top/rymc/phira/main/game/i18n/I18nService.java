@@ -3,6 +3,7 @@ package top.rymc.phira.main.game.i18n;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import top.rymc.phira.main.Server;
+import top.rymc.phira.main.game.player.LocalPlayer;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.util.GsonUtil;
 

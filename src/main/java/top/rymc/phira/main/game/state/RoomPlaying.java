@@ -7,7 +7,7 @@ import top.rymc.phira.main.event.game.GameAbortEvent;
 import top.rymc.phira.main.event.game.GameEndEvent;
 import top.rymc.phira.main.event.game.PlayerPlayedEvent;
 import top.rymc.phira.main.exception.GameOperationException;
-import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.LocalPlayer;
 import top.rymc.phira.main.game.record.PhiraRecord;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.util.PhiraFetcher;
@@ -30,13 +30,13 @@ import java.util.stream.Collectors;
 
 public final class RoomPlaying extends RoomGameState {
 
-    private final Set<Player> donePlayers = ConcurrentHashMap.newKeySet();
+    private final Set<LocalPlayer> donePlayers = ConcurrentHashMap.newKeySet();
 
-    private final Map<Player, GameRecord> gameRecords = new ConcurrentHashMap<>();
-    private final Map<Player, PhiraRecord> playerRecords = new ConcurrentHashMap<>();
+    private final Map<LocalPlayer, GameRecord> gameRecords = new ConcurrentHashMap<>();
+    private final Map<LocalPlayer, PhiraRecord> playerRecords = new ConcurrentHashMap<>();
 
-    private final Map<Player, List<TouchFrame>> touchFrames = new ConcurrentHashMap<>();
-    private final Map<Player, List<JudgeEvent>> judgeEvents = new ConcurrentHashMap<>();
+    private final Map<LocalPlayer, List<TouchFrame>> touchFrames = new ConcurrentHashMap<>();
+    private final Map<LocalPlayer, List<JudgeEvent>> judgeEvents = new ConcurrentHashMap<>();
 
     public RoomPlaying(Room room, Consumer<RoomGameState> stateUpdater) {
         super(room, stateUpdater);
@@ -47,42 +47,42 @@ public final class RoomPlaying extends RoomGameState {
     }
 
     @Override
-    public void handleJoin(Player player) {
+    public void handleJoin(LocalPlayer player) {
 
     }
 
     @Override
-    public void handleLeave(Player player) {
+    public void handleLeave(LocalPlayer player) {
 
     }
 
     @Override
-    public void requireStart(Player player) {
+    public void requireStart(LocalPlayer player) {
         throw GameOperationException.invalidState();
     }
 
     @Override
-    public void ready(Player player) {
+    public void ready(LocalPlayer player) {
         throw GameOperationException.invalidState();
     }
 
     @Override
-    public void cancelReady(Player player) {
+    public void cancelReady(LocalPlayer player) {
         throw GameOperationException.invalidState();
     }
 
     @Override
-    public void touchSend(Player player, List<TouchFrame> touchFrames) {
+    public void touchSend(LocalPlayer player, List<TouchFrame> touchFrames) {
         this.touchFrames.computeIfAbsent(player, p -> new CopyOnWriteArrayList<>()).addAll(touchFrames);
     }
 
     @Override
-    public void judgeSend(Player player, List<JudgeEvent> judgeEvents) {
+    public void judgeSend(LocalPlayer player, List<JudgeEvent> judgeEvents) {
         this.judgeEvents.computeIfAbsent(player, p -> new CopyOnWriteArrayList<>()).addAll(judgeEvents);
     }
 
     @Override
-    public void abort(Player player) {
+    public void abort(LocalPlayer player) {
         try {
             broadcast(ClientBoundMessagePacket.create(new AbortMessage(player.getId())));
 
@@ -94,7 +94,7 @@ public final class RoomPlaying extends RoomGameState {
     }
 
     @Override
-    public void played(Player player, int recordId) {
+    public void played(LocalPlayer player, int recordId) {
 
         try {
             GameRecord record = PhiraFetcher.GET_RECORD_INFO.toIntFunction(e -> {
@@ -135,7 +135,7 @@ public final class RoomPlaying extends RoomGameState {
         }
     }
 
-    private void updateState(Player player) {
+    private void updateState(LocalPlayer player) {
         donePlayers.add(player);
 
         if (isAllOnlinePlayersDone()) {
@@ -149,8 +149,8 @@ public final class RoomPlaying extends RoomGameState {
     }
 
     private boolean isAllOnlinePlayersDone() {
-        Set<Player> onlinePlayers = room.getPlayers().stream()
-                .filter(Player::isOnline)
+        Set<LocalPlayer> onlinePlayers = room.getPlayers().stream()
+                .filter(LocalPlayer::isOnline)
                 .collect(Collectors.toSet());
 
         return donePlayers.containsAll(onlinePlayers);

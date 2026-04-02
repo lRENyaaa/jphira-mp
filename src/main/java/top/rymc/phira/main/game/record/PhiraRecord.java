@@ -15,9 +15,9 @@ import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 import top.rymc.phira.protocol.handler.server.SimpleServerBoundPacketHandler;
+import top.rymc.phira.protocol.packet.ClientBoundPacket;
 import top.rymc.phira.protocol.packet.ServerBoundPacket;
 import top.rymc.phira.protocol.packet.serverbound.ServerBoundJudgesPacket;
-import top.rymc.phira.protocol.packet.serverbound.ServerBoundPingPacket;
 import top.rymc.phira.protocol.packet.serverbound.ServerBoundTouchesPacket;
 import top.rymc.phira.protocol.util.NettyPacketUtil;
 import top.rymc.phira.protocol.util.PacketWriter;
@@ -116,12 +116,12 @@ public final class PhiraRecord implements Encodeable {
         this.touchFrames = new ArrayList<>();
         this.judgeEvents = new ArrayList<>();
 
-        ServerBoundPacketHandler dataProcessor = new SimpleServerBoundPacketHandler(null) {
+        ServerBoundPacketHandler dataProcessor = new SimpleServerBoundPacketHandler() {
 
             @Override
-            public void handle(ServerBoundPingPacket packet) {
-            }
+            protected void sendPacket(ClientBoundPacket packet) {
 
+            }
 
             @Override
             public void handle(ServerBoundTouchesPacket packet) {

@@ -1,7 +1,7 @@
 package top.rymc.phira.main.game.room;
 
 import top.rymc.phira.main.exception.GameOperationException;
-import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.LocalPlayer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,11 +16,11 @@ public class RoomManager {
         return innerCreateRoom(roomId, id -> Room.create(id, key -> ROOMS.remove(roomId), setting));
     }
 
-    public static Room createRoom(String roomId, Player host) {
+    public static Room createRoom(String roomId, LocalPlayer host) {
         return innerCreateRoom(roomId, id -> Room.create(id, key -> ROOMS.remove(roomId), host));
     }
 
-    public static Room createRoom(String roomId, Player host, Room.RoomSetting setting) {
+    public static Room createRoom(String roomId, LocalPlayer host, Room.RoomSetting setting) {
         return innerCreateRoom(roomId, id -> Room.create(id, key -> ROOMS.remove(roomId), host, setting));
     }
 

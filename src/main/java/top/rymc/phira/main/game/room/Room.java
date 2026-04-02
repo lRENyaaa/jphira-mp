@@ -19,7 +19,7 @@ import top.rymc.phira.main.event.room.RoomDestroyEvent;
 import top.rymc.phira.main.event.room.RoomHostChangeEvent;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.i18n.I18nService;
-import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.LocalPlayer;
 import top.rymc.phira.main.game.state.RoomGameState;
 import top.rymc.phira.main.game.state.RoomPlaying;
 import top.rymc.phira.main.game.state.RoomSelectChart;
@@ -63,9 +63,9 @@ public class Room {
     @Getter private final String roomId;
     private final Consumer<Room> onDestroy;
 
-    private final Set<Player> players = ConcurrentHashMap.newKeySet();
-    private final Set<Player> monitors = ConcurrentHashMap.newKeySet();
-    @Getter private Player host;
+    private final Set<LocalPlayer> players = ConcurrentHashMap.newKeySet();
+    private final Set<LocalPlayer> monitors = ConcurrentHashMap.newKeySet();
+    @Getter private LocalPlayer host;
 
     private volatile RoomGameState state;
     @Getter
@@ -103,7 +103,7 @@ public class Room {
         return room;
     }
 
-    public static Room create(String roomId, Consumer<Room> onDestroy, Player hostPlayer) {
+    public static Room create(String roomId, Consumer<Room> onDestroy, LocalPlayer hostPlayer) {
         Room room = new Room(roomId, onDestroy, new RoomSetting());
         room.state = new RoomSelectChart(room, room::updateState);
         room.join(hostPlayer, false);
@@ -111,7 +111,7 @@ public class Room {
         return room;
     }
 
-    public static Room create(String roomId, Consumer<Room> onDestroy, Player hostPlayer, RoomSetting setting) {
+    public static Room create(String roomId, Consumer<Room> onDestroy, LocalPlayer hostPlayer, RoomSetting setting) {
         Room room = new Room(roomId, onDestroy, setting);
         room.state = new RoomSelectChart(room, room::updateState);
         room.join(hostPlayer, false);
@@ -119,13 +119,13 @@ public class Room {
         return room;
     }
 
-    public void join(Player player, boolean isMonitor) {
+    public void join(LocalPlayer player, boolean isMonitor) {
         synchronized (stateLock) {
             if (players.size() >= setting.maxPlayer) throw GameOperationException.roomFull();
             if (setting.locked && !players.isEmpty()) throw GameOperationException.roomLocked();
 
             boolean isInit = players.isEmpty();
-            Set<Player> set = isMonitor ? monitors : players;
+            Set<LocalPlayer> set = isMonitor ? monitors : players;
             set.add(player);
 
             if (isInit) {
@@ -141,7 +141,7 @@ public class Room {
         }
     }
 
-    public void leave(Player player) {
+    public void leave(LocalPlayer player) {
         synchronized (stateLock) {
             if (!players.remove(player) && !monitors.remove(player)) return;
 
@@ -168,8 +168,8 @@ public class Room {
     }
 
     private void transferHostToNextPlayer() {
-        Player previousHost = host;
-        Player nextHost = players.iterator().next();
+        LocalPlayer previousHost = host;
+        LocalPlayer nextHost = players.iterator().next();
         if (nextHost != null && nextHost.isOnline()) {
             host = nextHost;
             host.getConnection().send(ClientBoundChangeHostPacket.create(true));
@@ -179,15 +179,15 @@ public class Room {
         }
     }
 
-    public boolean containsPlayer(Player player) {
+    public boolean containsPlayer(LocalPlayer player) {
         return players.contains(player);
     }
 
-    public boolean isInRoom(Player player) {
+    public boolean isInRoom(LocalPlayer player) {
         return players.contains(player) || monitors.contains(player);
     }
 
-    public boolean containsMonitor(Player player) {
+    public boolean containsMonitor(LocalPlayer player) {
         return monitors.contains(player);
     }
 
@@ -197,13 +197,13 @@ public class Room {
 
     public class Operation {
 
-        private void validateHost(Player player) {
+        private void validateHost(LocalPlayer player) {
             if (!isHost(player)) {
                 throw GameOperationException.permissionDenied();
             }
         }
 
-        public void lockRoom(Player player) {
+        public void lockRoom(LocalPlayer player) {
             validateHost(player);
 
             setting.locked = !setting.locked;
@@ -212,7 +212,7 @@ public class Room {
 
         }
 
-        public void cycleRoom(Player player) {
+        public void cycleRoom(LocalPlayer player) {
             validateHost(player);
 
             setting.cycle = !setting.cycle;
@@ -221,7 +221,7 @@ public class Room {
 
         }
 
-        public void selectChart(Player player, int id) {
+        public void selectChart(LocalPlayer player, int id) {
             validateHost(player);
 
             if (!(state instanceof RoomSelectChart)) {
@@ -250,7 +250,7 @@ public class Room {
             Server.postEvent(postEvent);
         }
 
-        public void chat(Player player, String message) {
+        public void chat(LocalPlayer player, String message) {
             if (!setting.chat) {
                 throw GameOperationException.chatNotEnabled();
             }
@@ -258,36 +258,36 @@ public class Room {
             broadcast(ClientBoundMessagePacket.create(new ChatMessage(player.getId(), message)));
         }
 
-        public void touchSend(Player player, List<TouchFrame> touchFrames) {
+        public void touchSend(LocalPlayer player, List<TouchFrame> touchFrames) {
             state.touchSend(player, touchFrames);
             ClientBoundTouchesPacket packet = ClientBoundTouchesPacket.create(player.getId(), touchFrames);
             monitors.forEach(p -> p.getConnection().send(packet));
         }
 
-        public void judgeSend(Player player, List<JudgeEvent> judgeEvents) {
+        public void judgeSend(LocalPlayer player, List<JudgeEvent> judgeEvents) {
             state.judgeSend(player, judgeEvents);
             ClientBoundJudgesPacket packet = ClientBoundJudgesPacket.create(player.getId(), judgeEvents);
             monitors.forEach(p -> p.getConnection().send(packet));
         }
 
-        public void requireStart(Player player){
+        public void requireStart(LocalPlayer player){
             validateHost(player);
             state.requireStart(player);
         }
 
-        public void ready(Player player){
+        public void ready(LocalPlayer player){
             state.ready(player);
         }
 
-        public void cancelReady(Player player) {
+        public void cancelReady(LocalPlayer player) {
             state.cancelReady(player);
         }
 
-        public void abort(Player player) {
+        public void abort(LocalPlayer player) {
             state.abort(player);
         }
 
-        public void played(Player player, int recordId) {
+        public void played(LocalPlayer player, int recordId) {
             state.played(player, recordId);
         }
 
@@ -390,7 +390,7 @@ public class Room {
     }
 
     public void broadcast(ClientBoundPacket packet) {
-        Consumer<Player> broadcastProcessor = p -> {
+        Consumer<LocalPlayer> broadcastProcessor = p -> {
             if (p.isOnline()) p.getConnection().send(packet);
         };
 
@@ -398,19 +398,19 @@ public class Room {
         monitors.forEach(broadcastProcessor);
     }
 
-    public boolean isHost(Player player) {
+    public boolean isHost(LocalPlayer player) {
         return setting.host && player.getId() == host.getId();
     }
 
-    public ProtocolConvertible<RoomInfo> asProtocolConvertible(Player viewer) {
+    public ProtocolConvertible<RoomInfo> asProtocolConvertible(LocalPlayer viewer) {
         return () -> new RoomInfo(
                 roomId,
                 state.toProtocol(),
                 setting.live, setting.locked, setting.cycle,
                 isHost(viewer),
                 state instanceof RoomWaitForReady,
-                players.stream().map(Player::toProtocol).toList(),
-                monitors.stream().map(Player::toProtocol).toList()
+                players.stream().map(LocalPlayer::toProtocol).toList(),
+                monitors.stream().map(LocalPlayer::toProtocol).toList()
         );
     }
 
@@ -431,15 +431,15 @@ public class Room {
 
             return ClientBoundJoinRoomPacket.success(
                     protocolState,
-                    players.stream().map(Player::toProtocol).toList(),
-                    monitors.stream().map(Player::toProtocol).toList(),
+                    players.stream().map(LocalPlayer::toProtocol).toList(),
+                    monitors.stream().map(LocalPlayer::toProtocol).toList(),
                     setting.live
             );
         }
 
         private static final Executor executor = CompletableFuture.delayedExecutor(2, TimeUnit.MILLISECONDS);
 
-        public void forceSyncHost(Player player, boolean delay) {
+        public void forceSyncHost(LocalPlayer player, boolean delay) {
             if (!isInRoom(player)) return;
 
             PlayerConnection connection = player.getConnection();
@@ -450,7 +450,7 @@ public class Room {
 
         }
 
-        public void forceSyncInfo(Player player, boolean delay) {
+        public void forceSyncInfo(LocalPlayer player, boolean delay) {
             if (!isInRoom(player)) return;
 
             PlayerConnection connection = player.getConnection();
@@ -476,7 +476,7 @@ public class Room {
 
         }
 
-        public void fixClientRoomState(Player player) {
+        public void fixClientRoomState(LocalPlayer player) {
             if (!isInRoom(player)) return;
 
             if (!(state instanceof RoomSelectChart) && state.getChart() != null) {
@@ -484,7 +484,7 @@ public class Room {
             }
         }
 
-        private void fixClientRoomState0(Player player) {
+        private void fixClientRoomState0(LocalPlayer player) {
             PlayerConnection connection = player.getConnection();
             ChartInfo chart = state.getChart();
             if (chart != null) {
@@ -507,11 +507,11 @@ public class Room {
         }
     }
 
-    public Set<Player> getPlayers() {
+    public Set<LocalPlayer> getPlayers() {
         return Collections.unmodifiableSet(players);
     }
 
-    public Set<Player> getMonitors() {
+    public Set<LocalPlayer> getMonitors() {
         return Collections.unmodifiableSet(monitors);
     }
 

@@ -6,7 +6,7 @@ import top.rymc.phira.main.event.game.PlayerReadyEvent;
 import top.rymc.phira.main.event.game.GamePlayingStartEvent;
 import top.rymc.phira.main.event.game.PlayerCancelReadyEvent;
 import top.rymc.phira.main.exception.GameOperationException;
-import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.LocalPlayer;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.protocol.data.message.CancelReadyMessage;
 import top.rymc.phira.protocol.data.message.ReadyMessage;
@@ -26,13 +26,13 @@ import java.util.stream.Collectors;
 
 public final class RoomWaitForReady extends RoomGameState {
 
-    private final Set<Player> readyPlayers = ConcurrentHashMap.newKeySet();
+    private final Set<LocalPlayer> readyPlayers = ConcurrentHashMap.newKeySet();
 
     public RoomWaitForReady(Room room, Consumer<RoomGameState> stateUpdater) {
         super(room, stateUpdater);
     }
 
-    public RoomWaitForReady(Room room, Consumer<RoomGameState> stateUpdater, ChartInfo chart, Player initiator) {
+    public RoomWaitForReady(Room room, Consumer<RoomGameState> stateUpdater, ChartInfo chart, LocalPlayer initiator) {
         this(room, stateUpdater, chart);
         readyPlayers.add(initiator);
     }
@@ -42,22 +42,22 @@ public final class RoomWaitForReady extends RoomGameState {
     }
 
     @Override
-    public void handleJoin(Player player) {
+    public void handleJoin(LocalPlayer player) {
 
     }
 
     @Override
-    public void handleLeave(Player player) {
+    public void handleLeave(LocalPlayer player) {
         readyPlayers.remove(player);
     }
 
     @Override
-    public void requireStart(Player player) {
+    public void requireStart(LocalPlayer player) {
         throw GameOperationException.invalidState();
     }
 
     @Override
-    public void ready(Player player) {
+    public void ready(LocalPlayer player) {
         readyPlayers.add(player);
         broadcast(ClientBoundMessagePacket.create(new ReadyMessage(player.getId())));
         updateState();
@@ -67,7 +67,7 @@ public final class RoomWaitForReady extends RoomGameState {
     }
 
     @Override
-    public void cancelReady(Player player) {
+    public void cancelReady(LocalPlayer player) {
         readyPlayers.remove(player);
         broadcast(ClientBoundMessagePacket.create(new CancelReadyMessage(player.getId())));
 
@@ -76,29 +76,29 @@ public final class RoomWaitForReady extends RoomGameState {
     }
 
     @Override
-    public void touchSend(Player player, List<TouchFrame> touchFrames) {
+    public void touchSend(LocalPlayer player, List<TouchFrame> touchFrames) {
 
     }
 
     @Override
-    public void judgeSend(Player player, List<JudgeEvent> judgeEvents) {
+    public void judgeSend(LocalPlayer player, List<JudgeEvent> judgeEvents) {
 
     }
 
     @Override
-    public void abort(Player player) {
+    public void abort(LocalPlayer player) {
         throw GameOperationException.invalidState();
     }
 
     @Override
-    public void played(Player player, int recordId) {
+    public void played(LocalPlayer player, int recordId) {
         throw GameOperationException.invalidState();
     }
 
     private void updateState() {
         if (isAllOnlinePlayersDone()) {
-            Set<Player> players = room.getPlayers();
-            Set<Player> monitors = room.getMonitors();
+            Set<LocalPlayer> players = room.getPlayers();
+            Set<LocalPlayer> monitors = room.getMonitors();
             GamePlayingStartEvent event = new GamePlayingStartEvent(room, chart, Set.copyOf(players), Set.copyOf(monitors));
             Server.postEvent(event);
 
@@ -110,11 +110,11 @@ public final class RoomWaitForReady extends RoomGameState {
     }
 
     private boolean isAllOnlinePlayersDone() {
-        Set<Player> allPlayers = new HashSet<>(room.getPlayers());
+        Set<LocalPlayer> allPlayers = new HashSet<>(room.getPlayers());
         allPlayers.addAll(room.getMonitors());
 
-        Set<Player> onlinePlayers = allPlayers.stream()
-                .filter(Player::isOnline)
+        Set<LocalPlayer> onlinePlayers = allPlayers.stream()
+                .filter(LocalPlayer::isOnline)
                 .collect(Collectors.toSet());
 
         return readyPlayers.containsAll(onlinePlayers);

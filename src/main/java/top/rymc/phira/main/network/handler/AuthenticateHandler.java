@@ -7,7 +7,7 @@ import top.rymc.phira.main.event.player.PlayerPostLoginEvent;
 import top.rymc.phira.main.event.player.PlayerPreAuthenticateEvent;
 import top.rymc.phira.main.event.player.PlayerPreLoginEvent;
 import top.rymc.phira.main.exception.GameOperationException;
-import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.LocalPlayer;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.i18n.I18nService;
@@ -16,6 +16,7 @@ import top.rymc.phira.main.util.PhiraFetcher;
 import top.rymc.phira.protocol.data.FullUserProfile;
 import top.rymc.phira.protocol.data.RoomInfo;
 import top.rymc.phira.protocol.handler.server.SimpleServerBoundPacketHandler;
+import top.rymc.phira.protocol.packet.ClientBoundPacket;
 import top.rymc.phira.protocol.packet.ServerBoundPacket;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundAuthenticatePacket;
 import top.rymc.phira.protocol.packet.serverbound.*;
@@ -26,8 +27,11 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
 
     private final PlayerConnection connection;
 
+    protected void sendPacket(ClientBoundPacket packet) {
+        connection.send(packet);
+    }
+
     public AuthenticateHandler(PlayerConnection connection) {
-        super(connection.getChannel());
         this.connection = connection;
     }
 
@@ -42,57 +46,12 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
             String token = packet.getToken();
             Server.getLogger().info("{} sent his token [{}]", connection.getRemoteAddressAsString(), token);
 
-            PlayerPreAuthenticateEvent preAuthEvent = new PlayerPreAuthenticateEvent(connection, token);
-            Server.postEvent(preAuthEvent);
+            UserInfo userInfo = PhiraFetcher.GET_USER_INFO.apply(token);
+            RoomInfo roomInfo = PlayerManager.resumeOrCreate(userInfo, connection);
 
-            String preAuthCancelReason = preAuthEvent.getCancelReason();
-            if (preAuthCancelReason != null) {
-                connection.send(ClientBoundAuthenticatePacket.failed(preAuthCancelReason));
-                connection.close();
-                return;
-            }
-            UserInfo eventUserInfo = preAuthEvent.getUserInfo();
-            UserInfo userInfo = eventUserInfo != null ? eventUserInfo : PhiraFetcher.GET_USER_INFO.apply(token);
-
-            PlayerPreLoginEvent preLoginEvent = new PlayerPreLoginEvent(userInfo);
-            Server.postEvent(preLoginEvent);
-            String preLoginCancelReason = preLoginEvent.getCancelReason();
-            if (preLoginCancelReason != null) {
-                connection.send(ClientBoundAuthenticatePacket.failed(preLoginCancelReason));
-                connection.close();
-                return;
-            }
-
-            Player player = PlayerManager.resumeOrCreate(userInfo, connection);
-
-            Optional<Room> roomOptional = player.getRoom();
-            RoomInfo info = null;
-            Room room = null;
-            if (roomOptional.isPresent()) {
-                room = roomOptional.get();
-                info = room.asProtocolConvertible(player).toProtocol();
-            }
-
-            PlayerPostLoginEvent postLoginEvent = new PlayerPostLoginEvent(player);
-            Server.postEvent(postLoginEvent);
-            String postLoginCancelReason = postLoginEvent.getCancelReason();
-            if (postLoginCancelReason != null) {
-                connection.send(ClientBoundAuthenticatePacket.failed(postLoginCancelReason));
-                connection.close();
-                return;
-            }
-
-            boolean resumed = roomOptional.isPresent();
-            connection.send(ClientBoundAuthenticatePacket.success(new FullUserProfile(userInfo.getId(), userInfo.getName(), false), info));
+            connection.send(ClientBoundAuthenticatePacket.success(new FullUserProfile(userInfo.getId(), userInfo.getName(), false), roomInfo));
 
             Server.getLogger().info("{} has logged in as [{}] {}", connection.getRemoteAddressAsString(), userInfo.getId(), userInfo.getName());
-
-            PlayerLoginSuccessEvent successEvent = new PlayerLoginSuccessEvent(player, resumed, roomOptional);
-            Server.postEvent(successEvent);
-
-            if (room != null) {
-                room.getProtocolHack().forceSyncInfo(player, true);
-            }
 
         } catch (GameOperationException e) {
             connection.send(ClientBoundAuthenticatePacket.failed(I18nService.INSTANCE.getMessage(e.getMessageKey())));

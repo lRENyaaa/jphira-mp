@@ -53,7 +53,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
         this.remoteAddress = remoteAddress;
 
         this.packetExecutor = Executors.newSingleThreadExecutor(
-                ThreadFactoryCompat.THREAD_FACTORY_CREATOR.apply("Player-Worker-" + getRemoteAddressAsString())
+                ThreadFactoryCompat.THREAD_FACTORY_CREATOR.apply("LocalPlayer-Worker-" + getRemoteAddressAsString())
         );
     }
 
@@ -126,7 +126,11 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
         });
 
         for (Consumer<ChannelHandlerContext> handler : closeHandlers) {
-            handler.accept(ctx);
+            try {
+                handler.accept(ctx);
+            } catch (Exception e) {
+                Server.getLogger().error("error",e); // TODO: optimize
+            }
         }
 
         super.channelInactive(ctx);
