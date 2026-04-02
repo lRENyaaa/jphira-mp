@@ -5,14 +5,12 @@ import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.event.game.GameRequireStartEvent;
 import top.rymc.phira.main.event.game.GameStartEvent;
 import top.rymc.phira.main.exception.GameOperationException;
-import top.rymc.phira.main.game.player.LocalPlayer;
+import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.room.Room;
-import top.rymc.phira.protocol.data.message.GameStartMessage;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
 import top.rymc.phira.protocol.data.state.GameState;
 import top.rymc.phira.protocol.data.state.SelectChart;
-import top.rymc.phira.protocol.packet.clientbound.ClientBoundMessagePacket;
 
 import java.util.List;
 import java.util.Set;
@@ -28,19 +26,19 @@ public final class RoomSelectChart extends RoomGameState {
     }
 
     @Override
-    public void handleJoin(LocalPlayer player) {
+    public void handleJoin(Player player) {
 
     }
 
     @Override
-    public void handleLeave(LocalPlayer player) {
+    public void handleLeave(Player player) {
 
     }
 
     @Override
-    public void requireStart(LocalPlayer player) {
-        Set<LocalPlayer> players = room.getPlayers();
-        Set<LocalPlayer> monitors = room.getMonitors();
+    public void requireStart(Player player) {
+        Set<Player> players = room.getPlayers();
+        Set<Player> monitors = room.getMonitors();
         int totalPlayers = players.size() + monitors.size();
 
         GameRequireStartEvent event = new GameRequireStartEvent(room, player, chart);
@@ -58,37 +56,37 @@ public final class RoomSelectChart extends RoomGameState {
         } else {
             RoomWaitForReady state = new RoomWaitForReady(room, stateUpdater, chart, player);
             updateGameState(state);
-            broadcast(ClientBoundMessagePacket.create(new GameStartMessage(player.getId())));
+            broadcast(op -> op.gameRequireStart(player.getId()));
         }
     }
 
     @Override
-    public void ready(LocalPlayer player) {
+    public void ready(Player player) {
         throw GameOperationException.invalidState();
     }
 
     @Override
-    public void cancelReady(LocalPlayer player) {
+    public void cancelReady(Player player) {
         throw GameOperationException.invalidState();
     }
 
     @Override
-    public void touchSend(LocalPlayer player, List<TouchFrame> touchFrames) {
+    public void touchSend(Player player, List<TouchFrame> touchFrames) {
 
     }
 
     @Override
-    public void judgeSend(LocalPlayer player, List<JudgeEvent> judgeEvents) {
+    public void judgeSend(Player player, List<JudgeEvent> judgeEvents) {
 
     }
 
     @Override
-    public void abort(LocalPlayer player) {
+    public void abort(Player player) {
         throw GameOperationException.invalidState();
     }
 
     @Override
-    public void played(LocalPlayer player, int recordId) {
+    public void played(Player player, int recordId) {
         throw GameOperationException.invalidState();
     }
 

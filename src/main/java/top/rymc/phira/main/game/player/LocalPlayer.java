@@ -4,11 +4,12 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import top.rymc.phira.main.data.UserInfo;
+import top.rymc.phira.main.game.player.operations.LocalPlayerOperations;
+import top.rymc.phira.main.game.player.operations.PlayerOperations;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.holder.RoomHolder;
 import top.rymc.phira.main.network.ConnectionReference;
 import top.rymc.phira.main.network.PlayerConnection;
-import top.rymc.phira.protocol.data.RoomInfo;
 import top.rymc.phira.protocol.data.UserProfile;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 
@@ -23,6 +24,7 @@ public class LocalPlayer implements Player {
         return connectionRef.get();
     }
 
+    @Override
     public Optional<Room> getRoom() {
         PlayerConnection conn = getConnection();
         if (conn == null) return Optional.empty();
@@ -30,17 +32,22 @@ public class LocalPlayer implements Player {
         return (h instanceof RoomHolder rh) ? Optional.of(rh.getRoom()) : Optional.empty();
     }
 
-    public Optional<RoomInfo> getRoomInfo() {
-        return getRoom().map(r -> r.asProtocolConvertible(this).toProtocol());
-    }
-
-    public boolean isOnline() {
-        return getConnection() != null && !getConnection().isClosed();
-    }
-
+    @Override
     public void kick() {
         getRoom().ifPresent(room -> room.leave(this));
         getConnection().markAsKicked();
+    }
+
+    @Override
+    public Optional<PlayerOperations> operations() {
+        PlayerConnection conn = getConnection();
+        if (conn == null) return Optional.empty();
+        return Optional.of(new LocalPlayerOperations(conn));
+    }
+
+    @Override
+    public boolean isNotSuspend() {
+        return getConnection() != null && !getConnection().isClosed();
     }
 
     @Override

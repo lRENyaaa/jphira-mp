@@ -20,35 +20,21 @@ import top.rymc.phira.main.event.room.RoomHostChangeEvent;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.player.LocalPlayer;
+import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.operations.PlayerOperations;
 import top.rymc.phira.main.game.state.RoomGameState;
 import top.rymc.phira.main.game.state.RoomPlaying;
 import top.rymc.phira.main.game.state.RoomSelectChart;
 import top.rymc.phira.main.game.state.RoomWaitForReady;
-import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.main.util.PhiraFetcher;
-import top.rymc.phira.protocol.data.FullUserProfile;
+
 import top.rymc.phira.protocol.data.RoomInfo;
-import top.rymc.phira.protocol.data.message.ChatMessage;
-import top.rymc.phira.protocol.data.message.CycleRoomMessage;
-import top.rymc.phira.protocol.data.message.GameStartMessage;
-import top.rymc.phira.protocol.data.message.JoinRoomMessage;
-import top.rymc.phira.protocol.data.message.LeaveRoomMessage;
-import top.rymc.phira.protocol.data.message.LockRoomMessage;
-import top.rymc.phira.protocol.data.message.SelectChartMessage;
-import top.rymc.phira.protocol.data.message.StartPlayingMessage;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
 import top.rymc.phira.protocol.data.state.GameState;
 import top.rymc.phira.protocol.data.state.SelectChart;
-import top.rymc.phira.protocol.packet.ClientBoundPacket;
-import top.rymc.phira.protocol.packet.clientbound.ClientBoundChangeHostPacket;
-import top.rymc.phira.protocol.packet.clientbound.ClientBoundChangeStatePacket;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundJoinRoomPacket;
-import top.rymc.phira.protocol.packet.clientbound.ClientBoundJudgesPacket;
-import top.rymc.phira.protocol.packet.clientbound.ClientBoundMessagePacket;
-import top.rymc.phira.protocol.packet.clientbound.ClientBoundOnJoinRoomPacket;
-import top.rymc.phira.protocol.packet.clientbound.ClientBoundTouchesPacket;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -63,9 +49,9 @@ public class Room {
     @Getter private final String roomId;
     private final Consumer<Room> onDestroy;
 
-    private final Set<LocalPlayer> players = ConcurrentHashMap.newKeySet();
-    private final Set<LocalPlayer> monitors = ConcurrentHashMap.newKeySet();
-    @Getter private LocalPlayer host;
+    private final Set<Player> players = ConcurrentHashMap.newKeySet();
+    private final Set<Player> monitors = ConcurrentHashMap.newKeySet();
+    @Getter private Player host;
 
     private volatile RoomGameState state;
     @Getter
@@ -119,13 +105,13 @@ public class Room {
         return room;
     }
 
-    public void join(LocalPlayer player, boolean isMonitor) {
+    public void join(Player player, boolean isMonitor) {
         synchronized (stateLock) {
             if (players.size() >= setting.maxPlayer) throw GameOperationException.roomFull();
             if (setting.locked && !players.isEmpty()) throw GameOperationException.roomLocked();
 
             boolean isInit = players.isEmpty();
-            Set<LocalPlayer> set = isMonitor ? monitors : players;
+            Set<Player> set = isMonitor ? monitors : players;
             set.add(player);
 
             if (isInit) {
@@ -133,8 +119,7 @@ public class Room {
                     host = player;
                 }
             } else {
-                broadcast(ClientBoundOnJoinRoomPacket.create(player.toProtocol(), isMonitor));
-                broadcast(ClientBoundMessagePacket.create(new JoinRoomMessage(player.getId(), player.getName())));
+                broadcast(op -> op.memberJoined(player.getId(), player.getName(), isMonitor));
             }
 
             state.handleJoin(player);
@@ -145,7 +130,7 @@ public class Room {
         synchronized (stateLock) {
             if (!players.remove(player) && !monitors.remove(player)) return;
 
-            broadcast(ClientBoundMessagePacket.create(new LeaveRoomMessage(player.getId(), player.getName())));
+            broadcast(op -> op.memberLeft(player.getId(), player.getName()));
             state.handleLeave(player);
 
             PlayerLeaveRoomEvent event = new PlayerLeaveRoomEvent(player, this);
@@ -168,14 +153,24 @@ public class Room {
     }
 
     private void transferHostToNextPlayer() {
-        LocalPlayer previousHost = host;
-        LocalPlayer nextHost = players.iterator().next();
-        if (nextHost != null && nextHost.isOnline()) {
-            host = nextHost;
-            host.getConnection().send(ClientBoundChangeHostPacket.create(true));
+        Player previousHost = host;
 
-            RoomHostChangeEvent event = new RoomHostChangeEvent(this, previousHost, nextHost);
+        for (Player player : players) {
+            if (player.equals(previousHost)) {
+                continue;
+            }
+
+            Optional<PlayerOperations> operations = player.operations();
+            if (operations.isEmpty()) {
+                continue;
+            }
+
+            host = player;
+            operations.get().updateHostStatus(true);
+
+            RoomHostChangeEvent event = new RoomHostChangeEvent(this, previousHost, player);
             Server.postEvent(event);
+            return;
         }
     }
 
@@ -191,6 +186,14 @@ public class Room {
         return monitors.contains(player);
     }
 
+    private void broadcast(Consumer<PlayerOperations> action) {
+        players.forEach(p -> p.operations().ifPresent(action));
+        monitors.forEach(p -> p.operations().ifPresent(action));
+    }
+
+    private void broadcastToMonitors(Consumer<PlayerOperations> action) {
+        monitors.forEach(p -> p.operations().ifPresent(action));
+    }
 
     @Getter
     private final Operation operation = new Operation();
@@ -208,8 +211,7 @@ public class Room {
 
             setting.locked = !setting.locked;
 
-            broadcast(ClientBoundMessagePacket.create(new LockRoomMessage(setting.locked)));
-
+            broadcast(op -> op.lockRoom(setting.locked));
         }
 
         public void cycleRoom(LocalPlayer player) {
@@ -217,8 +219,7 @@ public class Room {
 
             setting.cycle = !setting.cycle;
 
-            broadcast(ClientBoundMessagePacket.create(new CycleRoomMessage(setting.cycle)));
-
+            broadcast(op -> op.cycleRoom(setting.cycle));
         }
 
         public void selectChart(LocalPlayer player, int id) {
@@ -243,8 +244,7 @@ public class Room {
             ChartInfo info = eventChartInfo != null ? eventChartInfo : getInfoFunc.apply(id);
 
             state.setChart(info);
-            broadcast(ClientBoundMessagePacket.create(new SelectChartMessage(player.getId(), info.getName(), id)));
-            broadcast(ClientBoundChangeStatePacket.create(state.toProtocol()));
+            broadcast(operations -> operations.selectChart(info.getId(), info.getName(), player.getId()));
 
             RoomPostSelectChartEvent postEvent = new RoomPostSelectChartEvent(Room.this, player, info);
             Server.postEvent(postEvent);
@@ -255,19 +255,17 @@ public class Room {
                 throw GameOperationException.chatNotEnabled();
             }
 
-            broadcast(ClientBoundMessagePacket.create(new ChatMessage(player.getId(), message)));
+            broadcast(operations -> operations.receiveChat(player.getId(), message));
         }
 
         public void touchSend(LocalPlayer player, List<TouchFrame> touchFrames) {
             state.touchSend(player, touchFrames);
-            ClientBoundTouchesPacket packet = ClientBoundTouchesPacket.create(player.getId(), touchFrames);
-            monitors.forEach(p -> p.getConnection().send(packet));
+            broadcastToMonitors(operations -> operations.receiveTouchStream(player.getId(), touchFrames));
         }
 
         public void judgeSend(LocalPlayer player, List<JudgeEvent> judgeEvents) {
             state.judgeSend(player, judgeEvents);
-            ClientBoundJudgesPacket packet = ClientBoundJudgesPacket.create(player.getId(), judgeEvents);
-            monitors.forEach(p -> p.getConnection().send(packet));
+            broadcastToMonitors(operations -> operations.receiveJudgeStream(player.getId(), judgeEvents));
         }
 
         public void requireStart(LocalPlayer player){
@@ -318,8 +316,7 @@ public class Room {
 
             ChartInfo info = eventChartInfo != null ? eventChartInfo : getInfoFunc.apply(id);
             state.setChart(info);
-            broadcast(ClientBoundMessagePacket.create(new SelectChartMessage(-1, info.getName(), info.getId())));
-            broadcast(ClientBoundChangeStatePacket.create(state.toProtocol()));
+            broadcast(operations -> operations.selectChart(info.getId(), info.getName(), -1));
 
             RoomAdminPostSelectChartEvent postEvent = new RoomAdminPostSelectChartEvent(Room.this, info);
             Server.postEvent(postEvent);
@@ -343,7 +340,7 @@ public class Room {
             }
 
             updateState(new RoomWaitForReady(Room.this, Room.this::updateState, chart));
-            broadcast(ClientBoundMessagePacket.create(new GameStartMessage(-1)));
+            broadcast(operations -> operations.gameRequireStart(-1));
         }
 
         public void forceStart(){
@@ -360,7 +357,7 @@ public class Room {
             }
 
             updateState(new RoomPlaying(Room.this, Room.this::updateState, state.getChart()));
-            broadcast(ClientBoundMessagePacket.create(StartPlayingMessage.INSTANCE));
+            broadcast(PlayerOperations::gameStartPlaying);
         }
 
         public boolean destroy() {
@@ -385,32 +382,23 @@ public class Room {
             RoomGameState oldState = this.state;
             this.state = newState;
             Server.postEvent(new RoomStateChangeEvent(this, oldState, newState));
-            broadcast(ClientBoundChangeStatePacket.create(newState.toProtocol()));
+            broadcast(operations -> operations.enterState(newState.toProtocol()));
         }
     }
 
-    public void broadcast(ClientBoundPacket packet) {
-        Consumer<LocalPlayer> broadcastProcessor = p -> {
-            if (p.isOnline()) p.getConnection().send(packet);
-        };
-
-        players.forEach(broadcastProcessor);
-        monitors.forEach(broadcastProcessor);
-    }
-
-    public boolean isHost(LocalPlayer player) {
+    public boolean isHost(Player player) {
         return setting.host && player.getId() == host.getId();
     }
 
-    public ProtocolConvertible<RoomInfo> asProtocolConvertible(LocalPlayer viewer) {
+    public ProtocolConvertible<RoomInfo> asProtocolConvertible(Player viewer) {
         return () -> new RoomInfo(
                 roomId,
                 state.toProtocol(),
                 setting.live, setting.locked, setting.cycle,
                 isHost(viewer),
                 state instanceof RoomWaitForReady,
-                players.stream().map(LocalPlayer::toProtocol).toList(),
-                monitors.stream().map(LocalPlayer::toProtocol).toList()
+                players.stream().map(Player::toProtocol).toList(),
+                monitors.stream().map(Player::toProtocol).toList()
         );
     }
 
@@ -431,8 +419,8 @@ public class Room {
 
             return ClientBoundJoinRoomPacket.success(
                     protocolState,
-                    players.stream().map(LocalPlayer::toProtocol).toList(),
-                    monitors.stream().map(LocalPlayer::toProtocol).toList(),
+                    players.stream().map(Player::toProtocol).toList(),
+                    monitors.stream().map(Player::toProtocol).toList(),
                     setting.live
             );
         }
@@ -442,29 +430,25 @@ public class Room {
         public void forceSyncHost(LocalPlayer player, boolean delay) {
             if (!isInRoom(player)) return;
 
-            PlayerConnection connection = player.getConnection();
-
-            Runnable task = () -> connection.send(ClientBoundChangeHostPacket.create(isHost(player)));
+            Runnable task = () -> player.operations().ifPresent(operations -> operations.updateHostStatus(isHost(player)));
 
             runTask(task, delay);
-
         }
 
         public void forceSyncInfo(LocalPlayer player, boolean delay) {
             if (!isInRoom(player)) return;
 
-            PlayerConnection connection = player.getConnection();
-
             Runnable task = () -> {
                 if (!isHost(player)) {
-                    connection.send(ClientBoundChangeHostPacket.create(false));
+                    player.operations().ifPresent(operations -> operations.updateHostStatus(false));
                 }
 
                 if (setting.live) {
                     String name = I18nService.INSTANCE.getMessage(player, "system.live_recorder_name");
-                    connection.send(ClientBoundOnJoinRoomPacket.create(new FullUserProfile(-1, name, true)));
-                    connection.send(ClientBoundMessagePacket.create(new JoinRoomMessage(-1, name)));
-                    connection.send(ClientBoundMessagePacket.create(new LeaveRoomMessage(-1, name)));
+                    player.operations().ifPresent(operations -> {
+                        operations.memberJoined(-1, name, true);
+                        operations.memberLeft(-1, name);
+                    });
                 }
 
                 if (!(state instanceof RoomSelectChart && state.getChart() == null)) {
@@ -473,7 +457,6 @@ public class Room {
             };
 
             runTask(task, delay);
-
         }
 
         public void fixClientRoomState(LocalPlayer player) {
@@ -485,17 +468,16 @@ public class Room {
         }
 
         private void fixClientRoomState0(LocalPlayer player) {
-            PlayerConnection connection = player.getConnection();
             ChartInfo chart = state.getChart();
             if (chart != null) {
-                connection.send(ClientBoundChangeStatePacket.create(new SelectChart(chart.getId())));
+                player.operations().ifPresent(operations -> operations.enterState(new SelectChart(chart.getId())));
             }
 
             if (state instanceof RoomSelectChart) {
                 return;
             }
 
-            runTask(() -> connection.send(ClientBoundChangeStatePacket.create(state.toProtocol())), true);
+            runTask(() -> player.operations().ifPresent(operations -> operations.enterState(state.toProtocol())), true);
         }
 
         private void runTask(Runnable task, boolean delay) {
@@ -507,11 +489,11 @@ public class Room {
         }
     }
 
-    public Set<LocalPlayer> getPlayers() {
+    public Set<Player> getPlayers() {
         return Collections.unmodifiableSet(players);
     }
 
-    public Set<LocalPlayer> getMonitors() {
+    public Set<Player> getMonitors() {
         return Collections.unmodifiableSet(monitors);
     }
 

@@ -3,14 +3,13 @@ package top.rymc.phira.main.game.state;
 import lombok.Getter;
 import lombok.Setter;
 import top.rymc.phira.main.data.ChartInfo;
-import top.rymc.phira.main.game.player.LocalPlayer;
+import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.operations.PlayerOperations;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
 import top.rymc.phira.protocol.data.state.GameState;
-import top.rymc.phira.protocol.packet.ClientBoundPacket;
-import top.rymc.phira.protocol.packet.clientbound.ClientBoundChangeStatePacket;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -36,34 +35,31 @@ public abstract sealed class RoomGameState implements ProtocolConvertible<GameSt
 
     protected void updateGameState(RoomGameState newRoomGameState) {
         stateUpdater.accept(newRoomGameState);
-        broadcast(ClientBoundChangeStatePacket.create(newRoomGameState.toProtocol()));
+        room.getPlayers().forEach(p -> p.operations().ifPresent(op -> op.enterState(newRoomGameState.toProtocol())));
+        room.getMonitors().forEach(p -> p.operations().ifPresent(op -> op.enterState(newRoomGameState.toProtocol())));
     }
 
-    protected void broadcast(ClientBoundPacket packet) {
-        Consumer<LocalPlayer> broadcastProcessor = p -> {
-            if (p.isOnline()) p.getConnection().send(packet);
-        };
-
-        room.getPlayers().forEach(broadcastProcessor);
-        room.getMonitors().forEach(broadcastProcessor);
+    protected void broadcast(Consumer<PlayerOperations> action) {
+        room.getPlayers().forEach(p -> p.operations().ifPresent(action));
+        room.getMonitors().forEach(p -> p.operations().ifPresent(action));
     }
 
-    public abstract void handleJoin(LocalPlayer player);
+    public abstract void handleJoin(Player player);
 
-    public abstract void handleLeave(LocalPlayer player);
+    public abstract void handleLeave(Player player);
 
-    public abstract void requireStart(LocalPlayer player);
+    public abstract void requireStart(Player player);
 
-    public abstract void ready(LocalPlayer player);
+    public abstract void ready(Player player);
 
-    public abstract void cancelReady(LocalPlayer player);
+    public abstract void cancelReady(Player player);
 
-    public abstract void touchSend(LocalPlayer player, List<TouchFrame> touchFrames);
+    public abstract void touchSend(Player player, List<TouchFrame> touchFrames);
 
-    public abstract void judgeSend(LocalPlayer player, List<JudgeEvent> judgeEvents);
+    public abstract void judgeSend(Player player, List<JudgeEvent> judgeEvents);
 
-    public abstract void abort(LocalPlayer player);
+    public abstract void abort(Player player);
 
-    public abstract void played(LocalPlayer player, int recordId);
+    public abstract void played(Player player, int recordId);
 
 }
