@@ -83,20 +83,6 @@ public class Room {
         }
     }
 
-    public static Room create(String roomId, Consumer<Room> onDestroy, RoomSetting setting) {
-        Room room = new Room(roomId, onDestroy, setting);
-        room.state = new RoomSelectChart(room, room::updateState);
-        return room;
-    }
-
-    public static Room create(String roomId, Consumer<Room> onDestroy, LocalPlayer hostPlayer) {
-        Room room = new Room(roomId, onDestroy, new RoomSetting());
-        room.state = new RoomSelectChart(room, room::updateState);
-        room.join(hostPlayer, false);
-        room.host = hostPlayer;
-        return room;
-    }
-
     public static Room create(String roomId, Consumer<Room> onDestroy, LocalPlayer hostPlayer, RoomSetting setting) {
         Room room = new Room(roomId, onDestroy, setting);
         room.state = new RoomSelectChart(room, room::updateState);
@@ -289,92 +275,6 @@ public class Room {
             state.played(player, recordId);
         }
 
-    }
-
-    @Getter
-    private final AdminOperation adminOperation = new AdminOperation();
-
-    public class AdminOperation {
-
-        public void selectChart(int id) {
-            if (!(state instanceof RoomSelectChart)) {
-                throw GameOperationException.invalidState();
-            }
-
-            RoomAdminPreSelectChartEvent preEvent = new RoomAdminPreSelectChartEvent(Room.this, id);
-            Server.postEvent(preEvent);
-            String cancelReason = preEvent.getCancelReason();
-            if (cancelReason != null) {
-                throw new GameOperationException(cancelReason);
-            }
-
-            IntFunction<ChartInfo> getInfoFunc = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
-                throw GameOperationException.chartNotFound();
-            });
-
-            ChartInfo eventChartInfo = preEvent.getChartInfo();
-
-            ChartInfo info = eventChartInfo != null ? eventChartInfo : getInfoFunc.apply(id);
-            state.setChart(info);
-            broadcast(operations -> operations.selectChart(info.getId(), info.getName(), -1));
-
-            RoomAdminPostSelectChartEvent postEvent = new RoomAdminPostSelectChartEvent(Room.this, info);
-            Server.postEvent(postEvent);
-        }
-
-        public void requireStart(){
-            if (!(state instanceof RoomSelectChart)) {
-                throw GameOperationException.invalidState();
-            }
-
-            ChartInfo chart = state.getChart();
-            if (chart == null) {
-                throw GameOperationException.chartNotSelected();
-            }
-
-            RoomAdminRequireStartEvent event = new RoomAdminRequireStartEvent(Room.this);
-            Server.postEvent(event);
-            String cancelReason = event.getCancelReason();
-            if (cancelReason != null) {
-                throw new GameOperationException(cancelReason);
-            }
-
-            updateState(new RoomWaitForReady(Room.this, Room.this::updateState, chart));
-            broadcast(operations -> operations.gameRequireStart(-1));
-        }
-
-        public void forceStart(){
-            ChartInfo chart = state.getChart();
-            if (chart == null) {
-                throw GameOperationException.chartNotSelected();
-            }
-
-            RoomAdminForceStartEvent event = new RoomAdminForceStartEvent(Room.this);
-            Server.postEvent(event);
-            String cancelReason = event.getCancelReason();
-            if (cancelReason != null) {
-                throw new GameOperationException(cancelReason);
-            }
-
-            updateState(new RoomPlaying(Room.this, Room.this::updateState, state.getChart()));
-            broadcast(PlayerOperations::gameStartPlaying);
-        }
-
-        public boolean destroy() {
-            if (!players.isEmpty() || !monitors.isEmpty()) {
-                return false;
-            }
-
-            RoomAdminDestroyEvent event = new RoomAdminDestroyEvent(Room.this);
-            Server.postEvent(event);
-            String cancelReason = event.getCancelReason();
-            if (cancelReason != null) {
-                throw new GameOperationException(cancelReason);
-            }
-
-            onDestroy.accept(Room.this);
-            return true;
-        }
     }
 
     private void updateState(RoomGameState newState) {

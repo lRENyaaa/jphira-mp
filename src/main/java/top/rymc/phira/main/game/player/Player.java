@@ -24,7 +24,7 @@ public interface Player extends ProtocolConvertible<UserProfile> {
 
     Optional<PlayerOperations> operations();
 
-    boolean isNotSuspend();
+    boolean isOnline();
 
     default int getId() { return getUserInfo().getId(); }
     default String getName() { return getUserInfo().getName(); }

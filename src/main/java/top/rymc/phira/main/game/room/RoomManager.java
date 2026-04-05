@@ -12,14 +12,6 @@ import java.util.function.Function;
 public class RoomManager {
     private static final Map<String, Room> ROOMS = new ConcurrentHashMap<>();
 
-    public static Room createRoom(String roomId, Room.RoomSetting setting) {
-        return innerCreateRoom(roomId, id -> Room.create(id, key -> ROOMS.remove(roomId), setting));
-    }
-
-    public static Room createRoom(String roomId, LocalPlayer host) {
-        return innerCreateRoom(roomId, id -> Room.create(id, key -> ROOMS.remove(roomId), host));
-    }
-
     public static Room createRoom(String roomId, LocalPlayer host, Room.RoomSetting setting) {
         return innerCreateRoom(roomId, id -> Room.create(id, key -> ROOMS.remove(roomId), host, setting));
     }

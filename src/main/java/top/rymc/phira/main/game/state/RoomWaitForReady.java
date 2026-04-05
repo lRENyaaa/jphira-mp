@@ -111,7 +111,7 @@ public final class RoomWaitForReady extends RoomGameState {
         allPlayers.addAll(room.getMonitors());
 
         Set<Player> onlinePlayers = allPlayers.stream()
-                .filter(Player::isNotSuspend)
+                .filter(Player::isOnline)
                 .collect(Collectors.toSet());
 
         return readyPlayers.containsAll(onlinePlayers);

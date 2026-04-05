@@ -146,7 +146,7 @@ public final class RoomPlaying extends RoomGameState {
 
     private boolean isAllOnlinePlayersDone() {
         Set<Player> onlinePlayers = room.getPlayers().stream()
-                .filter(Player::isNotSuspend)
+                .filter(Player::isOnline)
                 .collect(Collectors.toSet());
 
         return donePlayers.containsAll(onlinePlayers);

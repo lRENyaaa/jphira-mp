@@ -79,7 +79,6 @@ public class SessionManager {
             return false;
         }
 
-        player.getConnectionRef().suspend();
         SUSPENDED.compute(player.getId(), (id, oldSession) -> {
             if (oldSession != null && oldSession.timeout != null) {
                 oldSession.timeout.cancel(false);

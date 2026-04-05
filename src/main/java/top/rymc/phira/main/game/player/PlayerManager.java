@@ -55,13 +55,13 @@ public class PlayerManager {
 
     public static boolean isOnline(int playerId) {
         LocalPlayer p = PLAYERS.get(playerId);
-        return p != null && p.isNotSuspend();
+        return p != null && p.isOnline();
     }
 
     public static List<LocalPlayer> getOnlinePlayers() {
         return PLAYERS.values()
                 .stream()
-                .filter(LocalPlayer::isNotSuspend)
+                .filter(LocalPlayer::isOnline)
                 .toList();
     }
 

@@ -41,13 +41,13 @@ public class LocalPlayer implements Player {
     @Override
     public Optional<PlayerOperations> operations() {
         PlayerConnection conn = getConnection();
-        if (conn == null) return Optional.empty();
+        if (conn.isClosed()) return Optional.empty();
         return Optional.of(new LocalPlayerOperations(conn));
     }
 
     @Override
-    public boolean isNotSuspend() {
-        return getConnection() != null && !getConnection().isClosed();
+    public boolean isOnline() {
+        return !getConnection().isClosed();
     }
 
     @Override

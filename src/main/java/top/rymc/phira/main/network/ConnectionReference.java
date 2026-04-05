@@ -30,8 +30,4 @@ public class ConnectionReference {
 
     }
 
-    public void suspend() {
-        connectionReference.set(null);
-    }
-
 }
