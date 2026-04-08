@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import top.rymc.phira.main.game.player.LocalPlayer;
 import top.rymc.phira.main.game.room.LocalRoom;
+import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.plugin.event.ReasonedCancellableEvent;
 
 @RequiredArgsConstructor
@@ -11,6 +12,6 @@ import top.rymc.phira.plugin.event.ReasonedCancellableEvent;
 public class PlayerPostJoinRoomEvent extends ReasonedCancellableEvent {
 
     private final LocalPlayer player;
-    private final LocalRoom room;
+    private final Room room;
     private final boolean isMonitor;
 }

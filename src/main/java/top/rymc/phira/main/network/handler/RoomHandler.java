@@ -1,14 +1,9 @@
 package top.rymc.phira.main.network.handler;
 
 import lombok.Getter;
-import top.rymc.phira.main.Server;
-import top.rymc.phira.main.event.operation.RoomChatEvent;
-import top.rymc.phira.main.event.operation.RoomCycleChangeEvent;
-import top.rymc.phira.main.event.operation.RoomLockChangeEvent;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.player.LocalPlayer;
 import top.rymc.phira.main.game.player.holder.PlayerHolder;
-import top.rymc.phira.main.game.room.LocalRoom;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.holder.SuspendableRoomHolder;
@@ -23,10 +18,10 @@ import java.util.function.Supplier;
 @Getter
 public class RoomHandler extends ServerBoundPacketHandler implements SuspendableRoomHolder, PlayerHolder {
     private final LocalPlayer player;
-    private final LocalRoom room;
+    private final Room room;
     private final ServerBoundPacketHandler fallback;
 
-    public RoomHandler(LocalPlayer player, LocalRoom room, ServerBoundPacketHandler fallback) {
+    public RoomHandler(LocalPlayer player, Room room, ServerBoundPacketHandler fallback) {
         this.player = player;
         this.room = room;
         this.fallback = fallback;

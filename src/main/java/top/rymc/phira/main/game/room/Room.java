@@ -21,6 +21,10 @@ public interface Room {
 
     boolean isHost(Player player);
 
+    boolean containsPlayer(Player player);
+
+    boolean containsMonitor(Player player);
+
     interface Operation {
 
         void lockRoom(Player player);
@@ -30,6 +34,7 @@ public interface Room {
         void selectChart(Player player, int id);
 
         void chat(Player player, String message);
+
         void touchSend(Player player, List<TouchFrame> touchFrames);
 
         void judgeSend(Player player, List<JudgeEvent> judgeEvents);
@@ -37,6 +42,7 @@ public interface Room {
         void requireStart(Player player);
 
         void ready(Player player);
+
         void cancelReady(Player player);
 
         void abort(Player player);

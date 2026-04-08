@@ -40,8 +40,6 @@ public class LocalRoom implements Room {
     @Getter
     private final PlayerManager playerManager = new PlayerManager();
 
-
-
     @SuppressWarnings("InnerClassMayBeStatic")
     public class PlayerManager {
 
@@ -95,6 +93,14 @@ public class LocalRoom implements Room {
         public void broadcastToMonitors(Consumer<PlayerOperations> action) {
             monitors.forEach(p -> p.operations().ifPresent(action));
         }
+    }
+
+    public boolean containsPlayer(Player player) {
+        return playerManager.containsPlayer(player);
+    }
+
+    public boolean containsMonitor(Player player) {
+        return playerManager.containsMonitor(player);
     }
 
     private RoomGameStateReference stateRef;

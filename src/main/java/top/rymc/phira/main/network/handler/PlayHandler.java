@@ -11,6 +11,7 @@ import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.player.LocalPlayer;
 import top.rymc.phira.main.game.player.holder.PlayerHolder;
 import top.rymc.phira.main.game.room.LocalRoom;
+import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.RoomManager;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.network.PlayerConnection;
@@ -49,7 +50,7 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
                 return;
             }
 
-            LocalRoom room = RoomManager.createRoom(packet.getRoomId(), player, createEvent.getSetting());
+            Room room = RoomManager.createRoom(packet.getRoomId(), player, createEvent.getSetting());
 
             RoomPostCreateEvent createdEvent = new RoomPostCreateEvent(room, player);
             Server.postEvent(createdEvent);
@@ -81,7 +82,7 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
                 return;
             }
 
-            LocalRoom room = RoomManager.findRoom(packet.getRoomId());
+            Room room = RoomManager.findRoom(packet.getRoomId());
             if (room == null) {
                 throw GameOperationException.roomNotFound();
             }

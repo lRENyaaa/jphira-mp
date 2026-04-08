@@ -1,7 +1,7 @@
 package top.rymc.phira.main.game.room.holder;
 
-import top.rymc.phira.main.game.room.LocalRoom;
+import top.rymc.phira.main.game.room.Room;
 
 public interface RoomHolder {
-    LocalRoom getRoom();
+    Room getRoom();
 }
