@@ -10,26 +10,26 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 public class RoomManager {
-    private static final Map<String, Room> ROOMS = new ConcurrentHashMap<>();
+    private static final Map<String, LocalRoom> ROOMS = new ConcurrentHashMap<>();
 
-    public static Room createRoom(String roomId, LocalPlayer host, Room.RoomSetting setting) {
-        return innerCreateRoom(roomId, id -> Room.create(id, key -> ROOMS.remove(roomId), host, setting));
+    public static LocalRoom createRoom(String roomId, LocalPlayer host, LocalRoom.RoomSetting setting) {
+        return innerCreateRoom(roomId, id -> LocalRoom.create(id, key -> ROOMS.remove(roomId), host, setting));
     }
 
-    private static Room innerCreateRoom(String roomId, Function<String, Room> creator) {
+    private static LocalRoom innerCreateRoom(String roomId, Function<String, LocalRoom> creator) {
         if (ROOMS.containsKey(roomId)) {
             throw GameOperationException.roomAlreadyExists();
         }
-        Room room = creator.apply(roomId);
+        LocalRoom room = creator.apply(roomId);
         ROOMS.put(roomId, room);
         return room;
     }
 
-    public static Room findRoom(String roomId) {
+    public static LocalRoom findRoom(String roomId) {
         return ROOMS.get(roomId);
     }
 
-    public static List<Room> getAllRooms() {
+    public static List<LocalRoom> getAllRooms() {
         return new ArrayList<>(ROOMS.values());
     }
 }

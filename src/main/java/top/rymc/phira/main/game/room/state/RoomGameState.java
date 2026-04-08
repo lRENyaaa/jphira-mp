@@ -1,11 +1,11 @@
-package top.rymc.phira.main.game.state;
+package top.rymc.phira.main.game.room.state;
 
 import lombok.Getter;
 import lombok.Setter;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
-import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.LocalRoom;
 import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
@@ -18,16 +18,16 @@ public abstract sealed class RoomGameState implements ProtocolConvertible<GameSt
 
     protected final Consumer<RoomGameState> stateUpdater;
     @Getter
-    protected final Room room;
+    protected final LocalRoom room;
     @Setter
     @Getter
     protected ChartInfo chart;
 
-    public RoomGameState(Room room, Consumer<RoomGameState> stateUpdater) {
+    public RoomGameState(LocalRoom room, Consumer<RoomGameState> stateUpdater) {
         this(room, stateUpdater, null);
     }
 
-    protected RoomGameState(Room room, Consumer<RoomGameState> stateUpdater, ChartInfo chart) {
+    protected RoomGameState(LocalRoom room, Consumer<RoomGameState> stateUpdater, ChartInfo chart) {
         this.room = room;
         this.stateUpdater = stateUpdater;
         this.chart = chart;
@@ -35,13 +35,11 @@ public abstract sealed class RoomGameState implements ProtocolConvertible<GameSt
 
     protected void updateGameState(RoomGameState newRoomGameState) {
         stateUpdater.accept(newRoomGameState);
-        room.getPlayers().forEach(p -> p.operations().ifPresent(op -> op.enterState(newRoomGameState.toProtocol())));
-        room.getMonitors().forEach(p -> p.operations().ifPresent(op -> op.enterState(newRoomGameState.toProtocol())));
+        broadcast(op -> op.enterState(newRoomGameState.toProtocol()));
     }
 
     protected void broadcast(Consumer<PlayerOperations> action) {
-        room.getPlayers().forEach(p -> p.operations().ifPresent(action));
-        room.getMonitors().forEach(p -> p.operations().ifPresent(action));
+        room.getPlayerManager().broadcast(action);
     }
 
     public abstract void handleJoin(Player player);

@@ -2,14 +2,8 @@ package top.rymc.phira.main.network.handler;
 
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
-import top.rymc.phira.main.event.player.PlayerLoginSuccessEvent;
-import top.rymc.phira.main.event.player.PlayerPostLoginEvent;
-import top.rymc.phira.main.event.player.PlayerPreAuthenticateEvent;
-import top.rymc.phira.main.event.player.PlayerPreLoginEvent;
 import top.rymc.phira.main.exception.GameOperationException;
-import top.rymc.phira.main.game.player.LocalPlayer;
 import top.rymc.phira.main.game.player.PlayerManager;
-import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.main.util.PhiraFetcher;
@@ -20,8 +14,6 @@ import top.rymc.phira.protocol.packet.ClientBoundPacket;
 import top.rymc.phira.protocol.packet.ServerBoundPacket;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundAuthenticatePacket;
 import top.rymc.phira.protocol.packet.serverbound.*;
-
-import java.util.Optional;
 
 public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
 

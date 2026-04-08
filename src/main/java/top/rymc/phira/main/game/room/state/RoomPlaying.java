@@ -1,4 +1,4 @@
-package top.rymc.phira.main.game.state;
+package top.rymc.phira.main.game.room.state;
 
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
@@ -8,8 +8,9 @@ import top.rymc.phira.main.event.game.GameEndEvent;
 import top.rymc.phira.main.event.game.PlayerPlayedEvent;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.operations.PlayerOperations;
 import top.rymc.phira.main.game.record.PhiraRecord;
-import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.LocalRoom;
 import top.rymc.phira.main.util.PhiraFetcher;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
@@ -34,11 +35,11 @@ public final class RoomPlaying extends RoomGameState {
     private final Map<Player, List<TouchFrame>> touchFrames = new ConcurrentHashMap<>();
     private final Map<Player, List<JudgeEvent>> judgeEvents = new ConcurrentHashMap<>();
 
-    public RoomPlaying(Room room, Consumer<RoomGameState> stateUpdater) {
+    public RoomPlaying(LocalRoom room, Consumer<RoomGameState> stateUpdater) {
         super(room, stateUpdater);
     }
 
-    public RoomPlaying(Room room, Consumer<RoomGameState> stateUpdater, ChartInfo chart){
+    public RoomPlaying(LocalRoom room, Consumer<RoomGameState> stateUpdater, ChartInfo chart){
         super(room, stateUpdater, chart);
     }
 
@@ -140,12 +141,12 @@ public final class RoomPlaying extends RoomGameState {
 
             RoomSelectChart state = new RoomSelectChart(room, stateUpdater, chart);
             updateGameState(state);
-            broadcast(op -> op.gameEnd());
+            broadcast(PlayerOperations::gameEnd);
         }
     }
 
     private boolean isAllOnlinePlayersDone() {
-        Set<Player> onlinePlayers = room.getPlayers().stream()
+        Set<Player> onlinePlayers = room.getPlayerManager().getPlayers().stream()
                 .filter(Player::isOnline)
                 .collect(Collectors.toSet());
 

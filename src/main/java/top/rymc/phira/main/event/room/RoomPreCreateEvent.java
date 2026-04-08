@@ -3,7 +3,7 @@ package top.rymc.phira.main.event.room;
 import lombok.Getter;
 import lombok.Setter;
 import top.rymc.phira.main.game.player.LocalPlayer;
-import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.LocalRoom;
 import top.rymc.phira.plugin.event.ReasonedCancellableEvent;
 
 @Getter
@@ -13,9 +13,9 @@ public class RoomPreCreateEvent extends ReasonedCancellableEvent {
     private final String roomId;
 
     @Setter
-    private Room.RoomSetting setting;
+    private LocalRoom.RoomSetting setting;
 
-    public RoomPreCreateEvent(LocalPlayer creator, String roomId, Room.RoomSetting setting) {
+    public RoomPreCreateEvent(LocalPlayer creator, String roomId, LocalRoom.RoomSetting setting) {
         this.creator = creator;
         this.roomId = roomId;
         this.setting = setting;

@@ -1,4 +1,4 @@
-package top.rymc.phira.main.game.state;
+package top.rymc.phira.main.game.room.state;
 
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
@@ -8,7 +8,7 @@ import top.rymc.phira.main.event.game.PlayerCancelReadyEvent;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
-import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.LocalRoom;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
 import top.rymc.phira.protocol.data.state.GameState;
@@ -25,16 +25,16 @@ public final class RoomWaitForReady extends RoomGameState {
 
     private final Set<Player> readyPlayers = ConcurrentHashMap.newKeySet();
 
-    public RoomWaitForReady(Room room, Consumer<RoomGameState> stateUpdater) {
+    public RoomWaitForReady(LocalRoom room, Consumer<RoomGameState> stateUpdater) {
         super(room, stateUpdater);
     }
 
-    public RoomWaitForReady(Room room, Consumer<RoomGameState> stateUpdater, ChartInfo chart, Player initiator) {
+    public RoomWaitForReady(LocalRoom room, Consumer<RoomGameState> stateUpdater, ChartInfo chart, Player initiator) {
         this(room, stateUpdater, chart);
         readyPlayers.add(initiator);
     }
 
-    public RoomWaitForReady(Room room, Consumer<RoomGameState> stateUpdater, ChartInfo chart) {
+    public RoomWaitForReady(LocalRoom room, Consumer<RoomGameState> stateUpdater, ChartInfo chart) {
         super(room, stateUpdater, chart);
     }
 
@@ -94,8 +94,8 @@ public final class RoomWaitForReady extends RoomGameState {
 
     private void updateState() {
         if (isAllOnlinePlayersDone()) {
-            Set<Player> players = room.getPlayers();
-            Set<Player> monitors = room.getMonitors();
+            Set<Player> players = room.getPlayerManager().getPlayers();
+            Set<Player> monitors = room.getPlayerManager().getMonitors();
             GamePlayingStartEvent event = new GamePlayingStartEvent(room, chart, Set.copyOf(players), Set.copyOf(monitors));
             Server.postEvent(event);
 
@@ -107,8 +107,8 @@ public final class RoomWaitForReady extends RoomGameState {
     }
 
     private boolean isAllOnlinePlayersDone() {
-        Set<Player> allPlayers = new HashSet<>(room.getPlayers());
-        allPlayers.addAll(room.getMonitors());
+        Set<Player> allPlayers = new HashSet<>(room.getPlayerManager().getPlayers());
+        allPlayers.addAll(room.getPlayerManager().getMonitors());
 
         Set<Player> onlinePlayers = allPlayers.stream()
                 .filter(Player::isOnline)

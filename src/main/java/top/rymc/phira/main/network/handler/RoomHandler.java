@@ -8,8 +8,9 @@ import top.rymc.phira.main.event.operation.RoomLockChangeEvent;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.player.LocalPlayer;
 import top.rymc.phira.main.game.player.holder.PlayerHolder;
-import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.LocalRoom;
 import top.rymc.phira.main.game.i18n.I18nService;
+import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.holder.SuspendableRoomHolder;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 import top.rymc.phira.protocol.packet.ClientBoundPacket;
@@ -22,10 +23,10 @@ import java.util.function.Supplier;
 @Getter
 public class RoomHandler extends ServerBoundPacketHandler implements SuspendableRoomHolder, PlayerHolder {
     private final LocalPlayer player;
-    private final Room room;
+    private final LocalRoom room;
     private final ServerBoundPacketHandler fallback;
 
-    public RoomHandler(LocalPlayer player, Room room, ServerBoundPacketHandler fallback) {
+    public RoomHandler(LocalPlayer player, LocalRoom room, ServerBoundPacketHandler fallback) {
         this.player = player;
         this.room = room;
         this.fallback = fallback;
@@ -33,16 +34,8 @@ public class RoomHandler extends ServerBoundPacketHandler implements Suspendable
 
     @Override
     public void handle(ServerBoundChatPacket packet) {
-        RoomChatEvent event = new RoomChatEvent(player, room, packet.getMessage());
-        Server.postEvent(event);
-        if (event.isCancelled()) {
-            player.getConnection().send(ClientBoundChatPacket.failed(event.getCancelReason()));
-            return;
-        }
-
-        String message = event.getMessage();
         handleWithException(
-            () -> room.getOperation().chat(player, message),
+            () -> room.getOperation().chat(player, packet.getMessage()),
             ClientBoundChatPacket::success,
             ClientBoundChatPacket::failed
         );
@@ -64,11 +57,7 @@ public class RoomHandler extends ServerBoundPacketHandler implements Suspendable
     public void handle(ServerBoundLockRoomPacket packet) {
         handleWithException(
             () -> room.getOperation().lockRoom(player),
-            () -> {
-                RoomLockChangeEvent event = new RoomLockChangeEvent(room, player, room.getSetting().isLocked());
-                Server.postEvent(event);
-                return ClientBoundLockRoomPacket.success();
-            },
+            ClientBoundLockRoomPacket::success,
             ClientBoundLockRoomPacket::failed
         );
     }
@@ -77,11 +66,7 @@ public class RoomHandler extends ServerBoundPacketHandler implements Suspendable
     public void handle(ServerBoundCycleRoomPacket packet) {
         handleWithException(
             () -> room.getOperation().cycleRoom(player),
-            () -> {
-                RoomCycleChangeEvent event = new RoomCycleChangeEvent(room, player, room.getSetting().isCycle());
-                Server.postEvent(event);
-                return ClientBoundCycleRoomPacket.success();
-            },
+            ClientBoundCycleRoomPacket::success,
             ClientBoundCycleRoomPacket::failed
         );
     }

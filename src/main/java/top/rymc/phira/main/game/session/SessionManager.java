@@ -3,13 +3,11 @@ package top.rymc.phira.main.game.session;
 import lombok.Getter;
 import lombok.Setter;
 import top.rymc.phira.main.Server;
-import top.rymc.phira.main.event.player.PlayerPostResumeEvent;
-import top.rymc.phira.main.event.player.PlayerPreResumeEvent;
 import top.rymc.phira.main.event.session.PlayerSessionSuspendEvent;
 import top.rymc.phira.main.event.session.PlayerSessionTimeoutEvent;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.player.LocalPlayer;
-import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.LocalRoom;
 import top.rymc.phira.main.game.room.holder.SuspendableRoomHolder;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
@@ -45,7 +43,7 @@ public class SessionManager {
             timeout.cancel(false);
         }
 
-        if (!session.room.containsPlayer(player)) {
+        if (!session.room.getPlayerManager().containsPlayer(player)) {
             return false;
         }
 
@@ -64,12 +62,12 @@ public class SessionManager {
             return false;
         }
 
-        Room room = roomHolder.getRoom();
-        if (room.containsMonitor(player)) {
+        LocalRoom room = roomHolder.getRoom();
+        if (room.getPlayerManager().containsMonitor(player)) {
             room.leave(player);
         }
 
-        if (!room.containsPlayer(player)) {
+        if (!room.getPlayerManager().containsPlayer(player)) {
             return false;
         }
 
@@ -110,19 +108,19 @@ public class SessionManager {
         PlayerSessionTimeoutEvent timeoutEvent = new PlayerSessionTimeoutEvent(session.player, session.room);
         Server.postEvent(timeoutEvent);
 
-        if (session.room.containsPlayer(session.player)) {
+        if (session.room.getPlayerManager().containsPlayer(session.player)) {
             session.room.leave(session.player);
         }
     }
 
     private static final class SuspendedRoomSession {
-        private final Room room;
+        private final LocalRoom room;
         private final LocalPlayer player;
         private final ServerBoundPacketHandler handler;
         private volatile ScheduledFuture<?> timeout;
 
         private SuspendedRoomSession(
-                Room room,
+                LocalRoom room,
                 LocalPlayer player,
                 ServerBoundPacketHandler handler
         ) {

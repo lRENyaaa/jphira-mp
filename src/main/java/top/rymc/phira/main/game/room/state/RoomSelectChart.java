@@ -1,4 +1,4 @@
-package top.rymc.phira.main.game.state;
+package top.rymc.phira.main.game.room.state;
 
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
@@ -6,7 +6,7 @@ import top.rymc.phira.main.event.game.GameRequireStartEvent;
 import top.rymc.phira.main.event.game.GameStartEvent;
 import top.rymc.phira.main.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
-import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.LocalRoom;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
 import top.rymc.phira.protocol.data.state.GameState;
@@ -17,11 +17,11 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 public final class RoomSelectChart extends RoomGameState {
-    public RoomSelectChart(Room room, Consumer<RoomGameState> stateUpdater) {
+    public RoomSelectChart(LocalRoom room, Consumer<RoomGameState> stateUpdater) {
         super(room, stateUpdater);
     }
 
-    public RoomSelectChart(Room room, Consumer<RoomGameState> stateUpdater, ChartInfo chart){
+    public RoomSelectChart(LocalRoom room, Consumer<RoomGameState> stateUpdater, ChartInfo chart){
         super(room, stateUpdater, chart);
     }
 
@@ -37,8 +37,8 @@ public final class RoomSelectChart extends RoomGameState {
 
     @Override
     public void requireStart(Player player) {
-        Set<Player> players = room.getPlayers();
-        Set<Player> monitors = room.getMonitors();
+        Set<Player> players = room.getPlayerManager().getPlayers();
+        Set<Player> monitors = room.getPlayerManager().getMonitors();
         int totalPlayers = players.size() + monitors.size();
 
         GameRequireStartEvent event = new GameRequireStartEvent(room, player, chart);

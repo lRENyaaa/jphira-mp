@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.game.player.operations.LocalPlayerOperations;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
-import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.LocalRoom;
 import top.rymc.phira.main.game.room.holder.RoomHolder;
 import top.rymc.phira.main.network.ConnectionReference;
 import top.rymc.phira.main.network.PlayerConnection;
@@ -25,7 +25,7 @@ public class LocalPlayer implements Player {
     }
 
     @Override
-    public Optional<Room> getRoom() {
+    public Optional<LocalRoom> getRoom() {
         PlayerConnection conn = getConnection();
         if (conn == null) return Optional.empty();
         ServerBoundPacketHandler h = conn.getPacketHandler();
