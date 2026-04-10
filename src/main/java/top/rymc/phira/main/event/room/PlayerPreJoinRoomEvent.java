@@ -2,7 +2,7 @@ package top.rymc.phira.main.event.room;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import top.rymc.phira.main.game.player.LocalPlayer;
+import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.plugin.event.ReasonedCancellableEvent;
 
 @RequiredArgsConstructor

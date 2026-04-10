@@ -2,7 +2,7 @@ package top.rymc.phira.main.event.player;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import top.rymc.phira.main.game.player.LocalPlayer;
+import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.plugin.event.Event;
 
 @RequiredArgsConstructor

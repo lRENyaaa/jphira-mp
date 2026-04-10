@@ -6,7 +6,7 @@ import top.rymc.phira.main.event.game.GameRequireStartEvent;
 import top.rymc.phira.main.event.game.GameStartEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
-import top.rymc.phira.main.game.room.LocalRoom;
+import top.rymc.phira.main.game.room.local.LocalRoom;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
 import top.rymc.phira.protocol.data.state.GameState;

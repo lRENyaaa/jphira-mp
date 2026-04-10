@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.i18n.I18nService;
-import top.rymc.phira.main.game.player.LocalPlayer;
+import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.room.state.RoomGameState;
 import top.rymc.phira.main.game.room.state.RoomSelectChart;

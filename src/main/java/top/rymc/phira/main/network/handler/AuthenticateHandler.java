@@ -3,7 +3,7 @@ package top.rymc.phira.main.network.handler;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.game.exception.GameOperationException;
-import top.rymc.phira.main.game.player.LocalPlayer;
+import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.session.LocalSessionManager;

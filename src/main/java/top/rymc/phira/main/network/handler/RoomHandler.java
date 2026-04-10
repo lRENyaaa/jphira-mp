@@ -2,7 +2,7 @@ package top.rymc.phira.main.network.handler;
 
 import lombok.Getter;
 import top.rymc.phira.main.game.exception.GameOperationException;
-import top.rymc.phira.main.game.player.LocalPlayer;
+import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.player.holder.PlayerHolder;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.room.Room;

@@ -1,4 +1,4 @@
-package top.rymc.phira.main.game.room;
+package top.rymc.phira.main.game.room.local;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -13,6 +13,8 @@ import top.rymc.phira.main.event.room.RoomDestroyEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
+import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.RoomSnapshot;
 import top.rymc.phira.main.game.room.state.RoomGameState;
 import top.rymc.phira.main.game.room.state.RoomGameStateReference;
 import top.rymc.phira.main.game.room.state.RoomSelectChart;

@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import top.rymc.phira.main.data.ChartInfo;
-import top.rymc.phira.main.game.room.LocalRoom;
+import top.rymc.phira.main.game.room.local.LocalRoom;
 import top.rymc.phira.plugin.event.ReasonedCancellableEvent;
 
 @Getter

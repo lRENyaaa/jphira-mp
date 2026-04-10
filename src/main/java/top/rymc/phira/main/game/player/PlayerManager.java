@@ -1,6 +1,7 @@
 package top.rymc.phira.main.game.player;
 
 import top.rymc.phira.main.game.exception.session.PlayerTypeMismatchException;
+import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.network.PlayerConnection;
 
 import java.util.ArrayList;

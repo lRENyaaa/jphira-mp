@@ -2,7 +2,7 @@ package top.rymc.phira.main.event.room;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import top.rymc.phira.main.game.room.LocalRoom;
+import top.rymc.phira.main.game.room.local.LocalRoom;
 import top.rymc.phira.main.game.room.state.RoomGameState;
 import top.rymc.phira.plugin.event.Event;
 

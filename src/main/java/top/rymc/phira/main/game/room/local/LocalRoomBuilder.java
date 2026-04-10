@@ -1,10 +1,8 @@
-package top.rymc.phira.main.game.room;
+package top.rymc.phira.main.game.room.local;
 
 import top.rymc.phira.main.data.ChartInfo;
-import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.room.RoomManager;
 import top.rymc.phira.main.game.room.state.RoomGameState;
-
-import java.util.function.Consumer;
 
 public class LocalRoomBuilder {
 

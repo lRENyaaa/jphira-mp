@@ -1,12 +1,12 @@
-package top.rymc.phira.main.game.player;
+package top.rymc.phira.main.game.player.local;
 
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import top.rymc.phira.main.data.UserInfo;
+import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.LocalPlayerOperations;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
-import top.rymc.phira.main.game.room.LocalRoom;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.holder.RoomHolder;
 import top.rymc.phira.main.network.ConnectionReference;

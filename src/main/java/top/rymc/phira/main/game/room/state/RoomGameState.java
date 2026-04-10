@@ -6,7 +6,7 @@ import lombok.Setter;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
-import top.rymc.phira.main.game.room.LocalRoom;
+import top.rymc.phira.main.game.room.local.LocalRoom;
 import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
