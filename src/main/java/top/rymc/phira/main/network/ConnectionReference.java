@@ -1,5 +1,7 @@
 package top.rymc.phira.main.network;
 
+import top.rymc.phira.main.Server;
+
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -19,11 +21,11 @@ public class ConnectionReference {
     public void resume(PlayerConnection newConnection, Consumer<PlayerConnection> onDuplicate) {
 
         // In fact, duplicate should always be false, the logic here was written as a precaution.
-        // TODO: warn in logger
         PlayerConnection oldConn = connectionReference.get();
         boolean duplicate = oldConn != null;
 
         if (duplicate) {
+            Server.getLogger().warn("Duplicate connection detected for player, marking old connection as duplicate");
             onDuplicate.accept(oldConn);
             oldConn.markDuplicateLogin();
         }

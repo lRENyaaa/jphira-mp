@@ -3,7 +3,6 @@ package top.rymc.phira.main.data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
-import top.rymc.phira.protocol.data.UserProfile;
 
 import java.time.OffsetDateTime;
 

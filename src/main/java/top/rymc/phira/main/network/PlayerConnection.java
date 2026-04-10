@@ -129,7 +129,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
             try {
                 handler.accept(ctx);
             } catch (Exception e) {
-                Server.getLogger().error("error",e); // TODO: optimize message
+                Server.getLogger().error("Exception in close handler for connection {}", getRemoteAddressAsString(), e);
             }
         }
 

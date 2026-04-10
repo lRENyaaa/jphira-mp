@@ -1,6 +1,5 @@
 package top.rymc.phira.main.game.player.local;
 
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import top.rymc.phira.main.data.UserInfo;
@@ -16,7 +15,7 @@ import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 
 import java.util.Optional;
 
-@RequiredArgsConstructor(access = AccessLevel.PUBLIC)
+@RequiredArgsConstructor
 public class LocalPlayer implements Player {
     @Getter private final UserInfo userInfo;
     @Getter private final ConnectionReference connectionRef;

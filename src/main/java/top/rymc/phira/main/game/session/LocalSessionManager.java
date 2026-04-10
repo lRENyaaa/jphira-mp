@@ -54,12 +54,12 @@ public class LocalSessionManager {
         ServerBoundPacketHandler handler = player.getConnection().getPacketHandler();
         newConn.setPacketHandler(handler);
 
-        player.getConnectionRef().resume(newConn, (oldConn) -> {
-            oldConn.sendChat(I18nService.INSTANCE.getMessage(player.getLanguage(), "error.logged_in_elsewhere"));
-        });
+        player.getConnectionRef().resume(newConn, (oldConn) ->
+                oldConn.sendChat(I18nService.INSTANCE.getMessage(player.getLanguage(), "error.logged_in_elsewhere"))
+        );
     }
 
-    public static boolean suspend(LocalPlayer player, Runnable remover) {
+    public static void suspend(LocalPlayer player, Runnable remover) {
         ServerBoundPacketHandler handler = player.getConnection().getPacketHandler();
         if (!(handler instanceof SuspendableRoomHolder roomHolder)) {
             throw new SuspendFailedException();
@@ -82,7 +82,7 @@ public class LocalSessionManager {
 
         SUSPENDED.compute(player.getId(), (id, oldSession) -> {
             if (oldSession != null && oldSession.timeout != null) {
-                // Should not happen, TODO: warn in logger
+                Server.getLogger().warn("Player {} already has a suspended session, cancelling old timeout", player.getId());
                 oldSession.timeout.cancel(false);
             }
 
@@ -96,8 +96,6 @@ public class LocalSessionManager {
 
             return newSession;
         });
-
-        return true;
     }
 
     private static void forceLeave(int playerId, SuspendedRoomSession session, Runnable remover) {
