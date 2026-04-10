@@ -1,11 +1,7 @@
 package top.rymc.phira.main.game.player;
 
-import top.rymc.phira.main.data.UserInfo;
-import top.rymc.phira.main.game.session.SessionManager;
-import top.rymc.phira.main.network.ConnectionReference;
+import top.rymc.phira.main.game.exception.session.PlayerTypeMismatchException;
 import top.rymc.phira.main.network.PlayerConnection;
-import top.rymc.phira.main.network.handler.PlayHandler;
-import top.rymc.phira.protocol.data.RoomInfo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,60 +9,83 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class PlayerManager {
-    private static final Map<Integer, LocalPlayer> PLAYERS = new ConcurrentHashMap<>();
 
-    private static void initOnClose(PlayerConnection connection, LocalPlayer player) {
-        connection.onClose(ctx -> {
-            if (!SessionManager.suspend(player)) {
-                PLAYERS.remove(player.getId());
-            }
-        });
+    public record ResolveResult<T extends Player>(T player, Type type) {
+        public enum Type {
+            Resume,
+            Create
+        }
     }
 
-    public static RoomInfo resumeOrCreate(UserInfo userInfo, PlayerConnection newConn) {
-        AtomicReference<RoomInfo> reference = new AtomicReference<>();
-        PLAYERS.compute(userInfo.getId(), (id, existing) -> {
-            if (existing != null && SessionManager.resume(existing, newConn)) {
-                initOnClose(newConn, existing);
-                reference.set(existing.getRoomInfo().orElse(null));
-                return existing;
+    private static final Map<Integer, Player> PLAYERS = new ConcurrentHashMap<>();
+
+    public static <T extends Player> ResolveResult<T> resolvePlayer(
+            int userId,
+            Class<T> clazz,
+            Function<Runnable, T> constructor,
+            Consumer<T> resumer
+    ) {
+        AtomicReference<ResolveResult<T>> reference = new AtomicReference<>();
+        PLAYERS.compute(userId, (id, existing) -> {
+            if (existing == null) {
+                T player = constructor.apply(() -> PLAYERS.remove(userId));
+                reference.set(new ResolveResult<>(player, ResolveResult.Type.Create));
+                return player;
             }
 
-            LocalPlayer newPlayer = new LocalPlayer(userInfo, new ConnectionReference(newConn));
-            initOnClose(newConn, newPlayer);
-            newPlayer.getConnection().setPacketHandler(PlayHandler.create(newPlayer));
-            return newPlayer;
+            if (existing.getClass() != clazz) {
+                // This is to be expected, upstream must provide a graceful fallback
+                throw new PlayerTypeMismatchException(existing);
+            }
+
+            T castedExisting = clazz.cast(existing);
+            resumer.accept(castedExisting);
+            reference.set(new ResolveResult<>(castedExisting, ResolveResult.Type.Resume));
+            return castedExisting;
+
         });
-        return reference.get();
+
+        ResolveResult<T> result = reference.get();
+        if (result == null) {
+            throw new AssertionError();
+        }
+
+        return result;
     }
 
     public static Optional<LocalPlayer> getPlayer(PlayerConnection connection) {
-        return PLAYERS.values()
-                .stream()
+        return PLAYERS.values().stream()
+                .<LocalPlayer>mapMulti((p, consumer) -> {
+                    if (p instanceof LocalPlayer lp) {
+                        consumer.accept(lp);
+                    }
+                })
                 .filter(player -> player.getConnection() == connection)
                 .findFirst();
     }
 
-    public static Optional<LocalPlayer> getPlayer(int playerId) {
+    public static Optional<Player> getPlayer(int playerId) {
         return Optional.ofNullable(PLAYERS.get(playerId));
     }
 
     public static boolean isOnline(int playerId) {
-        LocalPlayer p = PLAYERS.get(playerId);
+        Player p = PLAYERS.get(playerId);
         return p != null && p.isOnline();
     }
 
-    public static List<LocalPlayer> getOnlinePlayers() {
+    public static List<Player> getOnlinePlayers() {
         return PLAYERS.values()
                 .stream()
-                .filter(LocalPlayer::isOnline)
+                .filter(Player::isOnline)
                 .toList();
     }
 
 
-    public static List<LocalPlayer> getAllPlayers() {
+    public static List<Player> getAllPlayers() {
         return new ArrayList<>(PLAYERS.values());
 
     }

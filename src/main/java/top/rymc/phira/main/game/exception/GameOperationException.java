@@ -1,4 +1,4 @@
-package top.rymc.phira.main.exception;
+package top.rymc.phira.main.game.exception;
 
 import lombok.Getter;
 

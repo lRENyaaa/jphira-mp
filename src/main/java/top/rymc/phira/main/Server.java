@@ -18,6 +18,7 @@ import top.rymc.phira.main.command.CommandService;
 import top.rymc.phira.main.config.ServerArgs;
 import top.rymc.phira.main.event.server.ServerLifecycleEvent;
 import top.rymc.phira.main.game.player.LocalPlayer;
+import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.network.ServerChannelInitializer;
@@ -156,7 +157,7 @@ public class Server {
 
         if (onlineCount > 0) {
             logger.info("Kicking {} player(s)...", onlineCount);
-            PlayerManager.getOnlinePlayers().forEach(LocalPlayer::kick);
+            PlayerManager.getOnlinePlayers().forEach(Player::kick);
         }
 
         if (pluginManager != null) {

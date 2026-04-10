@@ -18,6 +18,8 @@ public class ConnectionReference {
 
     public void resume(PlayerConnection newConnection, Consumer<PlayerConnection> onDuplicate) {
 
+        // In fact, duplicate should always be false, the logic here was written as a precaution.
+        // TODO: warn in logger
         PlayerConnection oldConn = connectionReference.get();
         boolean duplicate = oldConn != null;
 

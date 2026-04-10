@@ -1,6 +1,7 @@
 package top.rymc.phira.main.game.room.state;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.player.Player;
@@ -27,7 +28,7 @@ public abstract sealed class RoomGameState implements ProtocolConvertible<GameSt
         this(room, stateUpdater, null);
     }
 
-    protected RoomGameState(LocalRoom room, Consumer<RoomGameState> stateUpdater, ChartInfo chart) {
+    public RoomGameState(LocalRoom room, Consumer<RoomGameState> stateUpdater, ChartInfo chart) {
         this.room = room;
         this.stateUpdater = stateUpdater;
         this.chart = chart;
@@ -59,5 +60,22 @@ public abstract sealed class RoomGameState implements ProtocolConvertible<GameSt
     public abstract void abort(Player player);
 
     public abstract void played(Player player, int recordId);
+
+    @RequiredArgsConstructor
+    public enum Type {
+        Playing(RoomPlaying::new),
+        SelectChart(RoomSelectChart::new),
+        WaitForReady(RoomWaitForReady::new);
+
+        private final Builder builder;
+
+        private interface Builder {
+            RoomGameState build(LocalRoom room, Consumer<RoomGameState> stateUpdater, ChartInfo chart);
+        }
+
+        public RoomGameState build(LocalRoom room, Consumer<RoomGameState> stateUpdater, ChartInfo chart){
+            return builder.build(room, stateUpdater, chart);
+        }
+    }
 
 }

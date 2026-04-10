@@ -1,8 +1,8 @@
 package top.rymc.phira.main.game.room;
 
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
@@ -10,10 +10,10 @@ import top.rymc.phira.main.event.operation.RoomPostSelectChartEvent;
 import top.rymc.phira.main.event.operation.RoomPreSelectChartEvent;
 import top.rymc.phira.main.event.room.PlayerLeaveRoomEvent;
 import top.rymc.phira.main.event.room.RoomDestroyEvent;
-import top.rymc.phira.main.exception.GameOperationException;
-import top.rymc.phira.main.game.player.LocalPlayer;
+import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
+import top.rymc.phira.main.game.room.state.RoomGameState;
 import top.rymc.phira.main.game.room.state.RoomGameStateReference;
 import top.rymc.phira.main.game.room.state.RoomSelectChart;
 import top.rymc.phira.main.util.PhiraFetcher;
@@ -28,14 +28,44 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
-@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class LocalRoom implements Room {
+
+    private final Object lifecycleLock = new Object();
 
     @Getter
     private final String roomId;
+    @Getter
+    private final RoomSetting setting;
 
-    private final Consumer<LocalRoom> onDestroy;
-    private final Object lifecycleLock = new Object();
+    private final Runnable onDestroy;
+    private final RoomGameStateReference stateRef;
+
+    public LocalRoom(
+            Runnable onDestroy,
+            String roomId,
+            RoomSetting setting,
+            RoomGameState.Type state,
+            ChartInfo chart
+    ) {
+        this.roomId = roomId;
+        this.onDestroy = onDestroy;
+        this.setting = setting;
+        this.stateRef = new RoomGameStateReference(updater -> state.build(this, updater, chart));
+    }
+
+    @Getter
+    @Setter(AccessLevel.PRIVATE)
+    @AllArgsConstructor
+    public static class RoomSetting {
+        private boolean autoDestroy;
+        private boolean host;
+        private int maxPlayer;
+        private boolean locked;
+        private boolean cycle;
+        private boolean live;
+        private boolean chat;
+
+    }
 
     @Getter
     private final PlayerManager playerManager = new PlayerManager();
@@ -48,6 +78,14 @@ public class LocalRoom implements Room {
 
         private final Set<Player> players = ConcurrentHashMap.newKeySet();
         private final Set<Player> monitors = ConcurrentHashMap.newKeySet();
+
+        public Set<Player> getPlayersCopy() {
+            return Set.copyOf(players);
+        }
+
+        public Set<Player> getMonitorsCopy() {
+            return Set.copyOf(monitors);
+        }
 
         public Set<Player> getPlayers() {
             return Collections.unmodifiableSet(players);
@@ -103,42 +141,6 @@ public class LocalRoom implements Room {
         return playerManager.containsMonitor(player);
     }
 
-    private RoomGameStateReference stateRef;
-
-    @Getter
-    private final RoomSetting setting;
-
-    @Getter
-    @Setter(AccessLevel.PRIVATE)
-    public static class RoomSetting {
-        private boolean autoDestroy = true;
-        private boolean host = true;
-        private int maxPlayer = 8;
-        private boolean locked = false;
-        private boolean cycle = false;
-        private boolean live = false;
-        private boolean chat = true;
-
-        public RoomSetting() {}
-    }
-
-    public static LocalRoom create(String roomId, Consumer<LocalRoom> onDestroy, LocalPlayer hostPlayer, RoomSetting setting) {
-        LocalRoom room = new LocalRoom(roomId, onDestroy, setting);
-        room.stateRef = new RoomGameStateReference(updater -> new RoomSelectChart(room, updater));
-        room.join(hostPlayer, false);
-        return room;
-    }
-
-    private void destroyRoom() {
-        RoomDestroyEvent event = new RoomDestroyEvent(
-                this,
-                Set.copyOf(playerManager.players),
-                Set.copyOf(playerManager.monitors)
-        );
-        Server.postEvent(event);
-        onDestroy.accept(this);
-    }
-
     public boolean isHost(Player player) {
         return setting.host && player.getId() == playerManager.host.getId();
     }
@@ -179,7 +181,7 @@ public class LocalRoom implements Room {
         boolean shouldDestroy = false;
 
         synchronized (lifecycleLock) {
-            if (!playerManager.players.remove(player) || playerManager.monitors.remove(player)) {
+            if (!playerManager.players.remove(player) && !playerManager.monitors.remove(player)) {
                 return;
             }
 
@@ -304,9 +306,19 @@ public class LocalRoom implements Room {
                     setting.locked,
                     setting.cycle,
                     setting.host ? playerManager.host.getId() : null,
-                    Set.copyOf(playerManager.players),
-                    Set.copyOf(playerManager.monitors)
+                    playerManager.getPlayersCopy(),
+                    playerManager.getMonitorsCopy()
             );
         }
+    }
+
+    private void destroyRoom() {
+        RoomDestroyEvent event = new RoomDestroyEvent(
+                this,
+                playerManager.getPlayersCopy(),
+                playerManager.getMonitorsCopy()
+        );
+        Server.postEvent(event);
+        onDestroy.run();
     }
 }

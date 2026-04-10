@@ -5,7 +5,7 @@ import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.event.game.PlayerReadyEvent;
 import top.rymc.phira.main.event.game.GamePlayingStartEvent;
 import top.rymc.phira.main.event.game.PlayerCancelReadyEvent;
-import top.rymc.phira.main.exception.GameOperationException;
+import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
 import top.rymc.phira.main.game.room.LocalRoom;

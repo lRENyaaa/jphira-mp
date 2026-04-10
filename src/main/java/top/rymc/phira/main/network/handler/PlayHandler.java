@@ -7,10 +7,11 @@ import top.rymc.phira.main.event.room.PlayerPreJoinRoomEvent;
 import top.rymc.phira.main.event.room.PlayerJoinRoomSuccessEvent;
 import top.rymc.phira.main.event.room.RoomPreCreateEvent;
 import top.rymc.phira.main.event.room.RoomPostCreateEvent;
-import top.rymc.phira.main.exception.GameOperationException;
+import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.LocalPlayer;
 import top.rymc.phira.main.game.player.holder.PlayerHolder;
 import top.rymc.phira.main.game.room.LocalRoom;
+import top.rymc.phira.main.game.room.LocalRoomBuilder;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.RoomManager;
 import top.rymc.phira.main.game.i18n.I18nService;
@@ -42,7 +43,7 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
     @Override
     public void handle(ServerBoundCreateRoomPacket packet) {
         try {
-            RoomPreCreateEvent createEvent = new RoomPreCreateEvent(player, packet.getRoomId(), new LocalRoom.RoomSetting());
+            RoomPreCreateEvent createEvent = new RoomPreCreateEvent(player, packet.getRoomId(), new LocalRoomBuilder().buildSetting());
             Server.postEvent(createEvent);
             String cancelReason = createEvent.getCancelReason();
             if (cancelReason != null) {
@@ -50,7 +51,11 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
                 return;
             }
 
-            Room room = RoomManager.createRoom(packet.getRoomId(), player, createEvent.getSetting());
+            Room room = new LocalRoomBuilder()
+                    .setting(createEvent.getSetting())
+                    .build(packet.getRoomId());
+
+            room.join(player, false);
 
             RoomPostCreateEvent createdEvent = new RoomPostCreateEvent(room, player);
             Server.postEvent(createdEvent);
