@@ -22,9 +22,9 @@ class MiniInjectorTest {
         ServiceInterface service = new ServiceImpl();
         injector.bind(ServiceInterface.class, service);
 
-        ServiceInterface result = injector.getInstance(ServiceInterface.class);
+        ClientWithServiceDependency client = injector.getInstance(ClientWithServiceDependency.class);
 
-        assertThat(result).isSameAs(service);
+        assertThat(client.getService()).isSameAs(service);
     }
 
     @Test
@@ -54,7 +54,7 @@ class MiniInjectorTest {
     void missingBindingThrowsRuntimeException() {
         assertThatThrownBy(() -> injector.getInstance(InterfaceDependencyClient.class))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("No binding");
+                .hasMessageContaining("Failed to create");
     }
 
     @Test
@@ -120,6 +120,15 @@ class MiniInjectorTest {
     static class AnotherServiceImpl implements AnotherService {
         @Override
         public void doSomething() {
+        }
+    }
+
+    static class ClientWithServiceDependency {
+        @Inject
+        private ServiceInterface service;
+
+        ServiceInterface getService() {
+            return service;
         }
     }
 
