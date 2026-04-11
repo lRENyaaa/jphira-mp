@@ -120,6 +120,7 @@ public class LocalRoom implements Room {
 
                 host = player;
                 operations.get().updateHostStatus(true);
+                return;
             }
 
             host = null;

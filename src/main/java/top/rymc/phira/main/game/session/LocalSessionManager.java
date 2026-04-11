@@ -81,6 +81,7 @@ public class LocalSessionManager {
         }
 
         SUSPENDED.compute(player.getId(), (id, oldSession) -> {
+            // TODO: broadcast to room
             if (oldSession != null && oldSession.timeout != null) {
                 Server.getLogger().warn("Player {} already has a suspended session, cancelling old timeout", player.getId());
                 oldSession.timeout.cancel(false);
