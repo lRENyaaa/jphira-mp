@@ -20,8 +20,8 @@ class GsonUtilTest {
     }
 
     @Test
-    @DisplayName("OffsetDateTime serialization produces ISO-8601 format")
-    void offsetDateTimeSerializationProducesIso8601Format() {
+    @DisplayName("should produce ISO-8601 format when serializing OffsetDateTime")
+    void shouldProduceIso8601FormatWhenSerializingOffsetDateTime() {
         OffsetDateTime dateTime = OffsetDateTime.of(2024, 3, 15, 10, 30, 45, 0, ZoneOffset.UTC);
 
         String json = gson.toJson(dateTime);
@@ -30,8 +30,8 @@ class GsonUtilTest {
     }
 
     @Test
-    @DisplayName("OffsetDateTime serialization with non-UTC offset produces ISO-8601 format with offset")
-    void offsetDateTimeSerializationWithNonUtcOffsetProducesIso8601FormatWithOffset() {
+    @DisplayName("should produce ISO-8601 format with offset when serializing OffsetDateTime with non-UTC offset")
+    void shouldProduceIso8601FormatWithOffsetWhenSerializingOffsetDateTimeWithNonUtcOffset() {
         OffsetDateTime dateTime = OffsetDateTime.of(2024, 3, 15, 10, 30, 45, 0, ZoneOffset.ofHours(8));
 
         String json = gson.toJson(dateTime);
@@ -40,8 +40,8 @@ class GsonUtilTest {
     }
 
     @Test
-    @DisplayName("OffsetDateTime deserialization from ISO-8601 string with Z suffix")
-    void offsetDateTimeDeserializationFromIso8601StringWithZSuffix() {
+    @DisplayName("should deserialize OffsetDateTime from ISO-8601 string with Z suffix")
+    void shouldDeserializeOffsetDateTimeFromIso8601StringWithZSuffix() {
         String json = "\"2024-03-15T10:30:45Z\"";
 
         OffsetDateTime result = gson.fromJson(json, OffsetDateTime.class);
@@ -50,8 +50,8 @@ class GsonUtilTest {
     }
 
     @Test
-    @DisplayName("OffsetDateTime deserialization from ISO-8601 string with offset")
-    void offsetDateTimeDeserializationFromIso8601StringWithOffset() {
+    @DisplayName("should deserialize OffsetDateTime from ISO-8601 string with offset")
+    void shouldDeserializeOffsetDateTimeFromIso8601StringWithOffset() {
         String json = "\"2024-03-15T10:30:45+08:00\"";
 
         OffsetDateTime result = gson.fromJson(json, OffsetDateTime.class);
@@ -60,8 +60,8 @@ class GsonUtilTest {
     }
 
     @Test
-    @DisplayName("OffsetDateTime serialization and deserialization round trip")
-    void offsetDateTimeSerializationAndDeserializationRoundTrip() {
+    @DisplayName("should complete round trip serialization and deserialization for OffsetDateTime")
+    void shouldCompleteRoundTripSerializationAndDeserializationForOffsetDateTime() {
         OffsetDateTime original = OffsetDateTime.of(2024, 6, 20, 15, 45, 30, 123456789, ZoneOffset.ofHoursMinutes(-5, -30));
 
         String json = gson.toJson(original);
@@ -86,8 +86,8 @@ class GsonUtilTest {
     }
 
     @Test
-    @DisplayName("Field naming policy converts underscore_names to camelCase in deserialization")
-    void fieldNamingPolicyConvertsUnderscoreNamesToCamelCaseInDeserialization() {
+    @DisplayName("should convert underscore_names to camelCase when deserializing with field naming policy")
+    void shouldConvertUnderscoreNamesToCamelCaseWhenDeserializingWithFieldNamingPolicy() {
         String json = "{\"user_name\":\"testUser\",\"email_address\":\"test@example.com\",\"phone_number\":\"1234567890\"}";
 
         TestDataClass result = gson.fromJson(json, TestDataClass.class);
@@ -115,8 +115,8 @@ class GsonUtilTest {
     }
 
     @Test
-    @DisplayName("Field naming policy handles single word fields without conversion")
-    void fieldNamingPolicyHandlesSingleWordFieldsWithoutConversion() {
+    @DisplayName("should handle single word fields without conversion when using field naming policy")
+    void shouldHandleSingleWordFieldsWithoutConversionWhenUsingFieldNamingPolicy() {
         SingleWordFieldClass data = new SingleWordFieldClass();
         data.setName("testName");
         data.setId(123);
@@ -159,8 +159,8 @@ class GsonUtilTest {
     }
 
     @Test
-    @DisplayName("Gson instance is singleton and returns same instance")
-    void gsonInstanceIsSingletonAndReturnsSameInstance() {
+    @DisplayName("should return same instance when getting Gson instance as singleton")
+    void shouldReturnSameInstanceWhenGettingGsonInstanceAsSingleton() {
         Gson first = GsonUtil.getGson();
         Gson second = GsonUtil.getGson();
 

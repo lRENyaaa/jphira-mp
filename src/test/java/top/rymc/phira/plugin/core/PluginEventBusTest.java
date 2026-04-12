@@ -3,6 +3,8 @@ package top.rymc.phira.plugin.core;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 import top.rymc.phira.plugin.Listener;
 import top.rymc.phira.plugin.event.CancellableEvent;
 import top.rymc.phira.plugin.event.Event;
@@ -13,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+@ExtendWith(MockitoExtension.class)
 class PluginEventBusTest {
 
     private PluginEventBus eventBus;
@@ -25,8 +28,8 @@ class PluginEventBusTest {
     }
 
     @Test
-    @DisplayName("subscribe registers listener and receives events")
-    void subscribeRegistersListenerAndReceivesEvents() {
+    @DisplayName("should register listener and receive events when subscribe")
+    void shouldRegisterListenerAndReceiveEventsWhenSubscribe() {
         AtomicBoolean received = new AtomicBoolean(false);
         Listener listener = new TestListener() {
             @meteordevelopment.orbit.EventHandler
@@ -42,8 +45,8 @@ class PluginEventBusTest {
     }
 
     @Test
-    @DisplayName("post delivers event to subscribed listener")
-    void postDeliversEventToSubscribedListener() {
+    @DisplayName("should deliver event to subscribed listener when post")
+    void shouldDeliverEventToSubscribedListenerWhenPost() {
         AtomicInteger value = new AtomicInteger(0);
         Listener listener = new TestListener() {
             @meteordevelopment.orbit.EventHandler
@@ -61,8 +64,8 @@ class PluginEventBusTest {
     }
 
     @Test
-    @DisplayName("post returns event after delivery")
-    void postReturnsEventAfterDelivery() {
+    @DisplayName("should return event after delivery when post")
+    void shouldReturnEventAfterDeliveryWhenPost() {
         Listener listener = new TestListener() {
             @meteordevelopment.orbit.EventHandler
             void onTestEvent(TestEvent event) {
@@ -77,8 +80,8 @@ class PluginEventBusTest {
     }
 
     @Test
-    @DisplayName("unsubscribe removes listener and stops event delivery")
-    void unsubscribeRemovesListenerAndStopsEventDelivery() {
+    @DisplayName("should remove listener and stop event delivery when unsubscribe")
+    void shouldRemoveListenerAndStopEventDeliveryWhenUnsubscribe() {
         AtomicInteger count = new AtomicInteger(0);
         Listener listener = new TestListener() {
             @meteordevelopment.orbit.EventHandler
@@ -97,8 +100,8 @@ class PluginEventBusTest {
     }
 
     @Test
-    @DisplayName("multiple listeners can subscribe to same event type")
-    void multipleListenersCanSubscribeToSameEventType() {
+    @DisplayName("should allow multiple listeners to subscribe to same event type")
+    void shouldAllowMultipleListenersToSubscribeToSameEventType() {
         AtomicInteger count = new AtomicInteger(0);
         PluginContainer plugin2 = mock(PluginContainer.class);
 
@@ -123,8 +126,8 @@ class PluginEventBusTest {
     }
 
     @Test
-    @DisplayName("post cancellable event returns event with cancellation state")
-    void postCancellableEventReturnsEventWithCancellationState() {
+    @DisplayName("should return event with cancellation state when post cancellable event")
+    void shouldReturnEventWithCancellationStateWhenPostCancellableEvent() {
         Listener listener = new TestListener() {
             @meteordevelopment.orbit.EventHandler
             void onCancellableTestEvent(CancellableTestEvent event) {

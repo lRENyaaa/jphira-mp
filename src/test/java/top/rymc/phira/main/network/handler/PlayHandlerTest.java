@@ -27,6 +27,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@SuppressWarnings("unchecked")
 class PlayHandlerTest {
 
     private PlayerConnection connection;
@@ -67,8 +68,8 @@ class PlayHandlerTest {
     }
 
     @Test
-    @DisplayName("handleCreateRoom sends failed packet when pre create event is cancelled")
-    void handleCreateRoomSendsFailedPacketWhenPreCreateEventIsCancelled() {
+    @DisplayName("should send failed packet when handleCreateRoom with pre create event cancelled")
+    void shouldSendFailedPacketWhenHandleCreateRoomWithPreCreateEventCancelled() {
         mockedServer.when(() -> Server.postEvent(any())).thenReturn(true);
 
         playHandler.handle((top.rymc.phira.protocol.packet.serverbound.ServerBoundCreateRoomPacket) null);
@@ -77,16 +78,16 @@ class PlayHandlerTest {
     }
 
     @Test
-    @DisplayName("handleJoinRoom sends failed packet when room not found")
-    void handleJoinRoomSendsFailedPacketWhenRoomNotFound() {
+    @DisplayName("should send failed packet when handleJoinRoom with room not found")
+    void shouldSendFailedPacketWhenHandleJoinRoomWithRoomNotFound() {
         playHandler.handle((top.rymc.phira.protocol.packet.serverbound.ServerBoundJoinRoomPacket) null);
 
         verify(connection).send(any(ClientBoundJoinRoomPacket.class));
     }
 
     @Test
-    @DisplayName("handleJoinRoom sends failed packet when pre join event is cancelled")
-    void handleJoinRoomSendsFailedPacketWhenPreJoinEventIsCancelled() {
+    @DisplayName("should send failed packet when handleJoinRoom with pre join event cancelled")
+    void shouldSendFailedPacketWhenHandleJoinRoomWithPreJoinEventCancelled() {
         mockedServer.when(() -> Server.postEvent(any())).thenReturn(true);
 
         playHandler.handle((top.rymc.phira.protocol.packet.serverbound.ServerBoundJoinRoomPacket) null);
@@ -95,8 +96,8 @@ class PlayHandlerTest {
     }
 
     @Test
-    @DisplayName("handleCreateRoom does not create room when event is cancelled")
-    void handleCreateRoomDoesNotCreateRoomWhenEventIsCancelled() {
+    @DisplayName("should not create room when handleCreateRoom with event cancelled")
+    void shouldNotCreateRoomWhenHandleCreateRoomWithEventCancelled() {
         mockedServer.when(() -> Server.postEvent(any())).thenReturn(true);
 
         playHandler.handle((top.rymc.phira.protocol.packet.serverbound.ServerBoundCreateRoomPacket) null);
@@ -105,8 +106,8 @@ class PlayHandlerTest {
     }
 
     @Test
-    @DisplayName("handleJoinRoom does not join room when pre join event is cancelled")
-    void handleJoinRoomDoesNotJoinRoomWhenPreJoinEventIsCancelled() {
+    @DisplayName("should not join room when handleJoinRoom with pre join event cancelled")
+    void shouldNotJoinRoomWhenHandleJoinRoomWithPreJoinEventCancelled() {
         mockedServer.when(() -> Server.postEvent(any())).thenReturn(true);
 
         playHandler.handle((top.rymc.phira.protocol.packet.serverbound.ServerBoundJoinRoomPacket) null);
@@ -115,14 +116,14 @@ class PlayHandlerTest {
     }
 
     @Test
-    @DisplayName("getPlayer returns player associated with handler")
-    void getPlayerReturnsPlayerAssociatedWithHandler() {
+    @DisplayName("should return player associated with handler when getPlayer")
+    void shouldReturnPlayerAssociatedWithHandlerWhenGetPlayer() {
         assertThat(playHandler.getPlayer()).isSameAs(player);
     }
 
     @Test
-    @DisplayName("onUnhandledPacket kicks player")
-    void onUnhandledPacketKicksPlayer() {
+    @DisplayName("should kick player when onUnhandledPacket")
+    void shouldKickPlayerWhenOnUnhandledPacket() {
         playHandler.onUnhandledPacket(null);
 
         verify(player).kick();

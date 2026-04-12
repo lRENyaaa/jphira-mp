@@ -45,8 +45,8 @@ class LocalPlayerTest {
     }
 
     @Test
-    @DisplayName("getRoom returns room when handler is RoomHolder")
-    void getRoomReturnsRoomWhenHandlerIsRoomHolder() {
+    @DisplayName("should return room when handler is RoomHandler")
+    void shouldReturnRoomWhenHandlerIsRoomHandler() {
         RoomHandler roomHandler = mock(RoomHandler.class);
         when(connectionRef.get()).thenReturn(connection);
         when(connection.getPacketHandler()).thenReturn(roomHandler);
@@ -58,8 +58,8 @@ class LocalPlayerTest {
     }
 
     @Test
-    @DisplayName("getRoom returns empty when handler is not RoomHolder")
-    void getRoomReturnsEmptyWhenHandlerIsNotRoomHolder() {
+    @DisplayName("should return empty when handler is not RoomHandler")
+    void shouldReturnEmptyWhenHandlerIsNotRoomHandler() {
         ServerBoundPacketHandler nonRoomHandler = mock(ServerBoundPacketHandler.class);
         when(connectionRef.get()).thenReturn(connection);
         when(connection.getPacketHandler()).thenReturn(nonRoomHandler);
@@ -70,8 +70,8 @@ class LocalPlayerTest {
     }
 
     @Test
-    @DisplayName("kick leaves room and marks connection kicked")
-    void kickLeavesRoomAndMarksConnectionKicked() {
+    @DisplayName("should leave room and mark connection kicked when kick")
+    void shouldLeaveRoomAndMarkConnectionKickedWhenKick() {
         RoomHandler roomHandler = mock(RoomHandler.class);
         when(connectionRef.get()).thenReturn(connection);
         when(connection.getPacketHandler()).thenReturn(roomHandler);
@@ -84,8 +84,8 @@ class LocalPlayerTest {
     }
 
     @Test
-    @DisplayName("isOnline returns true when connection is open")
-    void isOnlineReturnsTrueWhenConnectionIsOpen() {
+    @DisplayName("should return true when connection is open")
+    void shouldReturnTrueWhenConnectionIsOpen() {
         when(connectionRef.get()).thenReturn(connection);
         when(connection.isClosed()).thenReturn(false);
 
@@ -95,8 +95,8 @@ class LocalPlayerTest {
     }
 
     @Test
-    @DisplayName("isOnline returns false when connection is closed")
-    void isOnlineReturnsFalseWhenConnectionIsClosed() {
+    @DisplayName("should return false when connection is closed")
+    void shouldReturnFalseWhenConnectionIsClosed() {
         when(connectionRef.get()).thenReturn(connection);
         when(connection.isClosed()).thenReturn(true);
 
@@ -106,8 +106,8 @@ class LocalPlayerTest {
     }
 
     @Test
-    @DisplayName("toProtocol returns UserProfile with correct id and name")
-    void toProtocolReturnsUserProfileWithCorrectIdAndName() {
+    @DisplayName("should return UserProfile with correct id and name")
+    void shouldReturnUserProfileWithCorrectIdAndName() {
         int expectedId = 123;
         String expectedName = "TestPlayer";
         when(userInfo.getId()).thenReturn(expectedId);
@@ -119,8 +119,8 @@ class LocalPlayerTest {
     }
 
     @Test
-    @DisplayName("operations returns LocalPlayerOperations when connection open")
-    void operationsReturnsLocalPlayerOperationsWhenConnectionOpen() {
+    @DisplayName("should return LocalPlayerOperations when connection is open")
+    void shouldReturnLocalPlayerOperationsWhenConnectionIsOpen() {
         when(connectionRef.get()).thenReturn(connection);
         when(connection.isClosed()).thenReturn(false);
 
@@ -131,8 +131,8 @@ class LocalPlayerTest {
     }
 
     @Test
-    @DisplayName("operations returns empty when connection closed")
-    void operationsReturnsEmptyWhenConnectionClosed() {
+    @DisplayName("should return empty when connection is closed")
+    void shouldReturnEmptyWhenConnectionIsClosed() {
         when(connectionRef.get()).thenReturn(connection);
         when(connection.isClosed()).thenReturn(true);
 

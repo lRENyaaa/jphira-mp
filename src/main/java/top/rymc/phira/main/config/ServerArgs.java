@@ -4,13 +4,22 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import lombok.Getter;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.io.IoBuilder;
+import top.rymc.phira.main.Server;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 @Getter
 public class ServerArgs {
+
+    private static final Logger logger = Server.getLogger();
+
     private final int port;
     private final String host;
     private final Path pluginsDir;
@@ -51,15 +60,18 @@ public class ServerArgs {
         try {
             options = parser.parse(args);
         } catch (Exception e) {
-            System.err.println("Failed to parse arguments: " + e.getMessage());
+            logger.error("Failed to parse arguments: {}", e.getMessage());
             printHelp(parser);
+            LogManager.shutdown();
             System.exit(1);
             throw new AssertionError();
         }
 
         if (options.has("help")) {
             printHelp(parser);
+            LogManager.shutdown();
             System.exit(0);
+            throw new AssertionError();
         }
 
         this.port = options.valueOf(portSpec);
@@ -71,10 +83,11 @@ public class ServerArgs {
 
     private void printHelp(OptionParser parser) {
         try {
-            System.out.println("Phira Server Usage:");
-            parser.printHelpOn(System.out);
+            logger.info("Phira Server Usage:");
+            PrintStream logStream = IoBuilder.forLogger(logger).setLevel(Level.INFO).buildPrintStream();
+            parser.printHelpOn(logStream);
         } catch (IOException e) {
-            System.err.println("Failed to print help: " + e.getMessage());
+            logger.error("Failed to print help: {}", e.getMessage());
         }
     }
 }

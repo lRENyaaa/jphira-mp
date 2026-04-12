@@ -4,9 +4,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.exception.GameOperationException;
@@ -16,10 +22,8 @@ import top.rymc.phira.main.game.room.state.RoomGameState;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class LocalRoomPlayerManagementTest {
 
     @Mock
@@ -38,9 +42,6 @@ class LocalRoomPlayerManagementTest {
     private PlayerOperations secondPlayerOperations;
 
     @Mock
-    private PlayerOperations thirdPlayerOperations;
-
-    @Mock
     private ChartInfo chartInfo;
 
     @Mock
@@ -51,13 +52,12 @@ class LocalRoomPlayerManagementTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
-        when(player.getId()).thenReturn(1);
-        when(player.getName()).thenReturn("Player1");
-        when(secondPlayer.getId()).thenReturn(2);
-        when(secondPlayer.getName()).thenReturn("Player2");
-        when(thirdPlayer.getId()).thenReturn(3);
-        when(thirdPlayer.getName()).thenReturn("Player3");
+        lenient().when(player.getId()).thenReturn(1);
+        lenient().when(player.getName()).thenReturn("Player1");
+        lenient().when(secondPlayer.getId()).thenReturn(2);
+        lenient().when(secondPlayer.getName()).thenReturn("Player2");
+        lenient().when(thirdPlayer.getId()).thenReturn(3);
+        lenient().when(thirdPlayer.getName()).thenReturn("Player3");
 
         mockedServer = mockStatic(Server.class);
     }
@@ -89,8 +89,8 @@ class LocalRoomPlayerManagementTest {
     }
 
     @Test
-    @DisplayName("join adds player to players set when isMonitor is false")
-    void joinAddsPlayerToPlayersSetWhenIsMonitorIsFalse() {
+    @DisplayName("should add player to players set when joining as non-monitor")
+    void shouldAddPlayerToPlayersSetWhenJoiningAsNonMonitor() {
         localRoom = createRoomWithSettings(false, false, 4, false);
 
         localRoom.join(player, false);
@@ -100,8 +100,8 @@ class LocalRoomPlayerManagementTest {
     }
 
     @Test
-    @DisplayName("join adds player to monitors set when isMonitor is true")
-    void joinAddsPlayerToMonitorsSetWhenIsMonitorIsTrue() {
+    @DisplayName("should add player to monitors set when joining as monitor")
+    void shouldAddPlayerToMonitorsSetWhenJoiningAsMonitor() {
         localRoom = createRoomWithSettings(false, false, 4, false);
 
         localRoom.join(player, true);
@@ -132,8 +132,8 @@ class LocalRoomPlayerManagementTest {
     }
 
     @Test
-    @DisplayName("first non-monitor player becomes host when host setting enabled")
-    void firstNonMonitorPlayerBecomesHostWhenHostSettingEnabled() {
+    @DisplayName("should make first non-monitor player host when host setting is enabled")
+    void shouldMakeFirstNonMonitorPlayerHostWhenHostSettingIsEnabled() {
         localRoom = createRoomWithSettings(false, true, 4, false);
 
         localRoom.join(player, false);
@@ -171,8 +171,8 @@ class LocalRoomPlayerManagementTest {
     }
 
     @Test
-    @DisplayName("destroy callback triggered when last player leaves with autoDestroy enabled")
-    void destroyCallbackTriggeredWhenLastPlayerLeavesWithAutoDestroyEnabled() {
+    @DisplayName("should trigger destroy callback when last player leaves with autoDestroy enabled")
+    void shouldTriggerDestroyCallbackWhenLastPlayerLeavesWithAutoDestroyEnabled() {
         localRoom = createRoomWithSettings(true, false, 4, false);
 
         localRoom.join(player, false);
@@ -193,8 +193,8 @@ class LocalRoomPlayerManagementTest {
     }
 
     @Test
-    @DisplayName("containsMonitor returns true for monitor in room")
-    void containsMonitorReturnsTrueForMonitorInRoom() {
+    @DisplayName("should return true when checking if monitor in room contains monitor")
+    void shouldReturnTrueWhenCheckingIfMonitorInRoomContainsMonitor() {
         localRoom = createRoomWithSettings(false, false, 4, false);
         localRoom.join(player, true);
 

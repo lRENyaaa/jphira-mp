@@ -59,8 +59,8 @@ class PlayerManagerTest {
     }
 
     @Test
-    @DisplayName("resolvePlayer creates new player when userId not exists")
-    void resolvePlayerCreatesNewPlayerWhenUserIdNotExists() {
+    @DisplayName("should create new player when userId does not exist")
+    void shouldCreateNewPlayerWhenUserIdDoesNotExist() {
         int userId = 1001;
         Function<Runnable, LocalPlayer> constructor = remover -> new LocalPlayer(userInfo, connectionRef);
 
@@ -75,8 +75,8 @@ class PlayerManagerTest {
     }
 
     @Test
-    @DisplayName("resolvePlayer resumes existing player when userId exists")
-    void resolvePlayerResumesExistingPlayerWhenUserIdExists() {
+    @DisplayName("should resume existing player when userId exists")
+    void shouldResumeExistingPlayerWhenUserIdExists() {
         int userId = 1002;
         LocalPlayer existingPlayer = new LocalPlayer(userInfo, connectionRef);
         Function<Runnable, LocalPlayer> constructor = remover -> existingPlayer;
@@ -97,19 +97,17 @@ class PlayerManagerTest {
     }
 
     @Test
-    @DisplayName("resolvePlayer throws PlayerTypeMismatchException when type mismatches")
-    void resolvePlayerThrowsPlayerTypeMismatchExceptionWhenTypeMismatches() {
+    @DisplayName("should throw PlayerTypeMismatchException when type mismatches")
+    void shouldThrowPlayerTypeMismatchExceptionWhenTypeMismatches() {
         int userId = 1003;
         LocalPlayer existingPlayer = new LocalPlayer(userInfo, connectionRef);
         Function<Runnable, LocalPlayer> constructor = remover -> existingPlayer;
 
         PlayerManager.resolvePlayer(userId, LocalPlayer.class, constructor, resumer);
 
-        assertThatThrownBy(() -> {
-            PlayerManager.resolvePlayer(
-                    userId, AnotherPlayerType.class, id -> mock(AnotherPlayerType.class), p -> {}
-            );
-        }).isInstanceOf(PlayerTypeMismatchException.class)
+        assertThatThrownBy(() -> PlayerManager.resolvePlayer(
+                userId, AnotherPlayerType.class, id -> mock(AnotherPlayerType.class), p -> {}
+        )).isInstanceOf(PlayerTypeMismatchException.class)
                 .satisfies(ex -> {
                     PlayerTypeMismatchException exception = (PlayerTypeMismatchException) ex;
                     assertThat(exception.getPlayer()).isEqualTo(existingPlayer);
@@ -117,8 +115,8 @@ class PlayerManagerTest {
     }
 
     @Test
-    @DisplayName("getPlayer by PlayerConnection returns correct LocalPlayer")
-    void getPlayerByPlayerConnectionReturnsCorrectLocalPlayer() {
+    @DisplayName("should return correct LocalPlayer by PlayerConnection")
+    void shouldReturnCorrectLocalPlayerByPlayerConnection() {
         int userId = 1004;
         LocalPlayer player = new LocalPlayer(userInfo, connectionRef);
         Function<Runnable, LocalPlayer> constructor = remover -> player;
@@ -134,8 +132,8 @@ class PlayerManagerTest {
     }
 
     @Test
-    @DisplayName("getPlayer by PlayerConnection returns empty when connection not found")
-    void getPlayerByPlayerConnectionReturnsEmptyWhenConnectionNotFound() {
+    @DisplayName("should return empty when connection not found")
+    void shouldReturnEmptyWhenConnectionNotFound() {
         PlayerConnection otherConnection = mock(PlayerConnection.class);
 
         Optional<LocalPlayer> result = PlayerManager.getPlayer(otherConnection);
@@ -144,8 +142,8 @@ class PlayerManagerTest {
     }
 
     @Test
-    @DisplayName("getPlayer by id returns player if exists")
-    void getPlayerByIdReturnsPlayerIfExists() {
+    @DisplayName("should return player by id if exists")
+    void shouldReturnPlayerByIdIfExists() {
         int userId = 1005;
         LocalPlayer player = new LocalPlayer(userInfo, connectionRef);
         Function<Runnable, LocalPlayer> constructor = remover -> player;
@@ -159,8 +157,8 @@ class PlayerManagerTest {
     }
 
     @Test
-    @DisplayName("getPlayer by id returns empty if not exists")
-    void getPlayerByIdReturnsEmptyIfNotExists() {
+    @DisplayName("should return empty by id if not exists")
+    void shouldReturnEmptyByIdIfNotExists() {
         int nonExistentUserId = 9999;
 
         Optional<Player> result = PlayerManager.getPlayer(nonExistentUserId);
@@ -169,8 +167,8 @@ class PlayerManagerTest {
     }
 
     @Test
-    @DisplayName("isOnline returns true for online player")
-    void isOnlineReturnsTrueForOnlinePlayer() {
+    @DisplayName("should return true for online player")
+    void shouldReturnTrueForOnlinePlayer() {
         int userId = 1006;
         LocalPlayer player = new LocalPlayer(userInfo, connectionRef);
         Function<Runnable, LocalPlayer> constructor = remover -> player;
@@ -186,8 +184,8 @@ class PlayerManagerTest {
     }
 
     @Test
-    @DisplayName("isOnline returns false for offline player")
-    void isOnlineReturnsFalseForOfflinePlayer() {
+    @DisplayName("should return false for offline player")
+    void shouldReturnFalseForOfflinePlayer() {
         int userId = 1007;
         LocalPlayer player = new LocalPlayer(userInfo, connectionRef);
         Function<Runnable, LocalPlayer> constructor = remover -> player;
@@ -203,8 +201,8 @@ class PlayerManagerTest {
     }
 
     @Test
-    @DisplayName("isOnline returns false for non-existing player")
-    void isOnlineReturnsFalseForNonExistingPlayer() {
+    @DisplayName("should return false for non-existing player")
+    void shouldReturnFalseForNonExistingPlayer() {
         int nonExistentUserId = 9998;
 
         boolean result = PlayerManager.isOnline(nonExistentUserId);
@@ -213,8 +211,8 @@ class PlayerManagerTest {
     }
 
     @Test
-    @DisplayName("getOnlinePlayers filters only online players")
-    void getOnlinePlayersFiltersOnlyOnlinePlayers() {
+    @DisplayName("should filter only online players")
+    void shouldFilterOnlyOnlinePlayers() {
         int onlineUserId = 1008;
         int offlineUserId = 1009;
 
@@ -246,16 +244,16 @@ class PlayerManagerTest {
     }
 
     @Test
-    @DisplayName("getOnlinePlayers returns empty list when no players online")
-    void getOnlinePlayersReturnsEmptyListWhenNoPlayersOnline() {
+    @DisplayName("should return empty list when no players online")
+    void shouldReturnEmptyListWhenNoPlayersOnline() {
         List<Player> result = PlayerManager.getOnlinePlayers();
 
         assertThat(result).isEmpty();
     }
 
     @Test
-    @DisplayName("getAllPlayers returns all registered players")
-    void getAllPlayersReturnsAllRegisteredPlayers() {
+    @DisplayName("should return all registered players")
+    void shouldReturnAllRegisteredPlayers() {
         int userId1 = 1010;
         int userId2 = 1011;
 
@@ -280,8 +278,8 @@ class PlayerManagerTest {
     }
 
     @Test
-    @DisplayName("getAllPlayers returns empty list when no players registered")
-    void getAllPlayersReturnsEmptyListWhenNoPlayersRegistered() {
+    @DisplayName("should return empty list when no players registered")
+    void shouldReturnEmptyListWhenNoPlayersRegistered() {
         List<Player> result = PlayerManager.getAllPlayers();
 
         assertThat(result).isEmpty();

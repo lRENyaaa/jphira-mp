@@ -9,7 +9,7 @@ import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class DataClassTests {
+class DataClassTest {
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
@@ -18,8 +18,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("UserInfo getters return correct values")
-    void userInfoGettersReturnCorrectValues() throws Exception {
+    @DisplayName("should return correct values from UserInfo getters")
+    void shouldReturnCorrectValuesFromUserInfoGetters() throws Exception {
         UserInfo userInfo = new UserInfo();
         OffsetDateTime joined = OffsetDateTime.of(2024, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
         OffsetDateTime lastLogin = OffsetDateTime.of(2024, 6, 1, 12, 0, 0, 0, ZoneOffset.UTC);
@@ -58,8 +58,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("UserInfo equals returns true for same values")
-    void userInfoEqualsReturnsTrueForSameValues() throws Exception {
+    @DisplayName("should return true when comparing equal UserInfo objects")
+    void shouldReturnTrueWhenComparingEqualUserInfoObjects() throws Exception {
         OffsetDateTime joined = OffsetDateTime.of(2024, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
         OffsetDateTime lastLogin = OffsetDateTime.of(2024, 6, 1, 12, 0, 0, 0, ZoneOffset.UTC);
 
@@ -101,8 +101,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("UserInfo equals returns false for different values")
-    void userInfoEqualsReturnsFalseForDifferentValues() throws Exception {
+    @DisplayName("should return false when comparing different UserInfo objects")
+    void shouldReturnFalseWhenComparingDifferentUserInfoObjects() throws Exception {
         UserInfo userInfo1 = new UserInfo();
         setField(userInfo1, "id", 123);
         setField(userInfo1, "name", "TestUser");
@@ -115,8 +115,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("UserInfo hashCode returns same value for equal objects")
-    void userInfoHashCodeReturnsSameValueForEqualObjects() throws Exception {
+    @DisplayName("should return same hashCode for equal UserInfo objects")
+    void shouldReturnSameHashCodeForEqualUserInfoObjects() throws Exception {
         OffsetDateTime joined = OffsetDateTime.of(2024, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
         OffsetDateTime lastLogin = OffsetDateTime.of(2024, 6, 1, 12, 0, 0, 0, ZoneOffset.UTC);
 
@@ -158,8 +158,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("UserInfo hashCode returns different value for different objects")
-    void userInfoHashCodeReturnsDifferentValueForDifferentObjects() throws Exception {
+    @DisplayName("should return different hashCode for different UserInfo objects")
+    void shouldReturnDifferentHashCodeForDifferentUserInfoObjects() throws Exception {
         UserInfo userInfo1 = new UserInfo();
         setField(userInfo1, "id", 123);
         setField(userInfo1, "name", "TestUser");
@@ -172,8 +172,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("ChartInfo getters return correct values")
-    void chartInfoGettersReturnCorrectValues() throws Exception {
+    @DisplayName("should return correct values from ChartInfo getters")
+    void shouldReturnCorrectValuesFromChartInfoGetters() throws Exception {
         ChartInfo chartInfo = new ChartInfo();
         OffsetDateTime created = OffsetDateTime.of(2024, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
         OffsetDateTime updated = OffsetDateTime.of(2024, 3, 1, 0, 0, 0, 0, ZoneOffset.UTC);
@@ -228,8 +228,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("ChartInfo equals returns true for same values")
-    void chartInfoEqualsReturnsTrueForSameValues() throws Exception {
+    @DisplayName("should return true when comparing equal ChartInfo objects")
+    void shouldReturnTrueWhenComparingEqualChartInfoObjects() throws Exception {
         OffsetDateTime created = OffsetDateTime.of(2024, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
         OffsetDateTime updated = OffsetDateTime.of(2024, 3, 1, 0, 0, 0, 0, ZoneOffset.UTC);
         OffsetDateTime chartUpdated = OffsetDateTime.of(2024, 2, 1, 0, 0, 0, 0, ZoneOffset.UTC);
@@ -287,8 +287,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("ChartInfo equals returns false for different values")
-    void chartInfoEqualsReturnsFalseForDifferentValues() throws Exception {
+    @DisplayName("should return false when comparing different ChartInfo objects")
+    void shouldReturnFalseWhenComparingDifferentChartInfoObjects() throws Exception {
         ChartInfo chartInfo1 = new ChartInfo();
         setField(chartInfo1, "id", 456);
         setField(chartInfo1, "name", "TestChart");
@@ -301,8 +301,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("ChartInfo hashCode returns same value for equal objects")
-    void chartInfoHashCodeReturnsSameValueForEqualObjects() throws Exception {
+    @DisplayName("should return same hashCode for equal ChartInfo objects")
+    void shouldReturnSameHashCodeForEqualChartInfoObjects() throws Exception {
         OffsetDateTime created = OffsetDateTime.of(2024, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
         OffsetDateTime updated = OffsetDateTime.of(2024, 3, 1, 0, 0, 0, 0, ZoneOffset.UTC);
         OffsetDateTime chartUpdated = OffsetDateTime.of(2024, 2, 1, 0, 0, 0, 0, ZoneOffset.UTC);
@@ -360,8 +360,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("ChartInfo hashCode returns different value for different objects")
-    void chartInfoHashCodeReturnsDifferentValueForDifferentObjects() throws Exception {
+    @DisplayName("should return different hashCode for different ChartInfo objects")
+    void shouldReturnDifferentHashCodeForDifferentChartInfoObjects() throws Exception {
         ChartInfo chartInfo1 = new ChartInfo();
         setField(chartInfo1, "id", 456);
         setField(chartInfo1, "name", "TestChart");
@@ -374,8 +374,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("GameRecord getters return correct values")
-    void gameRecordGettersReturnCorrectValues() {
+    @DisplayName("should return correct values from GameRecord getters")
+    void shouldReturnCorrectValuesFromGameRecordGetters() {
         OffsetDateTime time = OffsetDateTime.of(2024, 6, 15, 10, 30, 0, 0, ZoneOffset.UTC);
 
         GameRecord gameRecord = new GameRecord();
@@ -419,8 +419,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("GameRecord equals returns true for same values")
-    void gameRecordEqualsReturnsTrueForSameValues() {
+    @DisplayName("should return true when comparing equal GameRecord objects")
+    void shouldReturnTrueWhenComparingEqualGameRecordObjects() {
         OffsetDateTime time = OffsetDateTime.of(2024, 6, 15, 10, 30, 0, 0, ZoneOffset.UTC);
 
         GameRecord gameRecord1 = new GameRecord();
@@ -467,8 +467,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("GameRecord equals returns false for different values")
-    void gameRecordEqualsReturnsFalseForDifferentValues() {
+    @DisplayName("should return false when comparing different GameRecord objects")
+    void shouldReturnFalseWhenComparingDifferentGameRecordObjects() {
         GameRecord gameRecord1 = new GameRecord();
         gameRecord1.setId(100);
         gameRecord1.setScore(1000000);
@@ -481,8 +481,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("GameRecord hashCode returns same value for equal objects")
-    void gameRecordHashCodeReturnsSameValueForEqualObjects() {
+    @DisplayName("should return same hashCode for equal GameRecord objects")
+    void shouldReturnSameHashCodeForEqualGameRecordObjects() {
         OffsetDateTime time = OffsetDateTime.of(2024, 6, 15, 10, 30, 0, 0, ZoneOffset.UTC);
 
         GameRecord gameRecord1 = new GameRecord();
@@ -529,8 +529,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("GameRecord hashCode returns different value for different objects")
-    void gameRecordHashCodeReturnsDifferentValueForDifferentObjects() {
+    @DisplayName("should return different hashCode for different GameRecord objects")
+    void shouldReturnDifferentHashCodeForDifferentGameRecordObjects() {
         GameRecord gameRecord1 = new GameRecord();
         gameRecord1.setId(100);
         gameRecord1.setScore(1000000);
@@ -543,8 +543,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("GameRecord all args constructor works correctly")
-    void gameRecordAllArgsConstructorWorksCorrectly() {
+    @DisplayName("should create GameRecord with all args constructor")
+    void shouldCreateGameRecordWithAllArgsConstructor() {
         OffsetDateTime time = OffsetDateTime.of(2024, 6, 15, 10, 30, 0, 0, ZoneOffset.UTC);
 
         GameRecord gameRecord = new GameRecord(
@@ -574,8 +574,8 @@ class DataClassTests {
     }
 
     @Test
-    @DisplayName("GameRecord no args constructor creates empty object")
-    void gameRecordNoArgsConstructorCreatesEmptyObject() {
+    @DisplayName("should create empty GameRecord with no args constructor")
+    void shouldCreateEmptyGameRecordWithNoArgsConstructor() {
         GameRecord gameRecord = new GameRecord();
 
         assertThat(gameRecord.getId()).isEqualTo(0);

@@ -8,8 +8,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class LocalRoomBuilderTest {
 
     @Test
-    @DisplayName("Default settings return correct default values")
-    void defaultSettingsReturnsCorrectValues() {
+    @DisplayName("should return correct default values for default settings")
+    void shouldReturnCorrectDefaultValuesForDefaultSettings() {
         LocalRoomBuilder builder = new LocalRoomBuilder();
 
         LocalRoom.RoomSetting setting = builder.buildSetting();
@@ -24,8 +24,8 @@ class LocalRoomBuilderTest {
     }
 
     @Test
-    @DisplayName("Custom settings chain applies all values correctly")
-    void customSettingsChainAppliesAllValues() {
+    @DisplayName("should apply all values correctly for custom settings chain")
+    void shouldApplyAllValuesCorrectlyForCustomSettingsChain() {
         LocalRoomBuilder builder = new LocalRoomBuilder()
             .autoDestroy(false)
             .host(false)
@@ -47,8 +47,8 @@ class LocalRoomBuilderTest {
     }
 
     @Test
-    @DisplayName("Setting from existing room setting copies all values correctly")
-    void settingFromExistingRoomSettingCopiesAllValues() {
+    @DisplayName("should copy all values correctly from existing room setting")
+    void shouldCopyAllValuesCorrectlyFromExistingRoomSetting() {
         LocalRoom.RoomSetting originalSetting = new LocalRoom.RoomSetting(
             false, true, 4, true, true, true, false
         );

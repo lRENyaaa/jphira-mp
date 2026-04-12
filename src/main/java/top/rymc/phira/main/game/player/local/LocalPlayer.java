@@ -48,8 +48,5 @@ public class LocalPlayer implements Player {
         return !getConnection().isClosed();
     }
 
-    @Override
-    public UserProfile toProtocol() {
-        return new UserProfile(userInfo.getId(), userInfo.getName());
-    }
+
 }

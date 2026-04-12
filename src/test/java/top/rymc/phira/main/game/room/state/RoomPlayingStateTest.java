@@ -8,7 +8,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
-import top.rymc.phira.main.data.GameRecord;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
@@ -35,6 +34,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@SuppressWarnings("unchecked")
 class RoomPlayingStateTest {
 
     private LocalRoom room;
@@ -47,7 +47,6 @@ class RoomPlayingStateTest {
     private PlayerOperations monitorOperations;
     private ChartInfo chartInfo;
 
-    @SuppressWarnings("unchecked")
     private Consumer<RoomGameState> stateUpdater;
 
     private RoomPlaying roomPlaying;
@@ -106,8 +105,8 @@ class RoomPlayingStateTest {
     }
 
     @Test
-    @DisplayName("touch send stores frames")
-    void touchSendStoresFrames() {
+    @DisplayName("should store frames when touch send")
+    void shouldStoreFramesWhenTouchSend() {
         roomPlaying = new RoomPlaying(room, stateUpdater, chartInfo);
         List<TouchFrame> frames = List.of(mock(TouchFrame.class));
 
@@ -117,8 +116,8 @@ class RoomPlayingStateTest {
     }
 
     @Test
-    @DisplayName("touch send does not broadcast to monitors")
-    void touchSendDoesNotBroadcastToMonitors() {
+    @DisplayName("should not broadcast touch send to monitors")
+    void shouldNotBroadcastTouchSendToMonitors() {
         roomPlaying = new RoomPlaying(room, stateUpdater, chartInfo);
         when(playerManager.getPlayers()).thenReturn(Set.of(player));
         when(playerManager.getMonitors()).thenReturn(Set.of(monitor));
@@ -131,8 +130,8 @@ class RoomPlayingStateTest {
     }
 
     @Test
-    @DisplayName("judge send stores events")
-    void judgeSendStoresEvents() {
+    @DisplayName("should store events when judge send")
+    void shouldStoreEventsWhenJudgeSend() {
         roomPlaying = new RoomPlaying(room, stateUpdater, chartInfo);
         List<JudgeEvent> events = List.of(mock(JudgeEvent.class));
 
@@ -142,8 +141,8 @@ class RoomPlayingStateTest {
     }
 
     @Test
-    @DisplayName("judge send does not broadcast to monitors")
-    void judgeSendDoesNotBroadcastToMonitors() {
+    @DisplayName("should not broadcast judge send to monitors")
+    void shouldNotBroadcastJudgeSendToMonitors() {
         roomPlaying = new RoomPlaying(room, stateUpdater, chartInfo);
         when(playerManager.getPlayers()).thenReturn(Set.of(player));
         when(playerManager.getMonitors()).thenReturn(Set.of(monitor));
@@ -156,8 +155,8 @@ class RoomPlayingStateTest {
     }
 
     @Test
-    @DisplayName("abort broadcasts game abort")
-    void abortBroadcastsGameAbort() {
+    @DisplayName("should broadcast game abort when abort")
+    void shouldBroadcastGameAbortWhenAbort() {
         roomPlaying = new RoomPlaying(room, stateUpdater, chartInfo);
         when(playerManager.getPlayers()).thenReturn(Set.of(player, secondPlayer));
         when(playerManager.getMonitors()).thenReturn(Set.of());
@@ -174,8 +173,8 @@ class RoomPlayingStateTest {
     }
 
     @Test
-    @DisplayName("abort transitions to select chart when all done")
-    void abortTransitionsToSelectChartWhenAllDone() {
+    @DisplayName("should transition to select chart when all done after abort")
+    void shouldTransitionToSelectChartWhenAllDoneAfterAbort() {
         roomPlaying = new RoomPlaying(room, stateUpdater, chartInfo);
         when(playerManager.getPlayers()).thenReturn(Set.of(player));
         when(playerManager.getMonitors()).thenReturn(Set.of());
@@ -190,8 +189,8 @@ class RoomPlayingStateTest {
     }
 
     @Test
-    @DisplayName("played fetches record and creates phira record")
-    void playedFetchesRecordAndCreatesPhiraRecord() {
+    @DisplayName("should fetch record and create phira record when played")
+    void shouldFetchRecordAndCreatePhiraRecordWhenPlayed() {
         roomPlaying = new RoomPlaying(room, stateUpdater, chartInfo);
         when(playerManager.getPlayers()).thenReturn(Set.of(player, secondPlayer));
         when(playerManager.getMonitors()).thenReturn(Set.of());
@@ -271,8 +270,8 @@ class RoomPlayingStateTest {
     }
 
     @Test
-    @DisplayName("to protocol returns playing state")
-    void toProtocolReturnsPlayingState() {
+    @DisplayName("should return playing state when to protocol")
+    void shouldReturnPlayingStateWhenToProtocol() {
         roomPlaying = new RoomPlaying(room, stateUpdater, chartInfo);
 
         GameState result = roomPlaying.toProtocol();

@@ -4,13 +4,16 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.mockito.Mockito.lenient;
+
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.game.exception.session.ResumeFailedException;
 import top.rymc.phira.main.game.exception.session.SuspendFailedException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
-import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.local.LocalRoom;
 import top.rymc.phira.main.game.room.state.RoomGameState;
 import top.rymc.phira.main.network.ConnectionReference;
@@ -18,16 +21,14 @@ import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.test.TestHandler;
 import top.rymc.phira.test.TestServerSetup;
 
-import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class LocalSessionManagerTest {
 
     private static final int PLAYER_ID = 123;
@@ -50,11 +51,10 @@ class LocalSessionManagerTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
         LocalSessionManager.setSuspendTimeout(100, TimeUnit.MILLISECONDS);
-        when(userInfo.getId()).thenReturn(PLAYER_ID);
-        when(userInfo.getName()).thenReturn("TestPlayer");
-        when(playerConnection.getPacketHandler()).thenAnswer(inv -> currentHandler);
+        lenient().when(userInfo.getId()).thenReturn(PLAYER_ID);
+        lenient().when(userInfo.getName()).thenReturn("TestPlayer");
+        lenient().when(playerConnection.getPacketHandler()).thenAnswer(inv -> currentHandler);
     }
 
     private LocalPlayer createTestPlayer() {
@@ -76,8 +76,8 @@ class LocalSessionManagerTest {
     }
 
     @Test
-    @DisplayName("suspend creates session with timeout")
-    void suspendCreatesSessionWithTimeout() {
+    @DisplayName("should create session with timeout when suspend")
+    void shouldCreateSessionWithTimeoutWhenSuspend() {
         LocalPlayer player = createTestPlayer();
         LocalRoom room = createTestRoom();
         room.join(player, false);
@@ -94,8 +94,8 @@ class LocalSessionManagerTest {
     }
 
     @Test
-    @DisplayName("suspend without SuspendableRoomHolder throws SuspendFailedException")
-    void suspendWithoutSuspendableRoomHolderThrowsException() {
+    @DisplayName("should throw SuspendFailedException when suspend without SuspendableRoomHolder")
+    void shouldThrowSuspendFailedExceptionWhenSuspendWithoutSuspendableRoomHolder() {
         LocalPlayer player = createTestPlayer();
 
         assertThatThrownBy(() -> LocalSessionManager.suspend(player, () -> {}))
@@ -103,8 +103,8 @@ class LocalSessionManagerTest {
     }
 
     @Test
-    @DisplayName("suspend when not in room throws SuspendFailedException")
-    void suspendWhenNotInRoomThrowsException() {
+    @DisplayName("should throw SuspendFailedException when suspend when not in room")
+    void shouldThrowSuspendFailedExceptionWhenSuspendWhenNotInRoom() {
         LocalPlayer player = createTestPlayer();
         LocalRoom room = createTestRoom();
 
@@ -116,8 +116,8 @@ class LocalSessionManagerTest {
     }
 
     @Test
-    @DisplayName("resume restores connection")
-    void resumeRestoresConnection() {
+    @DisplayName("should restore connection when resume")
+    void shouldRestoreConnectionWhenResume() {
         LocalPlayer player = createTestPlayer();
         LocalRoom room = createTestRoom();
         room.join(player, false);
@@ -132,8 +132,8 @@ class LocalSessionManagerTest {
     }
 
     @Test
-    @DisplayName("resume cancels timeout")
-    void resumeCancelsTimeout() {
+    @DisplayName("should cancel timeout when resume")
+    void shouldCancelTimeoutWhenResume() {
         LocalPlayer player = createTestPlayer();
         LocalRoom room = createTestRoom();
         room.join(player, false);
@@ -147,14 +147,12 @@ class LocalSessionManagerTest {
         LocalSessionManager.suspend(player, remover);
         LocalSessionManager.resume(player, newPlayerConnection);
 
-        await().atMost(200, TimeUnit.MILLISECONDS).pollDelay(150, TimeUnit.MILLISECONDS).untilAsserted(() -> {
-            assertThat(removerCalled.get()).isFalse();
-        });
+        await().atMost(200, TimeUnit.MILLISECONDS).pollDelay(150, TimeUnit.MILLISECONDS).untilAsserted(() -> assertThat(removerCalled.get()).isFalse());
     }
 
     @Test
-    @DisplayName("resume without suspended session throws ResumeFailedException")
-    void resumeWithoutSuspendedSessionThrowsException() {
+    @DisplayName("should throw ResumeFailedException when resume without suspended session")
+    void shouldThrowResumeFailedExceptionWhenResumeWithoutSuspendedSession() {
         LocalPlayer player = createTestPlayer();
 
         assertThatThrownBy(() -> LocalSessionManager.resume(player, newPlayerConnection))
@@ -162,8 +160,8 @@ class LocalSessionManagerTest {
     }
 
     @Test
-    @DisplayName("resume when player not in room throws ResumeFailedException")
-    void resumeWhenPlayerNotInRoomThrowsResumeFailedException() {
+    @DisplayName("should throw ResumeFailedException when resume when player not in room")
+    void shouldThrowResumeFailedExceptionWhenResumeWhenPlayerNotInRoom() {
         LocalPlayer player = createTestPlayer();
         LocalRoom room = createTestRoom();
         room.join(player, false);
@@ -179,8 +177,8 @@ class LocalSessionManagerTest {
     }
 
     @Test
-    @DisplayName("session timeout forces leave")
-    void sessionTimeoutForcesLeave() {
+    @DisplayName("should force leave when session timeout")
+    void shouldForceLeaveWhenSessionTimeout() {
         LocalPlayer player = createTestPlayer();
         LocalRoom room = createTestRoom();
         room.join(player, false);
@@ -193,16 +191,14 @@ class LocalSessionManagerTest {
 
         LocalSessionManager.suspend(player, remover);
 
-        await().atMost(500, TimeUnit.MILLISECONDS).untilAsserted(() -> {
-            assertThat(removerCalled.get()).isTrue();
-        });
+        await().atMost(500, TimeUnit.MILLISECONDS).untilAsserted(() -> assertThat(removerCalled.get()).isTrue());
 
         assertThat(room.containsPlayer(player)).isFalse();
     }
 
     @Test
-    @DisplayName("duplicate suspend cancels old timeout")
-    void duplicateSuspendCancelsOldTimeout() {
+    @DisplayName("should cancel old timeout when duplicate suspend")
+    void shouldCancelOldTimeoutWhenDuplicateSuspend() {
         LocalPlayer player = createTestPlayer();
         LocalRoom room = createTestRoom();
         room.join(player, false);
@@ -219,12 +215,8 @@ class LocalSessionManagerTest {
         LocalSessionManager.suspend(player, firstRemoverRunnable);
         LocalSessionManager.suspend(player, secondRemoverRunnable);
 
-        await().atMost(500, TimeUnit.MILLISECONDS).pollDelay(150, TimeUnit.MILLISECONDS).untilAsserted(() -> {
-            assertThat(firstRemoverCalled.get()).isFalse();
-        });
+        await().atMost(500, TimeUnit.MILLISECONDS).pollDelay(150, TimeUnit.MILLISECONDS).untilAsserted(() -> assertThat(firstRemoverCalled.get()).isFalse());
 
-        await().atMost(500, TimeUnit.MILLISECONDS).untilAsserted(() -> {
-            assertThat(secondRemoverCalled.get()).isTrue();
-        });
+        await().atMost(500, TimeUnit.MILLISECONDS).untilAsserted(() -> assertThat(secondRemoverCalled.get()).isTrue());
     }
 }

@@ -3,10 +3,18 @@ package top.rymc.phira.main.game.room.state;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.exception.GameOperationException;
@@ -22,12 +30,9 @@ import java.util.function.Consumer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
+@SuppressWarnings("unchecked")
+@ExtendWith(MockitoExtension.class)
 class RoomWaitForReadyStateTest {
 
     @Mock
@@ -46,12 +51,8 @@ class RoomWaitForReadyStateTest {
     private PlayerOperations playerOperations;
 
     @Mock
-    private PlayerOperations secondPlayerOperations;
-
-    @Mock
     private ChartInfo chartInfo;
 
-    @SuppressWarnings("unchecked")
     private Consumer<RoomGameState> stateUpdater;
 
     private RoomWaitForReady roomWaitForReady;
@@ -59,13 +60,12 @@ class RoomWaitForReadyStateTest {
     @BeforeEach
     @SuppressWarnings("unchecked")
     void setUp() {
-        MockitoAnnotations.openMocks(this);
         stateUpdater = mock(Consumer.class);
-        when(room.getPlayerManager()).thenReturn(playerManager);
-        when(player.getId()).thenReturn(1);
-        when(secondPlayer.getId()).thenReturn(2);
-        when(player.isOnline()).thenReturn(true);
-        when(secondPlayer.isOnline()).thenReturn(true);
+        lenient().when(room.getPlayerManager()).thenReturn(playerManager);
+        lenient().when(player.getId()).thenReturn(1);
+        lenient().when(secondPlayer.getId()).thenReturn(2);
+        lenient().when(player.isOnline()).thenReturn(true);
+        lenient().when(secondPlayer.isOnline()).thenReturn(true);
     }
 
     @Test
@@ -75,7 +75,7 @@ class RoomWaitForReadyStateTest {
         when(playerManager.getPlayers()).thenReturn(Set.of(player));
         when(playerManager.getMonitors()).thenReturn(Set.of());
 
-        try (MockedStatic<Server> mockedServer = mockStatic(Server.class)) {
+        try (MockedStatic<Server> ignored = mockStatic(Server.class)) {
             roomWaitForReady.ready(player);
 
             roomWaitForReady.ready(player);
@@ -89,7 +89,7 @@ class RoomWaitForReadyStateTest {
         when(playerManager.getPlayers()).thenReturn(Set.of(player, secondPlayer));
         when(playerManager.getMonitors()).thenReturn(Set.of());
 
-        try (MockedStatic<Server> mockedServer = mockStatic(Server.class)) {
+        try (MockedStatic<Server> ignored = mockStatic(Server.class)) {
             roomWaitForReady.ready(player);
 
             ArgumentCaptor<Consumer<PlayerOperations>> captor = ArgumentCaptor.forClass(Consumer.class);
@@ -100,13 +100,13 @@ class RoomWaitForReadyStateTest {
     }
 
     @Test
-    @DisplayName("all players ready transitions state to playing")
-    void allPlayersReadyTransitionsToPlaying() {
+    @DisplayName("should transition state to playing when all players ready")
+    void shouldTransitionStateToPlayingWhenAllPlayersReady() {
         roomWaitForReady = new RoomWaitForReady(room, stateUpdater, chartInfo);
         when(playerManager.getPlayers()).thenReturn(Set.of(player));
         when(playerManager.getMonitors()).thenReturn(Set.of());
 
-        try (MockedStatic<Server> mockedServer = mockStatic(Server.class)) {
+        try (MockedStatic<Server> ignored = mockStatic(Server.class)) {
             roomWaitForReady.ready(player);
 
             ArgumentCaptor<RoomGameState> stateCaptor = ArgumentCaptor.forClass(RoomGameState.class);
@@ -116,13 +116,13 @@ class RoomWaitForReadyStateTest {
     }
 
     @Test
-    @DisplayName("cancel ready removes player from ready set")
-    void cancelReadyRemovesFromReadySet() {
+    @DisplayName("should remove player from ready set when cancel ready")
+    void shouldRemovePlayerFromReadySetWhenCancelReady() {
         roomWaitForReady = new RoomWaitForReady(room, stateUpdater, chartInfo);
         when(playerManager.getPlayers()).thenReturn(Set.of(player, secondPlayer));
         when(playerManager.getMonitors()).thenReturn(Set.of());
 
-        try (MockedStatic<Server> mockedServer = mockStatic(Server.class)) {
+        try (MockedStatic<Server> ignored = mockStatic(Server.class)) {
             roomWaitForReady.ready(player);
             roomWaitForReady.cancelReady(player);
 
@@ -133,11 +133,11 @@ class RoomWaitForReadyStateTest {
     }
 
     @Test
-    @DisplayName("cancel ready broadcasts member cancel ready to all players")
-    void cancelReadyBroadcastsMemberCancelReady() {
+    @DisplayName("should broadcast member cancel ready to all players when cancel ready")
+    void shouldBroadcastMemberCancelReadyToAllPlayersWhenCancelReady() {
         roomWaitForReady = new RoomWaitForReady(room, stateUpdater, chartInfo);
 
-        try (MockedStatic<Server> mockedServer = mockStatic(Server.class)) {
+        try (MockedStatic<Server> ignored = mockStatic(Server.class)) {
             roomWaitForReady.cancelReady(player);
 
             ArgumentCaptor<Consumer<PlayerOperations>> captor = ArgumentCaptor.forClass(Consumer.class);
@@ -148,13 +148,13 @@ class RoomWaitForReadyStateTest {
     }
 
     @Test
-    @DisplayName("handle leave removes player from ready set")
-    void handleLeaveRemovesFromReadySet() {
+    @DisplayName("should remove player from ready set when handle leave")
+    void shouldRemovePlayerFromReadySetWhenHandleLeave() {
         roomWaitForReady = new RoomWaitForReady(room, stateUpdater, chartInfo);
         when(playerManager.getPlayers()).thenReturn(Set.of(player, secondPlayer));
         when(playerManager.getMonitors()).thenReturn(Set.of());
 
-        try (MockedStatic<Server> mockedServer = mockStatic(Server.class)) {
+        try (MockedStatic<Server> ignored = mockStatic(Server.class)) {
             roomWaitForReady.ready(player);
             roomWaitForReady.handleLeave(player);
             roomWaitForReady.ready(secondPlayer);
@@ -173,8 +173,8 @@ class RoomWaitForReadyStateTest {
     }
 
     @Test
-    @DisplayName("abort throws invalid state exception")
-    void abortThrowsInvalidState() {
+    @DisplayName("should throw invalid state exception when abort")
+    void shouldThrowInvalidStateExceptionWhenAbort() {
         roomWaitForReady = new RoomWaitForReady(room, stateUpdater, chartInfo);
 
         assertThatThrownBy(() -> roomWaitForReady.abort(player))
@@ -182,8 +182,8 @@ class RoomWaitForReadyStateTest {
     }
 
     @Test
-    @DisplayName("played throws invalid state exception")
-    void playedThrowsInvalidState() {
+    @DisplayName("should throw invalid state exception when played")
+    void shouldThrowInvalidStateExceptionWhenPlayed() {
         roomWaitForReady = new RoomWaitForReady(room, stateUpdater, chartInfo);
 
         assertThatThrownBy(() -> roomWaitForReady.played(player, 123))
@@ -191,8 +191,8 @@ class RoomWaitForReadyStateTest {
     }
 
     @Test
-    @DisplayName("to protocol returns wait for ready state")
-    void toProtocolReturnsWaitForReadyState() {
+    @DisplayName("should return wait for ready state when to protocol")
+    void shouldReturnWaitForReadyStateWhenToProtocol() {
         roomWaitForReady = new RoomWaitForReady(room, stateUpdater, chartInfo);
 
         GameState result = roomWaitForReady.toProtocol();

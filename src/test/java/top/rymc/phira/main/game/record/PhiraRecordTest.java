@@ -37,6 +37,7 @@ class PhiraRecordTest {
                         try {
                             Files.deleteIfExists(path);
                         } catch (IOException e) {
+                            // ignore
                         }
                     });
         }
@@ -49,8 +50,8 @@ class PhiraRecordTest {
     }
 
     @Test
-    @DisplayName("encode generates correct byte stream with file header")
-    void encodeGeneratesCorrectByteStreamWithFileHeader() {
+    @DisplayName("should generate correct byte stream with file header when encode")
+    void shouldGenerateCorrectByteStreamWithFileHeaderWhenEncode() {
         List<TouchFrame> touchFrames = new ArrayList<>();
         List<JudgeEvent> judgeEvents = new ArrayList<>();
         PhiraRecord record = new PhiraRecord(1, 100, "TestChart", 1, "Player1", touchFrames, judgeEvents);
@@ -68,8 +69,8 @@ class PhiraRecordTest {
     }
 
     @Test
-    @DisplayName("decode correctly parses JPhiraRec format")
-    void decodeCorrectlyParsesJPhiraRecFormat() throws Exception {
+    @DisplayName("should correctly parse JPhiraRec format when decode")
+    void shouldCorrectlyParseJPhiraRecFormatWhenDecode() throws Exception {
         List<TouchFrame> touchFrames = new ArrayList<>();
         List<JudgeEvent> judgeEvents = new ArrayList<>();
         PhiraRecord original = new PhiraRecord(1, 100, "TestChart", 1, "Player1", touchFrames, judgeEvents);
@@ -90,8 +91,8 @@ class PhiraRecordTest {
     }
 
     @Test
-    @DisplayName("decode throws exception for unknown file type")
-    void decodeThrowsExceptionForUnknownFileType() throws Exception {
+    @DisplayName("should throw exception for unknown file type when decode")
+    void shouldThrowExceptionForUnknownFileTypeWhenDecode() throws Exception {
         ByteBuf buf = Unpooled.buffer();
         buf.writeBytes("UNKNOWN!!!".getBytes());
 
@@ -105,8 +106,8 @@ class PhiraRecordTest {
     }
 
     @Test
-    @DisplayName("saveAsFile saves record to correct path with correct filename")
-    void saveAsFileSavesRecordToCorrectPathWithCorrectFilename() {
+    @DisplayName("should save record to correct path with correct filename")
+    void shouldSaveRecordToCorrectPathWithCorrectFilename() {
         List<TouchFrame> touchFrames = new ArrayList<>();
         List<JudgeEvent> judgeEvents = new ArrayList<>();
         PhiraRecord record = new PhiraRecord(12345, 100, "TestChart", 1, "Player1", touchFrames, judgeEvents);
@@ -118,8 +119,8 @@ class PhiraRecordTest {
     }
 
     @Test
-    @DisplayName("readFromDirectory reads all phirarec files from directory")
-    void readFromDirectoryReadsAllPhirarecFilesFromDirectory() throws IOException {
+    @DisplayName("should read all phirarec files from directory")
+    void shouldReadAllPhirarecFilesFromDirectory() {
         List<TouchFrame> touchFrames = new ArrayList<>();
         List<JudgeEvent> judgeEvents = new ArrayList<>();
         PhiraRecord record1 = new PhiraRecord(1, 100, "Chart1", 1, "Player1", touchFrames, judgeEvents);
@@ -134,8 +135,8 @@ class PhiraRecordTest {
     }
 
     @Test
-    @DisplayName("readFromDirectory returns empty list for non existent directory")
-    void readFromDirectoryReturnsEmptyListForNonExistentDirectory() {
+    @DisplayName("should return empty list for non-existent directory")
+    void shouldReturnEmptyListForNonExistentDirectory() {
         Path nonExistentDir = tempDir.resolve("non-existent");
 
         List<PhiraRecord> records = PhiraRecord.readFromDirectory(nonExistentDir);
@@ -144,8 +145,8 @@ class PhiraRecordTest {
     }
 
     @Test
-    @DisplayName("readFromDirectory filters non phirarec files")
-    void readFromDirectoryFiltersNonPhirarecFiles() throws IOException {
+    @DisplayName("should filter non-phirarec files")
+    void shouldFilterNonPhirarecFiles() throws IOException {
         List<TouchFrame> touchFrames = new ArrayList<>();
         List<JudgeEvent> judgeEvents = new ArrayList<>();
         PhiraRecord record = new PhiraRecord(1, 100, "Chart1", 1, "Player1", touchFrames, judgeEvents);
@@ -160,8 +161,8 @@ class PhiraRecordTest {
     }
 
     @Test
-    @DisplayName("readFromDirectory returns empty list when directory has no phirarec files")
-    void readFromDirectoryReturnsEmptyListWhenDirectoryHasNoPhirarecFiles() throws IOException {
+    @DisplayName("should return empty list when directory has no phirarec files")
+    void shouldReturnEmptyListWhenDirectoryHasNoPhirarecFiles() throws IOException {
         Files.createFile(tempDir.resolve("not-a-record.txt"));
         Files.createFile(tempDir.resolve("another-file.log"));
 

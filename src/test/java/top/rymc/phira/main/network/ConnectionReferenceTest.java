@@ -14,6 +14,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 
+@SuppressWarnings("unchecked")
 @ExtendWith(MockitoExtension.class)
 class ConnectionReferenceTest {
 
@@ -61,8 +62,8 @@ class ConnectionReferenceTest {
     }
 
     @Test
-    @DisplayName("resume with null existing connection only updates reference")
-    void resumeWithNullExistingConnectionOnlyUpdatesReference() {
+    @DisplayName("should only update reference when resume with null existing connection")
+    void shouldOnlyUpdateReferenceWhenResumeWithNullExistingConnection() {
         connectionReference = new ConnectionReference(null);
         Consumer<PlayerConnection> onDuplicate = mock(Consumer.class);
 

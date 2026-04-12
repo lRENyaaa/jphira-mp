@@ -1,4 +1,3 @@
-
 package top.rymc.phira.main.game.room;
 
 import top.rymc.phira.main.game.player.Player;

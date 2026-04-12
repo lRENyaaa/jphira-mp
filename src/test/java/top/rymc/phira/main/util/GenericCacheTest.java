@@ -33,8 +33,8 @@ class GenericCacheTest {
     }
 
     @Test
-    @DisplayName("get returns cached value without calling loader when key exists")
-    void getReturnsCachedValueWithoutCallingLoaderWhenKeyExists() {
+    @DisplayName("should return cached value without calling loader when get with key exists")
+    void shouldReturnCachedValueWithoutCallingLoaderWhenGetWithKeyExists() {
         AtomicInteger callCount = new AtomicInteger(0);
 
         cache.get("key1", k -> {
@@ -52,8 +52,8 @@ class GenericCacheTest {
     }
 
     @Test
-    @DisplayName("invalidate removes key from cache")
-    void invalidateRemovesKeyFromCache() {
+    @DisplayName("should remove key from cache when invalidate")
+    void shouldRemoveKeyFromCacheWhenInvalidate() {
         AtomicInteger callCount = new AtomicInteger(0);
 
         cache.get("key1", k -> "value1");
@@ -69,8 +69,8 @@ class GenericCacheTest {
     }
 
     @Test
-    @DisplayName("clear removes all keys from cache")
-    void clearRemovesAllKeysFromCache() {
+    @DisplayName("should remove all keys from cache when clear")
+    void shouldRemoveAllKeysFromCacheWhenClear() {
         AtomicInteger callCount = new AtomicInteger(0);
 
         cache.get("key1", k -> "value1");
@@ -92,8 +92,8 @@ class GenericCacheTest {
     }
 
     @Test
-    @DisplayName("size returns estimated cache size")
-    void sizeReturnsEstimatedCacheSize() {
+    @DisplayName("should return estimated cache size when size")
+    void shouldReturnEstimatedCacheSizeWhenSize() {
         assertThat(cache.size()).isEqualTo(0);
 
         cache.get("key1", k -> "value1");

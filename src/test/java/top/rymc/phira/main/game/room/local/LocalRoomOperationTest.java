@@ -4,11 +4,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import top.rymc.phira.main.Server;
-import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
@@ -22,10 +27,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class LocalRoomOperationTest {
 
     @Mock
@@ -51,11 +54,10 @@ class LocalRoomOperationTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        MockitoAnnotations.openMocks(this);
-        when(hostPlayer.getId()).thenReturn(1);
-        when(hostPlayer.operations()).thenReturn(Optional.of(hostOperations));
-        when(nonHostPlayer.getId()).thenReturn(2);
-        when(nonHostPlayer.operations()).thenReturn(Optional.of(nonHostOperations));
+        lenient().when(hostPlayer.getId()).thenReturn(1);
+        lenient().when(hostPlayer.operations()).thenReturn(Optional.of(hostOperations));
+        lenient().when(nonHostPlayer.getId()).thenReturn(2);
+        lenient().when(nonHostPlayer.operations()).thenReturn(Optional.of(nonHostOperations));
 
         mockedServer = mockStatic(Server.class);
 
@@ -109,8 +111,8 @@ class LocalRoomOperationTest {
     }
 
     @Test
-    @DisplayName("isHost returns false for non-host player")
-    void isHostReturnsFalseForNonHostPlayer() {
+    @DisplayName("should return false when checking if non-host player is host")
+    void shouldReturnFalseWhenCheckingIfNonHostPlayerIsHost() {
         localRoom.join(nonHostPlayer, false);
 
         boolean result = localRoom.isHost(nonHostPlayer);
@@ -130,8 +132,8 @@ class LocalRoomOperationTest {
     }
 
     @Test
-    @DisplayName("lockRoom by non-host throws GameOperationException")
-    void lockRoomByNonHostThrowsGameOperationException() {
+    @DisplayName("should throw GameOperationException when non-host tries to lock room")
+    void shouldThrowGameOperationExceptionWhenNonHostTriesToLockRoom() {
         localRoom.join(nonHostPlayer, false);
 
         assertThatThrownBy(() -> operation.lockRoom(nonHostPlayer))
@@ -140,8 +142,8 @@ class LocalRoomOperationTest {
     }
 
     @Test
-    @DisplayName("cycleRoom by host toggles cycle setting")
-    void cycleRoomByHostTogglesCycleSetting() {
+    @DisplayName("should toggle cycle setting when host cycles room")
+    void shouldToggleCycleSettingWhenHostCyclesRoom() {
         boolean initialCycle = localRoom.getSetting().isCycle();
 
         operation.cycleRoom(hostPlayer);
@@ -151,8 +153,8 @@ class LocalRoomOperationTest {
     }
 
     @Test
-    @DisplayName("cycleRoom by non-host throws GameOperationException")
-    void cycleRoomByNonHostThrowsGameOperationException() {
+    @DisplayName("should throw GameOperationException when non-host tries to cycle room")
+    void shouldThrowGameOperationExceptionWhenNonHostTriesToCycleRoom() {
         localRoom.join(nonHostPlayer, false);
 
         assertThatThrownBy(() -> operation.cycleRoom(nonHostPlayer))
@@ -161,8 +163,8 @@ class LocalRoomOperationTest {
     }
 
     @Test
-    @DisplayName("selectChart in SelectChart state by host fetches and broadcasts")
-    void selectChartInSelectChartStateByHostFetchesAndBroadcasts() {
+    @DisplayName("should fetch and broadcast chart when host selects chart in SelectChart state")
+    void shouldFetchAndBroadcastChartWhenHostSelectsChartInSelectChartState() {
         Player anotherPlayer = mock(Player.class);
         when(anotherPlayer.getId()).thenReturn(3);
         when(anotherPlayer.operations()).thenReturn(Optional.of(anotherOperations));
@@ -174,8 +176,8 @@ class LocalRoomOperationTest {
     }
 
     @Test
-    @DisplayName("selectChart in wrong state throws GameOperationException")
-    void selectChartInWrongStateThrowsGameOperationException() {
+    @DisplayName("should throw GameOperationException when selecting chart in wrong state")
+    void shouldThrowGameOperationExceptionWhenSelectingChartInWrongState() {
         LocalRoom.RoomSetting setting = new LocalRoom.RoomSetting(
                 false,
                 true,
@@ -202,8 +204,8 @@ class LocalRoomOperationTest {
     }
 
     @Test
-    @DisplayName("chat when enabled broadcasts to all")
-    void chatWhenEnabledBroadcastsToAll() {
+    @DisplayName("should broadcast chat to all when chat is enabled")
+    void shouldBroadcastChatToAllWhenChatIsEnabled() {
         Player anotherPlayer = mock(Player.class);
         when(anotherPlayer.getId()).thenReturn(3);
         when(anotherPlayer.operations()).thenReturn(Optional.of(anotherOperations));
@@ -217,8 +219,8 @@ class LocalRoomOperationTest {
     }
 
     @Test
-    @DisplayName("chat when disabled throws GameOperationException")
-    void chatWhenDisabledThrowsGameOperationException() {
+    @DisplayName("should throw GameOperationException when chat is disabled")
+    void shouldThrowGameOperationExceptionWhenChatIsDisabled() {
         LocalRoom.RoomSetting setting = new LocalRoom.RoomSetting(
                 false,
                 true,

@@ -3,9 +3,15 @@ package top.rymc.phira.main.game.room.state;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.exception.GameOperationException;
@@ -22,11 +28,8 @@ import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class RoomSelectChartStateTest {
 
     @Mock
@@ -50,25 +53,24 @@ class RoomSelectChartStateTest {
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
         capturedState = new AtomicReference<>();
         stateUpdater = capturedState::set;
 
-        when(room.getPlayerManager()).thenReturn(playerManager);
-        when(player.getId()).thenReturn(1);
-        when(player.operations()).thenReturn(Optional.of(playerOperations));
-        when(chartInfo.getId()).thenReturn(100);
+        lenient().when(room.getPlayerManager()).thenReturn(playerManager);
+        lenient().when(player.getId()).thenReturn(1);
+        lenient().when(player.operations()).thenReturn(Optional.of(playerOperations));
+        lenient().when(chartInfo.getId()).thenReturn(100);
 
         roomSelectChart = new RoomSelectChart(room, stateUpdater);
     }
 
     @Test
-    @DisplayName("requireStart with single player transitions to Playing state")
-    void requireStartWithSinglePlayerTransitionsToPlaying() {
+    @DisplayName("should transition to Playing state when requireStart with single player")
+    void shouldTransitionToPlayingStateWhenRequireStartWithSinglePlayer() {
         when(playerManager.getPlayers()).thenReturn(Set.of(player));
         when(playerManager.getMonitors()).thenReturn(Collections.emptySet());
 
-        try (MockedStatic<Server> mockedServer = mockStatic(Server.class)) {
+        try (MockedStatic<Server> ignored = mockStatic(Server.class)) {
             roomSelectChart.requireStart(player);
 
             assertThat(capturedState.get()).isInstanceOf(RoomPlaying.class);
@@ -76,16 +78,16 @@ class RoomSelectChartStateTest {
     }
 
     @Test
-    @DisplayName("requireStart with multiple players transitions to WaitForReady state")
-    void requireStartWithMultiplePlayersTransitionsToWaitForReady() {
+    @DisplayName("should transition to WaitForReady state when requireStart with multiple players")
+    void shouldTransitionToWaitForReadyStateWhenRequireStartWithMultiplePlayers() {
         Player anotherPlayer = mock(Player.class);
-        when(anotherPlayer.getId()).thenReturn(2);
-        when(anotherPlayer.operations()).thenReturn(Optional.of(mock(PlayerOperations.class)));
+        lenient().when(anotherPlayer.getId()).thenReturn(2);
+        lenient().when(anotherPlayer.operations()).thenReturn(Optional.of(mock(PlayerOperations.class)));
 
         when(playerManager.getPlayers()).thenReturn(Set.of(player, anotherPlayer));
         when(playerManager.getMonitors()).thenReturn(Collections.emptySet());
 
-        try (MockedStatic<Server> mockedServer = mockStatic(Server.class)) {
+        try (MockedStatic<Server> ignored = mockStatic(Server.class)) {
             roomSelectChart.requireStart(player);
 
             assertThat(capturedState.get()).isInstanceOf(RoomWaitForReady.class);
@@ -93,24 +95,24 @@ class RoomSelectChartStateTest {
     }
 
     @Test
-    @DisplayName("ready throws invalid state exception")
-    void readyThrowsInvalidState() {
+    @DisplayName("should throw invalid state exception when ready")
+    void shouldThrowInvalidStateExceptionWhenReady() {
         assertThatThrownBy(() -> roomSelectChart.ready(player))
                 .isInstanceOf(GameOperationException.class)
                 .hasMessageContaining("error.invalid_state");
     }
 
     @Test
-    @DisplayName("cancelReady throws invalid state exception")
-    void cancelReadyThrowsInvalidState() {
+    @DisplayName("should throw invalid state exception when cancelReady")
+    void shouldThrowInvalidStateExceptionWhenCancelReady() {
         assertThatThrownBy(() -> roomSelectChart.cancelReady(player))
                 .isInstanceOf(GameOperationException.class)
                 .hasMessageContaining("error.invalid_state");
     }
 
     @Test
-    @DisplayName("abort throws invalid state exception")
-    void abortThrowsInvalidState() {
+    @DisplayName("should throw invalid state exception when abort")
+    void shouldThrowInvalidStateExceptionWhenAbort() {
         assertThatThrownBy(() -> roomSelectChart.abort(player))
                 .isInstanceOf(GameOperationException.class)
                 .hasMessageContaining("error.invalid_state");
@@ -133,8 +135,8 @@ class RoomSelectChartStateTest {
     }
 
     @Test
-    @DisplayName("toProtocol returns SelectChart state with chart id when chart is set")
-    void toProtocolReturnsSelectChartStateWithChartId() {
+    @DisplayName("should return SelectChart state with chart id when toProtocol with chart set")
+    void shouldReturnSelectChartStateWithChartIdWhenToProtocolWithChartSet() {
         RoomSelectChart chartWithState = new RoomSelectChart(room, stateUpdater, chartInfo);
 
         var protocol = chartWithState.toProtocol();

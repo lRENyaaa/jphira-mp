@@ -16,24 +16,24 @@ class SessionExceptionTest {
     private Player player;
 
     @Test
-    @DisplayName("SuspendFailedException can be created")
-    void suspendFailedExceptionCanBeCreated() {
+    @DisplayName("should create SuspendFailedException")
+    void shouldCreateSuspendFailedException() {
         SuspendFailedException exception = new SuspendFailedException();
 
         assertThat(exception).isInstanceOf(RuntimeException.class);
     }
 
     @Test
-    @DisplayName("ResumeFailedException can be created")
-    void resumeFailedExceptionCanBeCreated() {
+    @DisplayName("should create ResumeFailedException")
+    void shouldCreateResumeFailedException() {
         ResumeFailedException exception = new ResumeFailedException();
 
         assertThat(exception).isInstanceOf(RuntimeException.class);
     }
 
     @Test
-    @DisplayName("PlayerTypeMismatchException stores player")
-    void playerTypeMismatchExceptionStoresPlayer() {
+    @DisplayName("should store player in PlayerTypeMismatchException")
+    void shouldStorePlayerInPlayerTypeMismatchException() {
         PlayerTypeMismatchException exception = new PlayerTypeMismatchException(player);
 
         assertThat(exception).isInstanceOf(ResumeFailedException.class);

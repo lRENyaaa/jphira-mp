@@ -29,6 +29,10 @@ public interface Player extends ProtocolConvertible<UserProfile> {
     default int getId() { return getUserInfo().getId(); }
     default String getName() { return getUserInfo().getName(); }
 
+    default UserProfile toProtocol() {
+        return new UserProfile(getId(), getName());
+    }
+
     default String getLanguage() {
         String lang = getUserInfo().getLanguage();
         return lang != null ? lang : Server.getInstance().getArgs().getDefaultLanguage();

@@ -12,7 +12,6 @@ import top.rymc.phira.main.game.player.Player;
 
 import java.lang.reflect.Field;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -22,9 +21,6 @@ class I18nServiceTest {
 
     @Mock
     private Player player;
-
-    @Mock
-    private UserInfo userInfo;
 
     private static final String DEFAULT_LANGUAGE = "zh-CN";
     private static final String ENGLISH_LANGUAGE = "en-US";
@@ -50,8 +46,8 @@ class I18nServiceTest {
     }
 
     @Test
-    @DisplayName("getMessage with key uses default language")
-    void getMessageWithKeyUsesDefaultLanguage() {
+    @DisplayName("should return message with default language when only key provided")
+    void shouldReturnMessageWithDefaultLanguageWhenOnlyKeyProvided() {
         String key = "error.permission_denied";
 
         String result = I18nService.INSTANCE.getMessage(key);
@@ -60,8 +56,8 @@ class I18nServiceTest {
     }
 
     @Test
-    @DisplayName("getMessage with language and key uses specified language")
-    void getMessageWithLanguageAndKeyUsesSpecifiedLanguage() {
+    @DisplayName("should return message with specified language when language and key provided")
+    void shouldReturnMessageWithSpecifiedLanguageWhenLanguageAndKeyProvided() {
         String key = "error.permission_denied";
 
         String result = I18nService.INSTANCE.getMessage(ENGLISH_LANGUAGE, key);
@@ -70,8 +66,8 @@ class I18nServiceTest {
     }
 
     @Test
-    @DisplayName("getMessage with player and key uses player language preference")
-    void getMessageWithPlayerAndKeyUsesPlayerLanguagePreference() {
+    @DisplayName("should return message with player language preference when player and key provided")
+    void shouldReturnMessageWithPlayerLanguagePreferenceWhenPlayerAndKeyProvided() {
         String key = "error.permission_denied";
         when(player.getLanguage()).thenReturn(ENGLISH_LANGUAGE);
 
@@ -81,8 +77,8 @@ class I18nServiceTest {
     }
 
     @Test
-    @DisplayName("getMessage returns key when translation not found")
-    void getMessageReturnsKeyWhenTranslationNotFound() {
+    @DisplayName("should return key when translation not found")
+    void shouldReturnKeyWhenTranslationNotFound() {
         String nonExistentKey = "non.existent.key";
 
         String result = I18nService.INSTANCE.getMessage(nonExistentKey);
@@ -91,8 +87,8 @@ class I18nServiceTest {
     }
 
     @Test
-    @DisplayName("getMessage falls back to default language when specified language file not found")
-    void getMessageFallsBackToDefaultLanguageWhenSpecifiedLanguageFileNotFound() throws Exception {
+    @DisplayName("should fall back to default language when specified language file not found")
+    void shouldFallBackToDefaultLanguageWhenSpecifiedLanguageFileNotFound() throws Exception {
         String key = "error.permission_denied";
 
         preloadDefaultLanguage();
@@ -103,8 +99,8 @@ class I18nServiceTest {
     }
 
     @Test
-    @DisplayName("getMessage with player falls back to default when player language file not found")
-    void getMessageWithPlayerFallsBackToDefaultWhenPlayerLanguageFileNotFound() throws Exception {
+    @DisplayName("should fall back to default language when player language file not found")
+    void shouldFallBackToDefaultLanguageWhenPlayerLanguageFileNotFound() throws Exception {
         String key = "error.permission_denied";
         when(player.getLanguage()).thenReturn(NON_EXISTENT_LANGUAGE);
 
@@ -120,8 +116,8 @@ class I18nServiceTest {
     }
 
     @Test
-    @DisplayName("getMessage with null player uses default language")
-    void getMessageWithNullPlayerUsesDefaultLanguage() {
+    @DisplayName("should use default language when player is null")
+    void shouldUseDefaultLanguageWhenPlayerIsNull() {
         String key = "error.permission_denied";
 
         String result = I18nService.INSTANCE.getMessage((Player) null, key);
@@ -130,8 +126,8 @@ class I18nServiceTest {
     }
 
     @Test
-    @DisplayName("getMessage with different keys returns correct translations")
-    void getMessageWithDifferentKeysReturnsCorrectTranslations() {
+    @DisplayName("should return correct translations for different keys")
+    void shouldReturnCorrectTranslationsForDifferentKeys() {
         assertThat(I18nService.INSTANCE.getMessage(ENGLISH_LANGUAGE, "error.room_full"))
                 .isEqualTo("Room is full");
         assertThat(I18nService.INSTANCE.getMessage(ENGLISH_LANGUAGE, "error.room_not_found"))
@@ -141,9 +137,9 @@ class I18nServiceTest {
     }
 
     @Test
-    @DisplayName("getMessage caches loaded languages")
+    @DisplayName("should cache loaded languages")
     @SuppressWarnings("unchecked")
-    void getMessageCachesLoadedLanguages() throws Exception {
+    void shouldCacheLoadedLanguages() throws Exception {
         String key = "error.permission_denied";
 
         I18nService.INSTANCE.getMessage(ENGLISH_LANGUAGE, key);
@@ -156,8 +152,8 @@ class I18nServiceTest {
     }
 
     @Test
-    @DisplayName("setDefaultLanguage changes default language for getMessage with key")
-    void setDefaultLanguageChangesDefaultLanguageForGetMessageWithKey() {
+    @DisplayName("should change default language for getMessage with key")
+    void shouldChangeDefaultLanguageForGetMessageWithKey() {
         String key = "error.permission_denied";
         I18nService.INSTANCE.setDefaultLanguage(ENGLISH_LANGUAGE);
 
@@ -167,8 +163,8 @@ class I18nServiceTest {
     }
 
     @Test
-    @DisplayName("setDefaultLanguage with null falls back to zh-CN")
-    void setDefaultLanguageWithNullFallsBackToZhCn() {
+    @DisplayName("should fall back to zh-CN when setDefaultLanguage with null")
+    void shouldFallBackToZhCnWhenSetDefaultLanguageWithNull() {
         String key = "error.permission_denied";
         I18nService.INSTANCE.setDefaultLanguage(null);
 
@@ -178,8 +174,8 @@ class I18nServiceTest {
     }
 
     @Test
-    @DisplayName("getMessage returns key for empty string key")
-    void getMessageReturnsKeyForEmptyStringKey() {
+    @DisplayName("should return key for empty string key")
+    void shouldReturnKeyForEmptyStringKey() {
         String emptyKey = "";
 
         String result = I18nService.INSTANCE.getMessage(emptyKey);
@@ -188,8 +184,8 @@ class I18nServiceTest {
     }
 
     @Test
-    @DisplayName("getMessage with system key returns correct translation")
-    void getMessageWithSystemKeyReturnsCorrectTranslation() {
+    @DisplayName("should return correct translation for system key")
+    void shouldReturnCorrectTranslationForSystemKey() {
         String key = "system.live_recorder_name";
 
         String englishResult = I18nService.INSTANCE.getMessage(ENGLISH_LANGUAGE, key);

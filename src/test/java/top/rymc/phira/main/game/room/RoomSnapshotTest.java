@@ -18,14 +18,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@SuppressWarnings("unchecked")
 class RoomSnapshotTest {
 
     private static final String ROOM_ID = "test-room-123";
     private static final int HOST_ID = 1;
 
     @Test
-    @DisplayName("asProtocolConvertible returns correct RoomInfo with all fields")
-    void asProtocolConvertibleReturnsCorrectRoomInfo() {
+    @DisplayName("should return correct RoomInfo with all fields when asProtocolConvertible")
+    void shouldReturnCorrectRoomInfoWithAllFieldsWhenAsProtocolConvertible() {
         ChartInfo chartInfo = mock(ChartInfo.class);
         when(chartInfo.getId()).thenReturn(100);
 
@@ -61,8 +62,8 @@ class RoomSnapshotTest {
     }
 
     @Test
-    @DisplayName("isHost returns true when player is the host")
-    void isHostReturnsTrueForHostPlayer() {
+    @DisplayName("should return true when checking isHost for host player")
+    void shouldReturnTrueWhenCheckingIsHostForHostPlayer() {
         LocalRoom room = mock(LocalRoom.class);
         Consumer<top.rymc.phira.main.game.room.state.RoomGameState> stateUpdater = mock(Consumer.class);
         RoomSelectChart state = new RoomSelectChart(room, stateUpdater);
@@ -87,8 +88,8 @@ class RoomSnapshotTest {
     }
 
     @Test
-    @DisplayName("isHost returns false when player is not the host")
-    void isHostReturnsFalseForNonHostPlayer() {
+    @DisplayName("should return false when checking isHost for non-host player")
+    void shouldReturnFalseWhenCheckingIsHostForNonHostPlayer() {
         LocalRoom room = mock(LocalRoom.class);
         Consumer<top.rymc.phira.main.game.room.state.RoomGameState> stateUpdater = mock(Consumer.class);
         RoomSelectChart state = new RoomSelectChart(room, stateUpdater);
@@ -115,8 +116,8 @@ class RoomSnapshotTest {
     }
 
     @Test
-    @DisplayName("buildJoinSuccessPacket returns correct packet with players, monitors and live status")
-    void buildJoinSuccessPacketReturnsCorrectPacket() {
+    @DisplayName("should return correct packet with players, monitors and live status when buildJoinSuccessPacket")
+    void shouldReturnCorrectPacketWithPlayersMonitorsAndLiveStatusWhenBuildJoinSuccessPacket() {
         ChartInfo chartInfo = mock(ChartInfo.class);
         when(chartInfo.getId()).thenReturn(100);
 

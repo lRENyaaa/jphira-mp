@@ -145,6 +145,7 @@ public class LocalRoom implements Room {
     }
 
     public boolean isHost(Player player) {
+        // playerManager.host should not be null if setting.host == true
         return setting.host && player.getId() == playerManager.host.getId();
     }
 

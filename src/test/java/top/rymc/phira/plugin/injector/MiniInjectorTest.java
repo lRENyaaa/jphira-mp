@@ -3,10 +3,13 @@ package top.rymc.phira.plugin.injector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@ExtendWith(MockitoExtension.class)
 class MiniInjectorTest {
 
     private MiniInjector injector;
@@ -17,8 +20,8 @@ class MiniInjectorTest {
     }
 
     @Test
-    @DisplayName("bind and getInstance returns the bound instance")
-    void bindAndGetInstanceReturnsTheBoundInstance() {
+    @DisplayName("should return bound instance when bind and getInstance")
+    void shouldReturnBoundInstanceWhenBindAndGetInstance() {
         ServiceInterface service = new ServiceImpl();
         injector.bind(ServiceInterface.class, service);
 
@@ -28,8 +31,8 @@ class MiniInjectorTest {
     }
 
     @Test
-    @DisplayName("Constructor injection with Inject annotation")
-    void constructorInjectionWithInjectAnnotation() {
+    @DisplayName("should inject constructor with Inject annotation")
+    void shouldInjectConstructorWithInjectAnnotation() {
         ServiceInterface service = new ServiceImpl();
         injector.bind(ServiceInterface.class, service);
 
@@ -39,8 +42,8 @@ class MiniInjectorTest {
     }
 
     @Test
-    @DisplayName("Field injection with Inject annotation")
-    void fieldInjectionWithInjectAnnotation() {
+    @DisplayName("should inject field with Inject annotation")
+    void shouldInjectFieldWithInjectAnnotation() {
         ServiceInterface service = new ServiceImpl();
         injector.bind(ServiceInterface.class, service);
 
@@ -50,24 +53,24 @@ class MiniInjectorTest {
     }
 
     @Test
-    @DisplayName("Missing binding throws RuntimeException")
-    void missingBindingThrowsRuntimeException() {
+    @DisplayName("should throw RuntimeException when binding is missing")
+    void shouldThrowRuntimeExceptionWhenBindingIsMissing() {
         assertThatThrownBy(() -> injector.getInstance(InterfaceDependencyClient.class))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Failed to create");
     }
 
     @Test
-    @DisplayName("Auto instantiate concrete class without binding")
-    void autoInstantiateConcreteClassWithoutBinding() {
+    @DisplayName("should auto instantiate concrete class without binding")
+    void shouldAutoInstantiateConcreteClassWithoutBinding() {
         ConcreteService service = injector.getInstance(ConcreteService.class);
 
         assertThat(service).isNotNull();
     }
 
     @Test
-    @DisplayName("Auto instantiate concrete class with nested dependencies")
-    void autoInstantiateConcreteClassWithNestedDependencies() {
+    @DisplayName("should auto instantiate concrete class with nested dependencies")
+    void shouldAutoInstantiateConcreteClassWithNestedDependencies() {
         ConcreteService nested = new ConcreteService();
         injector.bind(ConcreteService.class, nested);
 
@@ -77,8 +80,8 @@ class MiniInjectorTest {
     }
 
     @Test
-    @DisplayName("Inject fields method injects dependencies into existing instance")
-    void injectFieldsMethodInjectsDependenciesIntoExistingInstance() {
+    @DisplayName("should inject dependencies into existing instance when injectFields")
+    void shouldInjectDependenciesIntoExistingInstanceWhenInjectFields() {
         ServiceInterface service = new ServiceImpl();
         injector.bind(ServiceInterface.class, service);
 
@@ -89,8 +92,8 @@ class MiniInjectorTest {
     }
 
     @Test
-    @DisplayName("Multiple bindings work correctly")
-    void multipleBindingsWorkCorrectly() {
+    @DisplayName("should work correctly with multiple bindings")
+    void shouldWorkCorrectlyWithMultipleBindings() {
         ServiceInterface service = new ServiceImpl();
         AnotherService anotherService = new AnotherServiceImpl();
         injector.bind(ServiceInterface.class, service);

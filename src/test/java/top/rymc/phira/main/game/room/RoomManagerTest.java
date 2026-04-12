@@ -9,7 +9,6 @@ import top.rymc.phira.main.game.exception.GameOperationException;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,8 +37,8 @@ class RoomManagerTest {
     }
 
     @Test
-    @DisplayName("resolveRoom creates new room with new roomId")
-    void resolveRoomCreatesNewRoomWithNewRoomId() {
+    @DisplayName("should create new room when resolveRoom with new roomId")
+    void shouldCreateNewRoomWhenResolveRoomWithNewRoomId() {
         String roomId = "test-room-1";
         Room mockRoom = mock(Room.class);
         when(mockRoom.getRoomId()).thenReturn(roomId);
@@ -81,8 +80,8 @@ class RoomManagerTest {
     }
 
     @Test
-    @DisplayName("findRoom returns null if roomId not exists")
-    void findRoomReturnsNullIfRoomIdNotExists() {
+    @DisplayName("should return null when findRoom with non-existing roomId")
+    void shouldReturnNullWhenFindRoomWithNonExistingRoomId() {
         String roomId = "non-existent-room";
 
         Room result = RoomManager.findRoom(roomId);
@@ -91,8 +90,8 @@ class RoomManagerTest {
     }
 
     @Test
-    @DisplayName("getAllRooms returns list of all registered rooms")
-    void getAllRoomsReturnsListOfAllRegisteredRooms() {
+    @DisplayName("should return list of all registered rooms when getAllRooms")
+    void shouldReturnListOfAllRegisteredRoomsWhenGetAllRooms() {
         String roomId1 = "test-room-4";
         String roomId2 = "test-room-5";
         Room mockRoom1 = mock(Room.class);
@@ -111,8 +110,8 @@ class RoomManagerTest {
     }
 
     @Test
-    @DisplayName("getAllRooms returns empty list when no rooms registered")
-    void getAllRoomsReturnsEmptyListWhenNoRoomsRegistered() {
+    @DisplayName("should return empty list when getAllRooms with no rooms registered")
+    void shouldReturnEmptyListWhenGetAllRoomsWithNoRoomsRegistered() {
         List<Room> result = RoomManager.getAllRooms();
 
         assertThat(result).isEmpty();

@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ServerArgsTest {
 
     @Test
-    @DisplayName("Should use default values when no arguments provided")
+    @DisplayName("should use default values when no arguments provided")
     void shouldUseDefaultValuesWhenNoArgumentsProvided() {
         ServerArgs args = new ServerArgs(new String[]{});
 
@@ -22,7 +22,7 @@ class ServerArgsTest {
     }
 
     @Test
-    @DisplayName("Should parse custom port from arguments")
+    @DisplayName("should parse custom port from arguments")
     void shouldParseCustomPortFromArguments() {
         ServerArgs args = new ServerArgs(new String[]{"--port", "8080"});
 
@@ -34,7 +34,7 @@ class ServerArgsTest {
     }
 
     @Test
-    @DisplayName("Should parse custom host from arguments")
+    @DisplayName("should parse custom host from arguments")
     void shouldParseCustomHostFromArguments() {
         ServerArgs args = new ServerArgs(new String[]{"--host", "127.0.0.1"});
 
@@ -46,7 +46,7 @@ class ServerArgsTest {
     }
 
     @Test
-    @DisplayName("Should parse custom plugins directory from arguments")
+    @DisplayName("should parse custom plugins directory from arguments")
     void shouldParseCustomPluginsDirectoryFromArguments() {
         ServerArgs args = new ServerArgs(new String[]{"--plugins", "/custom/plugins/path"});
 
@@ -58,7 +58,7 @@ class ServerArgsTest {
     }
 
     @Test
-    @DisplayName("Should parse custom proxy protocol from arguments")
+    @DisplayName("should parse custom proxy protocol from arguments")
     void shouldParseCustomProxyProtocolFromArguments() {
         ServerArgs args = new ServerArgs(new String[]{"--proxy-protocol", "true"});
 
@@ -70,7 +70,7 @@ class ServerArgsTest {
     }
 
     @Test
-    @DisplayName("Should parse custom language from arguments")
+    @DisplayName("should parse custom language from arguments")
     void shouldParseCustomLanguageFromArguments() {
         ServerArgs args = new ServerArgs(new String[]{"--language", "en-US"});
 
@@ -82,7 +82,7 @@ class ServerArgsTest {
     }
 
     @Test
-    @DisplayName("Should parse all custom arguments together")
+    @DisplayName("should parse all custom arguments together")
     void shouldParseAllCustomArgumentsTogether() {
         ServerArgs args = new ServerArgs(new String[]{
                 "--port", "9090",
