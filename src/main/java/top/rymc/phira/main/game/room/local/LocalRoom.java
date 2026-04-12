@@ -6,10 +6,15 @@ import lombok.Getter;
 import lombok.Setter;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
+import top.rymc.phira.main.event.operation.RoomChatEvent;
+import top.rymc.phira.main.event.operation.RoomCycleChangeEvent;
+import top.rymc.phira.main.event.operation.RoomLockChangeEvent;
 import top.rymc.phira.main.event.operation.RoomPostSelectChartEvent;
 import top.rymc.phira.main.event.operation.RoomPreSelectChartEvent;
 import top.rymc.phira.main.event.room.PlayerLeaveRoomEvent;
 import top.rymc.phira.main.event.room.RoomDestroyEvent;
+import top.rymc.phira.main.event.room.RoomHostChangeEvent;
+import top.rymc.phira.main.event.room.RoomStateChangeEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
@@ -120,7 +125,16 @@ public class LocalRoom implements Room {
 
                 host = player;
                 operations.get().updateHostStatus(true);
+
+                RoomHostChangeEvent event = new RoomHostChangeEvent(LocalRoom.this, previousHost, host);
+                Server.postEvent(event);
+
                 return;
+            }
+
+            if (host != null) {
+                RoomHostChangeEvent event = new RoomHostChangeEvent(LocalRoom.this, host, null);
+                Server.postEvent(event);
             }
 
             host = null;
@@ -145,7 +159,7 @@ public class LocalRoom implements Room {
     }
 
     public boolean isHost(Player player) {
-        // playerManager.host should not be null if setting.host == true
+        // playerManager.host should not be null if setting.host == true                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
         return setting.host && player.getId() == playerManager.host.getId();
     }
 
@@ -223,14 +237,24 @@ public class LocalRoom implements Room {
         public void lockRoom(Player player) {
             validateHost(player);
 
-            setting.locked = !setting.locked;
+            boolean newLockState = !setting.locked;
+
+            RoomLockChangeEvent event = new RoomLockChangeEvent(LocalRoom.this, player, newLockState);
+            Server.postEvent(event);
+
+            setting.locked = newLockState;
             playerManager.broadcast(op -> op.lockRoom(setting.locked));
         }
 
         public void cycleRoom(Player player) {
             validateHost(player);
 
-            setting.cycle = !setting.cycle;
+            boolean newCycleState = !setting.cycle;
+
+            RoomCycleChangeEvent event = new RoomCycleChangeEvent(LocalRoom.this, player, newCycleState);
+            Server.postEvent(event);
+
+            setting.cycle = newCycleState;
             playerManager.broadcast(op -> op.cycleRoom(setting.cycle));
         }
 
@@ -266,7 +290,12 @@ public class LocalRoom implements Room {
                 throw GameOperationException.chatNotEnabled();
             }
 
-            playerManager.broadcast(operations -> operations.receiveChat(player.getId(), message));
+            RoomChatEvent event = new RoomChatEvent(player, LocalRoom.this, message);
+            if (Server.postEvent(event)) {
+                return;
+            }
+
+            playerManager.broadcast(operations -> operations.receiveChat(player.getId(), event.getMessage()));
         }
 
         public void touchSend(Player player, List<TouchFrame> touchFrames) {

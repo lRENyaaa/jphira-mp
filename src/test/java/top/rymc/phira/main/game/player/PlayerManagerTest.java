@@ -12,6 +12,7 @@ import top.rymc.phira.main.game.exception.session.PlayerTypeMismatchException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.network.ConnectionReference;
 import top.rymc.phira.main.network.PlayerConnection;
+import top.rymc.phira.test.TestServerSetup;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -43,6 +44,7 @@ class PlayerManagerTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        TestServerSetup.init();
         clearPlayersMap();
     }
 

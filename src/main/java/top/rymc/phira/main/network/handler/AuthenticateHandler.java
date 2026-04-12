@@ -2,6 +2,10 @@ package top.rymc.phira.main.network.handler;
 
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
+import top.rymc.phira.main.event.player.PlayerCreateEvent;
+import top.rymc.phira.main.event.player.PlayerPostLoginEvent;
+import top.rymc.phira.main.event.player.PlayerPreAuthenticateEvent;
+import top.rymc.phira.main.event.player.PlayerPreLoginEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.player.PlayerManager;
@@ -43,7 +47,27 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
             String token = packet.getToken();
             Server.getLogger().info("{} sent his token [{}]", connection.getRemoteAddressAsString(), token);
 
-            UserInfo userInfo = PhiraFetcher.GET_USER_INFO.apply(token);
+            PlayerPreAuthenticateEvent preAuthEvent = new PlayerPreAuthenticateEvent(connection, token);
+            Server.postEvent(preAuthEvent);
+
+            String preAuthCancelReason = preAuthEvent.getCancelReason();
+            if (preAuthCancelReason != null) {
+                connection.send(ClientBoundAuthenticatePacket.failed(preAuthCancelReason));
+                connection.close();
+                return;
+            }
+            UserInfo eventUserInfo = preAuthEvent.getUserInfo();
+            UserInfo userInfo = eventUserInfo != null ? eventUserInfo : PhiraFetcher.GET_USER_INFO.apply(token);
+
+            PlayerPreLoginEvent preLoginEvent = new PlayerPreLoginEvent(userInfo);
+            Server.postEvent(preLoginEvent);
+            String preLoginCancelReason = preLoginEvent.getCancelReason();
+            if (preLoginCancelReason != null) {
+                connection.send(ClientBoundAuthenticatePacket.failed(preLoginCancelReason));
+                connection.close();
+                return;
+            }
+
             PlayerManager.ResolveResult<LocalPlayer> result = PlayerManager.resolvePlayer(
                     userInfo.getId(),
                     LocalPlayer.class,
@@ -61,10 +85,20 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
                     (player) -> LocalSessionManager.resume(player, connection)
             );
 
-            RoomInfo roomInfo = result.player().getRoomInfo().orElse(null);
+            LocalPlayer player = result.player();
+            RoomInfo roomInfo = player.getRoomInfo().orElse(null);
 
             if (result.type() == PlayerManager.ResolveResult.Type.Create) {
                 connection.setPacketHandler(PlayHandler.create(result.player()));
+            }
+
+            PlayerPostLoginEvent postLoginEvent = new PlayerPostLoginEvent(result);
+            Server.postEvent(postLoginEvent);
+            String postLoginCancelReason = postLoginEvent.getCancelReason();
+            if (postLoginCancelReason != null) {
+                connection.send(ClientBoundAuthenticatePacket.failed(postLoginCancelReason));
+                connection.close();
+                return;
             }
 
             connection.send(ClientBoundAuthenticatePacket.success(new FullUserProfile(userInfo.getId(), userInfo.getName(), false), roomInfo));

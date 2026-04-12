@@ -1,5 +1,7 @@
 package top.rymc.phira.main.game.player;
 
+import top.rymc.phira.main.Server;
+import top.rymc.phira.main.event.player.PlayerCreateEvent;
 import top.rymc.phira.main.game.exception.session.PlayerTypeMismatchException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.network.PlayerConnection;
@@ -35,6 +37,10 @@ public class PlayerManager {
             if (existing == null) {
                 T player = constructor.apply(() -> PLAYERS.remove(userId));
                 reference.set(new ResolveResult<>(player, ResolveResult.Type.Create));
+
+                PlayerCreateEvent createEvent = new PlayerCreateEvent(player);
+                Server.postEvent(createEvent);
+
                 return player;
             }
 
