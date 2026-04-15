@@ -6,6 +6,7 @@ import lombok.Setter;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.event.session.PlayerSessionSuspendEvent;
 import top.rymc.phira.main.event.session.PlayerSessionTimeoutEvent;
+import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.room.Room;
@@ -16,6 +17,7 @@ import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -35,9 +37,14 @@ public class LocalSessionManager {
         suspendTimeoutMillis = unit.toMillis(timeout);
     }
 
-    public static void resume(LocalPlayer player, PlayerConnection newConn) {
+    public static void resume(LocalPlayer player, PlayerConnection newConn) throws ResumeFailedException {
         SuspendedRoomSession session = SUSPENDED.remove(player.getId());
         if (session == null) {
+            if (player.isOnline()) {
+                postResume(player, newConn);
+                return;
+            }
+
             throw new ResumeFailedException();
         }
 
@@ -46,12 +53,18 @@ public class LocalSessionManager {
             timeout.cancel(false);
         }
 
-        player.getRoom().ifPresent((room) -> {
+        Optional<Room> optionalRoom = player.getRoom();
+        if (optionalRoom.isPresent()) {
+            Room room = optionalRoom.get();
             if (!room.containsPlayer(player)) {
                 throw new ResumeFailedException();
             }
-        });
+        }
 
+        postResume(player, newConn);
+    }
+
+    private static void postResume(LocalPlayer player, PlayerConnection newConn) {
         ServerBoundPacketHandler handler = player.getConnection().getPacketHandler();
         newConn.setPacketHandler(handler);
 
@@ -60,7 +73,7 @@ public class LocalSessionManager {
         );
     }
 
-    public static void suspend(LocalPlayer player, Runnable remover) {
+    public static void suspend(LocalPlayer player, Runnable remover) throws SuspendFailedException {
         ServerBoundPacketHandler handler = player.getConnection().getPacketHandler();
         if (!(handler instanceof SuspendableRoomHolder roomHolder)) {
             throw new SuspendFailedException();
@@ -82,7 +95,12 @@ public class LocalSessionManager {
         }
 
         SUSPENDED.compute(player.getId(), (id, oldSession) -> {
-            // TODO: broadcast to room
+
+            try {
+                room.getOperation().cancelReady(player);
+            } catch (GameOperationException ignored) {
+            }
+
             if (oldSession != null && oldSession.timeout != null) {
                 Server.getLogger().warn("Player {} already has a suspended session, cancelling old timeout", player.getId());
                 oldSession.timeout.cancel(false);

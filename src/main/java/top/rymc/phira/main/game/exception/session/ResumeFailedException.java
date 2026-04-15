@@ -1,5 +1,4 @@
 package top.rymc.phira.main.game.exception.session;
 
-public class ResumeFailedException extends RuntimeException {
-
+public class ResumeFailedException extends SessionException {
 }

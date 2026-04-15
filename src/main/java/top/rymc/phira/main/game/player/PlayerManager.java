@@ -1,8 +1,10 @@
 package top.rymc.phira.main.game.player;
 
+import top.rymc.phira.function.throwable.ThrowableConsumer;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.event.player.PlayerCreateEvent;
 import top.rymc.phira.main.game.exception.session.PlayerTypeMismatchException;
+import top.rymc.phira.main.game.exception.session.ResumeFailedException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.network.PlayerConnection;
 
@@ -12,8 +14,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 public class PlayerManager {
 
@@ -29,13 +31,17 @@ public class PlayerManager {
     public static <T extends Player> ResolveResult<T> resolvePlayer(
             int userId,
             Class<T> clazz,
-            Function<Runnable, T> constructor,
-            Consumer<T> resumer
-    ) {
+            Supplier<T> constructor,
+            ThrowableConsumer<T, ResumeFailedException> resumer,
+            BiConsumer<Runnable, T> closeBinder
+    ) throws ResumeFailedException {
+
         AtomicReference<ResolveResult<T>> reference = new AtomicReference<>();
+        AtomicReference<ResumeFailedException> exceptionReference = new AtomicReference<>();
+
         PLAYERS.compute(userId, (id, existing) -> {
             if (existing == null) {
-                T player = constructor.apply(() -> PLAYERS.remove(userId));
+                T player = constructor.get();
                 reference.set(new ResolveResult<>(player, ResolveResult.Type.Create));
 
                 PlayerCreateEvent createEvent = new PlayerCreateEvent(player);
@@ -46,20 +52,36 @@ public class PlayerManager {
 
             if (existing.getClass() != clazz) {
                 // This is to be expected, upstream must provide a graceful fallback
-                throw new PlayerTypeMismatchException(existing);
+                exceptionReference.set(new PlayerTypeMismatchException(existing));
+                return existing;
             }
 
             T castedExisting = clazz.cast(existing);
-            resumer.accept(castedExisting);
+
+            try {
+                resumer.accept(castedExisting);
+            } catch (ResumeFailedException exception) {
+                exceptionReference.set(exception);
+                return existing;
+            }
+
             reference.set(new ResolveResult<>(castedExisting, ResolveResult.Type.Resume));
-            return castedExisting;
+
+            return existing;
 
         });
+
+        ResumeFailedException exception = exceptionReference.get();
+        if (exception != null) {
+            throw exception;
+        }
 
         ResolveResult<T> result = reference.get();
         if (result == null) {
             throw new AssertionError();
         }
+
+        closeBinder.accept(() -> PLAYERS.remove(userId), result.player);
 
         return result;
     }

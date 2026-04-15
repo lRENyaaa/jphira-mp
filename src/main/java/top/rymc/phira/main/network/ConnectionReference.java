@@ -20,8 +20,6 @@ public class ConnectionReference {
     }
 
     public void resume(PlayerConnection newConnection, Consumer<PlayerConnection> onDuplicate) {
-
-        // In fact, duplicate should always be false, the logic here was written as a precaution.
         PlayerConnection oldConnection = connectionReference.get();
         boolean duplicate = oldConnection != null;
 
@@ -29,7 +27,6 @@ public class ConnectionReference {
         Server.postEvent(bindEvent);
 
         if (duplicate) {
-            Server.getLogger().warn("Duplicate connection detected for player, marking old connection as duplicate");
             onDuplicate.accept(oldConnection);
             oldConnection.markDuplicateLogin();
         }

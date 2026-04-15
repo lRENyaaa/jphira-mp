@@ -10,7 +10,6 @@ import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.holder.RoomHolder;
 import top.rymc.phira.main.network.ConnectionReference;
 import top.rymc.phira.main.network.PlayerConnection;
-import top.rymc.phira.protocol.data.UserProfile;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 
 import java.util.Optional;

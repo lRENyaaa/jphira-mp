@@ -7,8 +7,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import top.rymc.phira.function.throwable.ThrowableConsumer;
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.game.exception.session.PlayerTypeMismatchException;
+import top.rymc.phira.main.game.exception.session.ResumeFailedException;
+import top.rymc.phira.main.game.exception.session.SessionException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.network.ConnectionReference;
 import top.rymc.phira.main.network.PlayerConnection;
@@ -18,8 +21,8 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -40,7 +43,7 @@ class PlayerManagerTest {
     private PlayerConnection connection;
 
     @Mock
-    private Consumer<LocalPlayer> resumer;
+    private ThrowableConsumer<LocalPlayer, ResumeFailedException> resumer;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -62,12 +65,13 @@ class PlayerManagerTest {
 
     @Test
     @DisplayName("should create new player when userId does not exist")
-    void shouldCreateNewPlayerWhenUserIdDoesNotExist() {
+    void shouldCreateNewPlayerWhenUserIdDoesNotExist() throws ResumeFailedException {
         int userId = 1001;
-        Function<Runnable, LocalPlayer> constructor = remover -> new LocalPlayer(userInfo, connectionRef);
+        Supplier<LocalPlayer> constructor = () -> new LocalPlayer(userInfo, connectionRef);
+        BiConsumer<Runnable, LocalPlayer> closeBinder = (remover, player) -> {};
 
         PlayerManager.ResolveResult<LocalPlayer> result = PlayerManager.resolvePlayer(
-                userId, LocalPlayer.class, constructor, resumer
+                userId, LocalPlayer.class, constructor, resumer, closeBinder
         );
 
         assertThat(result).isNotNull();
@@ -78,18 +82,19 @@ class PlayerManagerTest {
 
     @Test
     @DisplayName("should resume existing player when userId exists")
-    void shouldResumeExistingPlayerWhenUserIdExists() {
+    void shouldResumeExistingPlayerWhenUserIdExists() throws SessionException {
         int userId = 1002;
         LocalPlayer existingPlayer = new LocalPlayer(userInfo, connectionRef);
-        Function<Runnable, LocalPlayer> constructor = remover -> existingPlayer;
+        Supplier<LocalPlayer> constructor = () -> existingPlayer;
+        BiConsumer<Runnable, LocalPlayer> closeBinder = (remover, player) -> {};
 
         PlayerManager.ResolveResult<LocalPlayer> firstResult = PlayerManager.resolvePlayer(
-                userId, LocalPlayer.class, constructor, resumer
+                userId, LocalPlayer.class, constructor, resumer, closeBinder
         );
         assertThat(firstResult.type()).isEqualTo(PlayerManager.ResolveResult.Type.Create);
 
         PlayerManager.ResolveResult<LocalPlayer> secondResult = PlayerManager.resolvePlayer(
-                userId, LocalPlayer.class, constructor, resumer
+                userId, LocalPlayer.class, constructor, resumer, closeBinder
         );
 
         assertThat(secondResult).isNotNull();
@@ -100,15 +105,16 @@ class PlayerManagerTest {
 
     @Test
     @DisplayName("should throw PlayerTypeMismatchException when type mismatches")
-    void shouldThrowPlayerTypeMismatchExceptionWhenTypeMismatches() {
+    void shouldThrowPlayerTypeMismatchExceptionWhenTypeMismatches() throws ResumeFailedException {
         int userId = 1003;
         LocalPlayer existingPlayer = new LocalPlayer(userInfo, connectionRef);
-        Function<Runnable, LocalPlayer> constructor = remover -> existingPlayer;
+        Supplier<LocalPlayer> constructor = () -> existingPlayer;
+        BiConsumer<Runnable, LocalPlayer> closeBinder = (remover, player) -> {};
 
-        PlayerManager.resolvePlayer(userId, LocalPlayer.class, constructor, resumer);
+        PlayerManager.resolvePlayer(userId, LocalPlayer.class, constructor, resumer, closeBinder);
 
         assertThatThrownBy(() -> PlayerManager.resolvePlayer(
-                userId, AnotherPlayerType.class, id -> mock(AnotherPlayerType.class), p -> {}
+                userId, AnotherPlayerType.class, () -> mock(AnotherPlayerType.class), p -> {}, (r, p) -> {}
         )).isInstanceOf(PlayerTypeMismatchException.class)
                 .satisfies(ex -> {
                     PlayerTypeMismatchException exception = (PlayerTypeMismatchException) ex;
@@ -118,12 +124,13 @@ class PlayerManagerTest {
 
     @Test
     @DisplayName("should return correct LocalPlayer by PlayerConnection")
-    void shouldReturnCorrectLocalPlayerByPlayerConnection() {
+    void shouldReturnCorrectLocalPlayerByPlayerConnection() throws ResumeFailedException {
         int userId = 1004;
         LocalPlayer player = new LocalPlayer(userInfo, connectionRef);
-        Function<Runnable, LocalPlayer> constructor = remover -> player;
+        Supplier<LocalPlayer> constructor = () -> player;
+        BiConsumer<Runnable, LocalPlayer> closeBinder = (remover, p) -> {};
 
-        PlayerManager.resolvePlayer(userId, LocalPlayer.class, constructor, resumer);
+        PlayerManager.resolvePlayer(userId, LocalPlayer.class, constructor, resumer, closeBinder);
 
         when(connectionRef.get()).thenReturn(connection);
 
@@ -145,12 +152,13 @@ class PlayerManagerTest {
 
     @Test
     @DisplayName("should return player by id if exists")
-    void shouldReturnPlayerByIdIfExists() {
+    void shouldReturnPlayerByIdIfExists() throws ResumeFailedException {
         int userId = 1005;
         LocalPlayer player = new LocalPlayer(userInfo, connectionRef);
-        Function<Runnable, LocalPlayer> constructor = remover -> player;
+        Supplier<LocalPlayer> constructor = () -> player;
+        BiConsumer<Runnable, LocalPlayer> closeBinder = (remover, p) -> {};
 
-        PlayerManager.resolvePlayer(userId, LocalPlayer.class, constructor, resumer);
+        PlayerManager.resolvePlayer(userId, LocalPlayer.class, constructor, resumer, closeBinder);
 
         Optional<Player> result = PlayerManager.getPlayer(userId);
 
@@ -170,12 +178,13 @@ class PlayerManagerTest {
 
     @Test
     @DisplayName("should return true for online player")
-    void shouldReturnTrueForOnlinePlayer() {
+    void shouldReturnTrueForOnlinePlayer() throws ResumeFailedException {
         int userId = 1006;
         LocalPlayer player = new LocalPlayer(userInfo, connectionRef);
-        Function<Runnable, LocalPlayer> constructor = remover -> player;
+        Supplier<LocalPlayer> constructor = () -> player;
+        BiConsumer<Runnable, LocalPlayer> closeBinder = (remover, p) -> {};
 
-        PlayerManager.resolvePlayer(userId, LocalPlayer.class, constructor, resumer);
+        PlayerManager.resolvePlayer(userId, LocalPlayer.class, constructor, resumer, closeBinder);
 
         when(connectionRef.get()).thenReturn(connection);
         when(connection.isClosed()).thenReturn(false);
@@ -187,12 +196,13 @@ class PlayerManagerTest {
 
     @Test
     @DisplayName("should return false for offline player")
-    void shouldReturnFalseForOfflinePlayer() {
+    void shouldReturnFalseForOfflinePlayer() throws ResumeFailedException {
         int userId = 1007;
         LocalPlayer player = new LocalPlayer(userInfo, connectionRef);
-        Function<Runnable, LocalPlayer> constructor = remover -> player;
+        Supplier<LocalPlayer> constructor = () -> player;
+        BiConsumer<Runnable, LocalPlayer> closeBinder = (remover, p) -> {};
 
-        PlayerManager.resolvePlayer(userId, LocalPlayer.class, constructor, resumer);
+        PlayerManager.resolvePlayer(userId, LocalPlayer.class, constructor, resumer, closeBinder);
 
         when(connectionRef.get()).thenReturn(connection);
         when(connection.isClosed()).thenReturn(true);
@@ -214,7 +224,7 @@ class PlayerManagerTest {
 
     @Test
     @DisplayName("should filter only online players")
-    void shouldFilterOnlyOnlinePlayers() {
+    void shouldFilterOnlyOnlinePlayers() throws ResumeFailedException {
         int onlineUserId = 1008;
         int offlineUserId = 1009;
 
@@ -228,11 +238,12 @@ class PlayerManagerTest {
         LocalPlayer onlinePlayer = new LocalPlayer(onlineUserInfo, onlineConnectionRef);
         LocalPlayer offlinePlayer = new LocalPlayer(offlineUserInfo, offlineConnectionRef);
 
-        Function<Runnable, LocalPlayer> onlineConstructor = remover -> onlinePlayer;
-        Function<Runnable, LocalPlayer> offlineConstructor = remover -> offlinePlayer;
+        Supplier<LocalPlayer> onlineConstructor = () -> onlinePlayer;
+        Supplier<LocalPlayer> offlineConstructor = () -> offlinePlayer;
+        BiConsumer<Runnable, LocalPlayer> closeBinder = (remover, p) -> {};
 
-        PlayerManager.resolvePlayer(onlineUserId, LocalPlayer.class, onlineConstructor, resumer);
-        PlayerManager.resolvePlayer(offlineUserId, LocalPlayer.class, offlineConstructor, resumer);
+        PlayerManager.resolvePlayer(onlineUserId, LocalPlayer.class, onlineConstructor, resumer, closeBinder);
+        PlayerManager.resolvePlayer(offlineUserId, LocalPlayer.class, offlineConstructor, resumer, closeBinder);
 
         when(onlineConnectionRef.get()).thenReturn(onlineConnection);
         when(offlineConnectionRef.get()).thenReturn(offlineConnection);
@@ -255,7 +266,7 @@ class PlayerManagerTest {
 
     @Test
     @DisplayName("should return all registered players")
-    void shouldReturnAllRegisteredPlayers() {
+    void shouldReturnAllRegisteredPlayers() throws ResumeFailedException {
         int userId1 = 1010;
         int userId2 = 1011;
 
@@ -267,11 +278,12 @@ class PlayerManagerTest {
         LocalPlayer player1 = new LocalPlayer(userInfo1, connectionRef1);
         LocalPlayer player2 = new LocalPlayer(userInfo2, connectionRef2);
 
-        Function<Runnable, LocalPlayer> constructor1 = remover -> player1;
-        Function<Runnable, LocalPlayer> constructor2 = remover -> player2;
+        Supplier<LocalPlayer> constructor1 = () -> player1;
+        Supplier<LocalPlayer> constructor2 = () -> player2;
+        BiConsumer<Runnable, LocalPlayer> closeBinder = (remover, p) -> {};
 
-        PlayerManager.resolvePlayer(userId1, LocalPlayer.class, constructor1, resumer);
-        PlayerManager.resolvePlayer(userId2, LocalPlayer.class, constructor2, resumer);
+        PlayerManager.resolvePlayer(userId1, LocalPlayer.class, constructor1, resumer, closeBinder);
+        PlayerManager.resolvePlayer(userId2, LocalPlayer.class, constructor2, resumer, closeBinder);
 
         List<Player> result = PlayerManager.getAllPlayers();
 

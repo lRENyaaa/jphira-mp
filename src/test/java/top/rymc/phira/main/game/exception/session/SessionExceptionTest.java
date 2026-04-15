@@ -20,7 +20,7 @@ class SessionExceptionTest {
     void shouldCreateSuspendFailedException() {
         SuspendFailedException exception = new SuspendFailedException();
 
-        assertThat(exception).isInstanceOf(RuntimeException.class);
+        assertThat(exception).isInstanceOf(SessionException.class);
     }
 
     @Test
@@ -28,7 +28,7 @@ class SessionExceptionTest {
     void shouldCreateResumeFailedException() {
         ResumeFailedException exception = new ResumeFailedException();
 
-        assertThat(exception).isInstanceOf(RuntimeException.class);
+        assertThat(exception).isInstanceOf(SessionException.class);
     }
 
     @Test

@@ -14,7 +14,6 @@ import top.rymc.phira.main.event.operation.RoomPreSelectChartEvent;
 import top.rymc.phira.main.event.room.PlayerLeaveRoomEvent;
 import top.rymc.phira.main.event.room.RoomDestroyEvent;
 import top.rymc.phira.main.event.room.RoomHostChangeEvent;
-import top.rymc.phira.main.event.room.RoomStateChangeEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
@@ -159,8 +158,7 @@ public class LocalRoom implements Room {
     }
 
     public boolean isHost(Player player) {
-        // playerManager.host should not be null if setting.host == true                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
-        return setting.host && player.getId() == playerManager.host.getId();
+        return playerManager.host != null && setting.host && player.getId() == playerManager.host.getId();
     }
 
     public void join(Player player, boolean isMonitor) {

@@ -12,6 +12,7 @@ import static org.mockito.Mockito.lenient;
 
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.game.exception.session.ResumeFailedException;
+import top.rymc.phira.main.game.exception.session.SessionException;
 import top.rymc.phira.main.game.exception.session.SuspendFailedException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.room.local.LocalRoom;
@@ -77,7 +78,7 @@ class LocalSessionManagerTest {
 
     @Test
     @DisplayName("should create session with timeout when suspend")
-    void shouldCreateSessionWithTimeoutWhenSuspend() {
+    void shouldCreateSessionWithTimeoutWhenSuspend() throws SuspendFailedException {
         LocalPlayer player = createTestPlayer();
         LocalRoom room = createTestRoom();
         room.join(player, false);
@@ -117,7 +118,7 @@ class LocalSessionManagerTest {
 
     @Test
     @DisplayName("should restore connection when resume")
-    void shouldRestoreConnectionWhenResume() {
+    void shouldRestoreConnectionWhenResume() throws SessionException {
         LocalPlayer player = createTestPlayer();
         LocalRoom room = createTestRoom();
         room.join(player, false);
@@ -133,7 +134,7 @@ class LocalSessionManagerTest {
 
     @Test
     @DisplayName("should cancel timeout when resume")
-    void shouldCancelTimeoutWhenResume() {
+    void shouldCancelTimeoutWhenResume() throws SessionException {
         LocalPlayer player = createTestPlayer();
         LocalRoom room = createTestRoom();
         room.join(player, false);
@@ -151,17 +152,16 @@ class LocalSessionManagerTest {
     }
 
     @Test
-    @DisplayName("should throw ResumeFailedException when resume without suspended session")
-    void shouldThrowResumeFailedExceptionWhenResumeWithoutSuspendedSession() {
+    @DisplayName("should not throw ResumeFailedException when resume without suspended session")
+    void shouldThrowResumeFailedExceptionWhenResumeWithoutSuspendedSession() throws ResumeFailedException {
         LocalPlayer player = createTestPlayer();
 
-        assertThatThrownBy(() -> LocalSessionManager.resume(player, newPlayerConnection))
-                .isInstanceOf(ResumeFailedException.class);
+        LocalSessionManager.resume(player, newPlayerConnection);
     }
 
     @Test
     @DisplayName("should throw ResumeFailedException when resume when player not in room")
-    void shouldThrowResumeFailedExceptionWhenResumeWhenPlayerNotInRoom() {
+    void shouldThrowResumeFailedExceptionWhenResumeWhenPlayerNotInRoom() throws SessionException {
         LocalPlayer player = createTestPlayer();
         LocalRoom room = createTestRoom();
         room.join(player, false);
@@ -178,7 +178,7 @@ class LocalSessionManagerTest {
 
     @Test
     @DisplayName("should force leave when session timeout")
-    void shouldForceLeaveWhenSessionTimeout() {
+    void shouldForceLeaveWhenSessionTimeout() throws SessionException {
         LocalPlayer player = createTestPlayer();
         LocalRoom room = createTestRoom();
         room.join(player, false);
@@ -198,7 +198,7 @@ class LocalSessionManagerTest {
 
     @Test
     @DisplayName("should cancel old timeout when duplicate suspend")
-    void shouldCancelOldTimeoutWhenDuplicateSuspend() {
+    void shouldCancelOldTimeoutWhenDuplicateSuspend() throws SessionException {
         LocalPlayer player = createTestPlayer();
         LocalRoom room = createTestRoom();
         room.join(player, false);

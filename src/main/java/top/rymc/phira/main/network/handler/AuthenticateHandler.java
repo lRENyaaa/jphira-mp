@@ -2,11 +2,11 @@ package top.rymc.phira.main.network.handler;
 
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
-import top.rymc.phira.main.event.player.PlayerCreateEvent;
 import top.rymc.phira.main.event.player.PlayerPostLoginEvent;
 import top.rymc.phira.main.event.player.PlayerPreAuthenticateEvent;
 import top.rymc.phira.main.event.player.PlayerPreLoginEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
+import top.rymc.phira.main.game.exception.session.SessionException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.i18n.I18nService;
@@ -71,18 +71,19 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
             PlayerManager.ResolveResult<LocalPlayer> result = PlayerManager.resolvePlayer(
                     userInfo.getId(),
                     LocalPlayer.class,
-                    (remover) -> {
-                        LocalPlayer player = new LocalPlayer(userInfo, new ConnectionReference(connection));
-                        connection.onClose((ctx) -> {
-                            try {
-                                LocalSessionManager.suspend(player, remover);
-                            } catch (SuspendFailedException e) {
-                                remover.run();
-                            }
-                        });
-                        return player;
-                    },
-                    (player) -> LocalSessionManager.resume(player, connection)
+                    () -> new LocalPlayer(userInfo, new ConnectionReference(connection)),
+                    (player) -> LocalSessionManager.resume(player, connection),
+                    (remover, player) -> connection.onClose((ctx) -> {
+                        if (player.getConnection() != connection) {
+                            return;
+                        }
+
+                        try {
+                            LocalSessionManager.suspend(player, remover);
+                        } catch (SuspendFailedException e) {
+                            remover.run();
+                        }
+                    })
             );
 
             LocalPlayer player = result.player();
