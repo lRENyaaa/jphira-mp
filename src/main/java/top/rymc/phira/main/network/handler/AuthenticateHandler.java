@@ -93,19 +93,12 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
                 connection.setPacketHandler(PlayHandler.create(result.player()));
             }
 
-            PlayerPostLoginEvent postLoginEvent = new PlayerPostLoginEvent(result);
-            Server.postEvent(postLoginEvent);
-            String postLoginCancelReason = postLoginEvent.getCancelReason();
-            if (postLoginCancelReason != null) {
-                connection.send(ClientBoundAuthenticatePacket.failed(postLoginCancelReason));
-                connection.close();
-                return;
-            }
-
             connection.send(ClientBoundAuthenticatePacket.success(new FullUserProfile(userInfo.getId(), userInfo.getName(), false), roomInfo));
 
             Server.getLogger().info("{} has logged in as [{}] {}", connection.getRemoteAddressAsString(), userInfo.getId(), userInfo.getName());
 
+            PlayerPostLoginEvent postLoginEvent = new PlayerPostLoginEvent(result);
+            Server.postEvent(postLoginEvent);
         } catch (GameOperationException e) {
             connection.send(ClientBoundAuthenticatePacket.failed(I18nService.INSTANCE.getMessage(e.getMessageKey())));
             connection.close();

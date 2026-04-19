@@ -1,5 +1,5 @@
 # jphira-mp
-Java 实现的 [phira-mp](https://github.com/TeamFlos/phira-mp) 服务端，仍在早期开发中
+Java 实现的 [phira-mp](https://github.com/TeamFlos/phira-mp) 服务端，为性能与扩展性的平衡而生
 
 ## ⚙️ 特性
 * Java 实现
@@ -50,7 +50,7 @@ jphira-mp 在 [JitPack](https://jitpack.io/) 上可用
 
 通过 [jphira-mp-example-plugin](https://github.com/lRENyaaa/jphira-mp-example-plugin) 了解API基本用法。
 
-**请注意: jphira-mp 还在早期开发中，当前插件API可能会频繁变更**
+**请注意: jphira-mp 的尚未稳定，当前插件API可能会频繁变更**
 
 ## 📜 致谢
 jphira-mp 基于如下项目:

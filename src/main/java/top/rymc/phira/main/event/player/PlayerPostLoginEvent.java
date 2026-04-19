@@ -4,11 +4,12 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.PlayerManager;
+import top.rymc.phira.plugin.event.Event;
 import top.rymc.phira.plugin.event.ReasonedCancellableEvent;
 
 @RequiredArgsConstructor
 @Getter
-public class PlayerPostLoginEvent extends ReasonedCancellableEvent {
+public class PlayerPostLoginEvent extends Event {
 
     private final PlayerManager.ResolveResult<? extends Player> loginResult;
 
