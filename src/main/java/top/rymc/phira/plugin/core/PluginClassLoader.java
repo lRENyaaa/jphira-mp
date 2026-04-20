@@ -9,7 +9,8 @@ public class PluginClassLoader extends URLClassLoader {
     private static final Set<String> HOST_PROVIDED_PACKAGES = Set.of(
             "top.rymc.phira.",
             "meteordevelopment.orbit.",
-            "org.apache.logging.log4j.",
+            "org.apache.logging.",
+            "org.slf4j.",
             "com.google.gson."
     );
 

@@ -45,7 +45,7 @@ public final class RoomPlaying extends RoomGameState {
 
     @Override
     public void handleJoin(Player player) {
-
+        donePlayers.add(player);
     }
 
     @Override
