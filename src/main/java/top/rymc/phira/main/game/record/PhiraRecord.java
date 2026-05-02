@@ -338,7 +338,6 @@ public final class PhiraRecord implements Encodeable {
         }
 
         private static PhiraRecord readRecordFromFile(File file) {
-            System.out.println("reading: " + file.getName());
             PhiraRecord record = new PhiraRecord();
 
             try (FileInputStream fis = new FileInputStream(file);
