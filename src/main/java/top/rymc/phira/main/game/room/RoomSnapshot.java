@@ -53,7 +53,7 @@ public class RoomSnapshot {
 
     public class ProtocolHack {
 
-        private boolean isNotInSnapshot(LocalPlayer player) {
+        private boolean isNotInSnapshot(Player player) {
             return !players.contains(player) && !monitors.contains(player);
         }
 
@@ -77,7 +77,7 @@ public class RoomSnapshot {
 
         private static final Executor executor = CompletableFuture.delayedExecutor(2, TimeUnit.MILLISECONDS);
 
-        public void forceSyncHost(LocalPlayer player, boolean delay) {
+        public void forceSyncHost(Player player, boolean delay) {
             if (isNotInSnapshot(player)) return;
 
             Runnable task = () -> player.operations().ifPresent(operations -> operations.updateHostStatus(isHost(player)));
@@ -85,7 +85,7 @@ public class RoomSnapshot {
             runTask(task, delay);
         }
 
-        public void forceSyncInfo(LocalPlayer player, boolean delay) {
+        public void forceSyncInfo(Player player, boolean delay) {
             if (isNotInSnapshot(player)) return;
 
             Runnable task = () -> {
@@ -109,15 +109,15 @@ public class RoomSnapshot {
             runTask(task, delay);
         }
 
-        public void fixClientRoomState(LocalPlayer player) {
+        public void fixClientRoomState(Player player, boolean delay) {
             if (isNotInSnapshot(player)) return;
 
             if (!(state instanceof RoomSelectChart) && state.getChart() != null) {
-                fixClientRoomState0(player);
+                runTask(() -> fixClientRoomState0(player), delay);
             }
         }
 
-        private void fixClientRoomState0(LocalPlayer player) {
+        private void fixClientRoomState0(Player player) {
             ChartInfo chart = state.getChart();
             if (chart != null) {
                 player.operations().ifPresent(operations -> operations.enterState(new SelectChart(chart.getId())));

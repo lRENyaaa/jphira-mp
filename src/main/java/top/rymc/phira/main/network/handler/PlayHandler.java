@@ -108,8 +108,8 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
             PlayerJoinRoomSuccessEvent successEvent = new PlayerJoinRoomSuccessEvent(player, room, packet.isMonitor());
             Server.postEvent(successEvent);
 
-            room.getView().getProtocolHack().fixClientRoomState(player);
-            room.getView().getProtocolHack().forceSyncHost(player, false);
+            room.getView().getProtocolHack().fixClientRoomState(player, true);
+            room.getView().getProtocolHack().forceSyncHost(player, true);
 
         } catch (GameOperationException e) {
             connection.send(ClientBoundJoinRoomPacket.failed(I18nService.INSTANCE.getMessage(player, e.getMessageKey())));

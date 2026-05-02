@@ -13,6 +13,9 @@ import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.holder.SuspendableRoomHolder;
 import top.rymc.phira.main.game.exception.session.ResumeFailedException;
 import top.rymc.phira.main.game.exception.session.SuspendFailedException;
+import top.rymc.phira.main.game.room.state.RoomGameState;
+import top.rymc.phira.main.game.room.state.RoomPlaying;
+import top.rymc.phira.main.game.room.state.RoomWaitForReady;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 
@@ -96,9 +99,11 @@ public class LocalSessionManager {
 
         SUSPENDED.compute(player.getId(), (id, oldSession) -> {
 
-            try {
+            RoomGameState state = room.getView().getState();
+            if (state instanceof RoomWaitForReady) {
                 room.getOperation().cancelReady(player);
-            } catch (GameOperationException ignored) {
+            } else if (state instanceof RoomPlaying) {
+                room.getOperation().abort(player);
             }
 
             if (oldSession != null && oldSession.timeout != null) {

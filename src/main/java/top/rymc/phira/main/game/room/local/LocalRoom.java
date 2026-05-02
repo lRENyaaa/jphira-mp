@@ -27,6 +27,7 @@ import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -109,21 +110,32 @@ public class LocalRoom implements Room {
             return monitors.contains(player);
         }
 
-        private void transferHostToNextPlayer() {
+        public void transferHostToNextPlayer() {
             Player previousHost = host;
 
-            for (Player player : players) {
-                if (player.equals(previousHost)) {
-                    continue;
-                }
+            List<Player> sorted = players.stream()
+                    .sorted(Comparator.comparing(Player::getId))
+                    .toList();
 
-                Optional<PlayerOperations> operations = player.operations();
-                if (operations.isEmpty()) {
-                    continue;
-                }
+            Player nextHost = sorted.stream().findFirst().orElse(null);
 
-                host = player;
-                operations.get().updateHostStatus(true);
+            if (previousHost != null) {
+                for (Player player : sorted) {
+                    if (player.getId() <= previousHost.getId()) {
+                        continue;
+                    }
+
+                    nextHost = player;
+                    break;
+                }
+            }
+
+            if (nextHost != null) {
+                host = nextHost;
+                if (previousHost != null) {
+                    previousHost.operations().ifPresent((o) -> o.updateHostStatus(false));
+                }
+                nextHost.operations().ifPresent((o) -> o.updateHostStatus(true));
 
                 RoomHostChangeEvent event = new RoomHostChangeEvent(LocalRoom.this, previousHost, host);
                 Server.postEvent(event);

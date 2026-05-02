@@ -13,6 +13,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import top.rymc.phira.main.Server;
@@ -20,6 +21,7 @@ import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
+import top.rymc.phira.main.game.room.RoomSnapshot;
 import top.rymc.phira.main.game.room.local.LocalRoom;
 import top.rymc.phira.protocol.data.state.GameState;
 import top.rymc.phira.protocol.data.state.WaitForReady;
@@ -53,6 +55,9 @@ class RoomWaitForReadyStateTest {
     @Mock
     private ChartInfo chartInfo;
 
+    @Mock
+    private RoomSnapshot roomSnapshot;
+
     private Consumer<RoomGameState> stateUpdater;
 
     private RoomWaitForReady roomWaitForReady;
@@ -62,6 +67,7 @@ class RoomWaitForReadyStateTest {
     void setUp() {
         stateUpdater = mock(Consumer.class);
         lenient().when(room.getPlayerManager()).thenReturn(playerManager);
+        lenient().when(room.getView()).thenReturn(roomSnapshot);
         lenient().when(player.getId()).thenReturn(1);
         lenient().when(secondPlayer.getId()).thenReturn(2);
         lenient().when(player.isOnline()).thenReturn(true);
@@ -136,12 +142,15 @@ class RoomWaitForReadyStateTest {
     @DisplayName("should broadcast member cancel ready to all players when cancel ready")
     void shouldBroadcastMemberCancelReadyToAllPlayersWhenCancelReady() {
         roomWaitForReady = new RoomWaitForReady(room, stateUpdater, chartInfo);
+        when(playerManager.getPlayers()).thenReturn(Set.of(player, secondPlayer));
+        when(playerManager.getMonitors()).thenReturn(Set.of());
 
         try (MockedStatic<Server> ignored = mockStatic(Server.class)) {
+            roomWaitForReady.ready(player);
             roomWaitForReady.cancelReady(player);
 
             ArgumentCaptor<Consumer<PlayerOperations>> captor = ArgumentCaptor.forClass(Consumer.class);
-            verify(playerManager).broadcast(captor.capture());
+            verify(playerManager, times(2)).broadcast(captor.capture());
             captor.getValue().accept(playerOperations);
             verify(playerOperations).memberCancelReady(player.getId());
         }

@@ -39,6 +39,7 @@ class RoomPlayingStateTest {
 
     private LocalRoom room;
     private LocalRoom.PlayerManager playerManager;
+    private LocalRoom.RoomSetting roomSetting;
     private Player player;
     private Player secondPlayer;
     private Player monitor;
@@ -59,6 +60,7 @@ class RoomPlayingStateTest {
     void setUp() throws IOException {
         room = mock(LocalRoom.class);
         playerManager = mock(LocalRoom.PlayerManager.class);
+        roomSetting = mock(LocalRoom.RoomSetting.class);
         player = mock(Player.class);
         secondPlayer = mock(Player.class);
         monitor = mock(Player.class);
@@ -69,6 +71,8 @@ class RoomPlayingStateTest {
         stateUpdater = mock(Consumer.class);
 
         lenient().when(room.getPlayerManager()).thenReturn(playerManager);
+        lenient().when(room.getSetting()).thenReturn(roomSetting);
+        lenient().when(roomSetting.isCycle()).thenReturn(false);
         lenient().when(player.getId()).thenReturn(1);
         lenient().when(player.getName()).thenReturn("Player1");
         lenient().when(secondPlayer.getId()).thenReturn(2);
@@ -180,6 +184,7 @@ class RoomPlayingStateTest {
         when(playerManager.getMonitors()).thenReturn(Set.of());
         when(playerManager.getPlayersCopy()).thenReturn(Set.of(player));
         when(player.operations()).thenReturn(java.util.Optional.of(playerOperations));
+        when(player.isOnline()).thenReturn(true);
 
         roomPlaying.abort(player);
 
@@ -233,6 +238,8 @@ class RoomPlayingStateTest {
         when(playerManager.getPlayersCopy()).thenReturn(Set.of(player, secondPlayer));
         when(player.operations()).thenReturn(java.util.Optional.of(playerOperations));
         when(secondPlayer.operations()).thenReturn(java.util.Optional.of(secondPlayerOperations));
+        when(player.isOnline()).thenReturn(true);
+        when(secondPlayer.isOnline()).thenReturn(true);
 
         roomPlaying.played(player, 1000);
         roomPlaying.played(secondPlayer, 1001);

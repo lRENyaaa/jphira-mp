@@ -80,6 +80,10 @@ public final class RoomPlaying extends RoomGameState {
 
     @Override
     public void abort(Player player) {
+        if (donePlayers.contains(player)) {
+            return;
+        }
+
         try {
             broadcast(op -> op.gameAbort(player.getId()));
 
@@ -92,6 +96,9 @@ public final class RoomPlaying extends RoomGameState {
 
     @Override
     public void played(Player player, int recordId) {
+        if (donePlayers.contains(player)) {
+            return;
+        }
 
         try {
             GameRecord record = PhiraFetcher.GET_RECORD_INFO.toIntFunction(e -> {
@@ -143,6 +150,9 @@ public final class RoomPlaying extends RoomGameState {
             RoomSelectChart state = new RoomSelectChart(room, stateUpdater, chart);
             updateGameState(state);
             broadcast(PlayerOperations::gameEnd);
+            if (room.getSetting().isCycle()) {
+                room.getPlayerManager().transferHostToNextPlayer();
+            }
         }
     }
 
