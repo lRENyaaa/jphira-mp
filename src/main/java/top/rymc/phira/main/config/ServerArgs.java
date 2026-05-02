@@ -74,7 +74,7 @@ public class ServerArgs {
             throw new AssertionError();
         }
 
-        this.port = options.valueOf(portSpec);
+        this.port = clampPort(options.valueOf(portSpec));
         this.host = options.valueOf(hostSpec);
         this.pluginsDir = Paths.get(options.valueOf(pluginsSpec));
         this.proxyProtocol = options.valueOf(proxyProtocol);
@@ -90,4 +90,9 @@ public class ServerArgs {
             logger.error("Failed to print help: {}", e.getMessage());
         }
     }
+
+    private static int clampPort(int value) {
+        return Math.max(1, Math.min(value, 65535));
+    }
+
 }

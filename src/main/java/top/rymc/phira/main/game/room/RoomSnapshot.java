@@ -97,7 +97,7 @@ public class RoomSnapshot {
                     String name = I18nService.INSTANCE.getMessage(player, "system.live_recorder_name");
                     player.operations().ifPresent(operations -> {
                         operations.memberJoined(-1, name, true);
-                        operations.memberLeft(-1, name);
+                        runTask(() -> operations.memberLeft(-1, name),true);
                     });
                 }
 

@@ -1,14 +1,21 @@
 package top.rymc.phira.main.game.record;
 
+import com.github.luben.zstd.Zstd;
+import com.github.luben.zstd.ZstdInputStream;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.DecoderException;
+import io.netty.util.ReferenceCountUtil;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import top.rymc.phira.main.util.PhiraFetcher;
+import top.rymc.phira.main.util.ThreadFactoryCompat;
 import top.rymc.phira.protocol.PacketRegistry;
 import top.rymc.phira.protocol.codec.Encodeable;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
@@ -22,6 +29,8 @@ import top.rymc.phira.protocol.packet.serverbound.ServerBoundTouchesPacket;
 import top.rymc.phira.protocol.util.NettyPacketUtil;
 import top.rymc.phira.protocol.util.PacketWriter;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -32,7 +41,15 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.zip.Deflater;
+import java.util.zip.InflaterInputStream;
 
 @Getter
 public final class PhiraRecord implements Encodeable {
@@ -40,10 +57,22 @@ public final class PhiraRecord implements Encodeable {
     private static final Logger LOGGER = LogManager.getLogger("PhiraRecord");
 
     private static final FileHeader fileHeader = new FileHeader();
-    private static final int fileVersion = 0;
+    private static final int formatVersion = 1;
+
+    private static CompressionType formatCompressionType = CompressionType.ZSTD;
+    private static int formatCompressionLevel = Zstd.defaultCompressionLevel();
+
+    public static void setCompression(CompressionType compressionType, int compressionLevel) {
+        formatCompressionType = compressionType;
+        formatCompressionLevel = compressionLevel;
+    }
 
     private FileHeader.FileType fileType;
+    private int fileVersion;
+    private CompressionType fileCompressionType;
+
     private int id;
+    private long time;
     private int chart;
     private String chartName;
     private int user;
@@ -54,8 +83,9 @@ public final class PhiraRecord implements Encodeable {
     private PhiraRecord() {
     }
 
-    public PhiraRecord(int id, int chart, String chartName, int user, String userName, List<TouchFrame> touchFrames, List<JudgeEvent> judgeEvents) {
+    public PhiraRecord(int id, long time, int chart, String chartName, int user, String userName, List<TouchFrame> touchFrames, List<JudgeEvent> judgeEvents) {
         this.id = id;
+        this.time = time;
         this.chart = chart;
         this.chartName = chartName;
         this.user = user;
@@ -67,14 +97,25 @@ public final class PhiraRecord implements Encodeable {
     @Override
     public void encode(ByteBuf byteBuf) {
         PacketWriter.write(byteBuf, fileHeader);
-        PacketWriter.write(byteBuf, fileVersion);
-        PacketWriter.write(byteBuf, id);
-        PacketWriter.write(byteBuf, chart);
-        PacketWriter.write(byteBuf, chartName);
-        PacketWriter.write(byteBuf, user);
-        PacketWriter.write(byteBuf, userName);
-        PacketWriter.write(byteBuf, touchFrames);
-        PacketWriter.write(byteBuf, judgeEvents);
+        PacketWriter.write(byteBuf, formatVersion);
+        PacketWriter.write(byteBuf, formatCompressionType);
+
+        ByteBuf tmpBuf = Unpooled.buffer();
+        try {
+            PacketWriter.write(tmpBuf, id);
+            PacketWriter.write(tmpBuf, time);
+            PacketWriter.write(tmpBuf, chart);
+            PacketWriter.write(tmpBuf, chartName);
+            PacketWriter.write(tmpBuf, user);
+            PacketWriter.write(tmpBuf, userName);
+            PacketWriter.write(tmpBuf, touchFrames);
+            PacketWriter.write(tmpBuf, judgeEvents);
+
+            byteBuf.writeBytes(formatCompressionType.compress(tmpBuf, formatCompressionLevel));
+        } finally {
+            ReferenceCountUtil.release(tmpBuf);
+        }
+
     }
 
     public void decode(ByteBuf buf) {
@@ -82,6 +123,8 @@ public final class PhiraRecord implements Encodeable {
         if (fileType == FileHeader.FileType.Unknown) {
             throw new IllegalArgumentException("Unknown file type: file header does not match JPhiraRec or TPhiraRec format");
         }
+
+        this.fileCompressionType = CompressionType.NONE;
 
         if (fileType == FileHeader.FileType.TPhiraRec) {
             try {
@@ -92,12 +135,47 @@ public final class PhiraRecord implements Encodeable {
             return;
         }
 
-        int version = buf.readIntLE();
-        if (version != fileVersion) {
-            throw new IllegalArgumentException(
-                String.format("Unsupported file version: %d (supported version: %d)", version, fileVersion));
+        this.fileVersion = buf.readIntLE();
+
+        if (fileVersion == 0) {
+            try {
+                decodeAsV1JPhiraRec(buf);
+            } catch (IOException | CodecException e) {
+                throw new RuntimeException("Failed to decode JPhiraRec version 0 format record", e);
+            }
+            return;
         }
+
+        if (fileVersion == 1) {
+            this.fileCompressionType = CompressionType.decode(buf);
+            ByteBuf decompressed = fileCompressionType.decompress(buf);
+            try {
+                decodeAsV2JPhiraRec(decompressed);
+            } finally {
+                ReferenceCountUtil.safeRelease(decompressed);
+            }
+            buf.skipBytes(buf.readableBytes());
+            return;
+        }
+
+        throw new IllegalArgumentException(String.format("Unsupported file version: %d (supported version: %d)", fileVersion, formatVersion));
+
+    }
+
+    private void decodeAsV2JPhiraRec(ByteBuf buf) {
         this.id = buf.readIntLE();
+        this.time = buf.readLongLE();
+        this.chart = buf.readIntLE();
+        this.chartName = NettyPacketUtil.decodeString(buf,Short.MAX_VALUE);
+        this.user = buf.readIntLE();
+        this.userName = NettyPacketUtil.decodeString(buf,Short.MAX_VALUE);
+        this.touchFrames = NettyPacketUtil.decodeList(buf, TouchFrame::decode);
+        this.judgeEvents = NettyPacketUtil.decodeList(buf, JudgeEvent::decode);
+    }
+
+    private void decodeAsV1JPhiraRec(ByteBuf buf) throws IOException {
+        this.id = buf.readIntLE();
+        this.time = getTimeStamp(id);
         this.chart = buf.readIntLE();
         this.chartName = NettyPacketUtil.decodeString(buf,Short.MAX_VALUE);
         this.user = buf.readIntLE();
@@ -112,6 +190,8 @@ public final class PhiraRecord implements Encodeable {
         this.user = buf.readIntLE();
         this.userName = PhiraFetcher.GET_USER_INFO_BY_ID.apply(user).getName();
         this.id = buf.readIntLE();
+        this.time = getTimeStamp(id);
+        this.fileVersion = 0;
 
         this.touchFrames = new ArrayList<>();
         this.judgeEvents = new ArrayList<>();
@@ -138,17 +218,32 @@ public final class PhiraRecord implements Encodeable {
             int length = buf.readIntLE();
             if (length < 0) {
                 throw new CorruptedFrameException(
-                    String.format("Invalid packet length: %d (negative value)", length));
+                        String.format("Invalid packet length: %d (negative value)", length));
             }
             if (buf.readableBytes() < length) {
                 throw new CorruptedFrameException(
-                    String.format("Insufficient data for packet: required %d bytes, but only %d bytes available",
-                        length, buf.readableBytes()));
+                        String.format("Insufficient data for packet: required %d bytes, but only %d bytes available",
+                                length, buf.readableBytes()));
             }
 
-            ServerBoundPacket packet = PacketRegistry.ServerBound.decode(buf.readRetainedSlice(length));
-            packet.handle(dataProcessor);
+            ByteBuf packetBuf = buf.readRetainedSlice(length);
+            try {
+                ServerBoundPacket packet = PacketRegistry.ServerBound.decode(packetBuf);
+                packet.handle(dataProcessor);
+            } finally {
+                ReferenceCountUtil.safeRelease(packetBuf);
+            }
         }
+    }
+
+    private static long getTimeStamp(int recordId) {
+        try {
+            return PhiraFetcher.GET_RECORD_INFO.apply(recordId).getTime().toInstant().toEpochMilli();
+        } catch (IOException e) {
+            LOGGER.warn("Failed get record info: {}, using system time", recordId);
+            return System.currentTimeMillis();
+        }
+
     }
 
 
@@ -166,26 +261,60 @@ public final class PhiraRecord implements Encodeable {
         return success;
     }
 
+    private static final ExecutorService BATCH_EXECUTOR = ThreadFactoryCompat.BATCH_EXECUTOR_CREATOR.get();
+
     public static List<PhiraRecord> readFromDirectory(Path dirPath) {
         File dir = dirPath.toFile();
         if (!dir.exists()) {
             dir.mkdirs();
+            return List.of();
         }
 
         if (!dir.isDirectory()) {
             LOGGER.warn("Path is not a directory: {}", dir.getAbsolutePath());
-            return new ArrayList<>();
+            return List.of();
         }
 
         File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".phirarec"));
-        if (files == null) {
-            return new ArrayList<>();
+        if (files == null || files.length == 0) {
+            return List.of();
         }
 
-        return Arrays.stream(files)
-                .map(PhiraRecordIO::readRecordFromFile)
-                .filter(Objects::nonNull)
-                .toList();
+        List<Future<PhiraRecord>> futures = new ArrayList<>(files.length);
+        for (File file : files) {
+            futures.add(BATCH_EXECUTOR.submit(() -> PhiraRecordIO.readRecordFromFile(file)));
+        }
+
+        List<PhiraRecord> records = new ArrayList<>(files.length);
+        for (Future<PhiraRecord> future : futures) {
+            try {
+                PhiraRecord record = future.get();
+                if (record != null) {
+                    records.add(record);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                LOGGER.warn("Batch reading interrupted");
+                break;
+            } catch (ExecutionException e) {
+                LOGGER.error("Failed to read record file", e.getCause());
+            }
+        }
+
+        return records;
+    }
+
+    public static PhiraRecord readFromFile(Path path) {
+        File file = path.toFile();
+        if (!file.exists()) {
+            return null;
+        }
+
+        if (!file.isFile()) {
+            return null;
+        }
+
+        return PhiraRecordIO.readRecordFromFile(file);
     }
 
     private static class PhiraRecordIO {
@@ -209,6 +338,7 @@ public final class PhiraRecord implements Encodeable {
         }
 
         private static PhiraRecord readRecordFromFile(File file) {
+            System.out.println("reading: " + file.getName());
             PhiraRecord record = new PhiraRecord();
 
             try (FileInputStream fis = new FileInputStream(file);
@@ -276,6 +406,113 @@ public final class PhiraRecord implements Encodeable {
             JPhiraRec,
             TPhiraRec,
             Unknown
+        }
+    }
+
+    @RequiredArgsConstructor
+    @Getter(AccessLevel.PRIVATE)
+    public enum CompressionType implements Encodeable {
+        NONE(0x00, ByteBuf::retainedSlice, (input,level) -> input.retainedSlice()),
+        ZSTD(0x01,
+                (input) -> {
+                    ByteArrayInputStream rawIn = new ByteArrayInputStream(ByteBufUtil.getBytes(input));
+                    try (ZstdInputStream in = new ZstdInputStream(rawIn)) {
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+                        byte[] buffer = new byte[4096];
+                        int index;
+
+                        while ((index = in.read(buffer)) != -1) {
+                            out.write(buffer, 0, index);
+                        }
+
+                        return Unpooled.wrappedBuffer(out.toByteArray());
+
+                    } catch (IOException e) {
+                        throw new DecoderException("Zstd decompression failed", e);
+                    }
+                },
+                (input, level) -> {
+                    byte[] src = ByteBufUtil.getBytes(input);
+                    byte[] compressed = Zstd.compress(src, level);
+                    return Unpooled.wrappedBuffer(compressed);
+
+                }),
+        DEFLATE(0x02,
+                (input) -> {
+                    ByteArrayInputStream rawIn = new ByteArrayInputStream(ByteBufUtil.getBytes(input));
+                    try (InflaterInputStream in = new InflaterInputStream(rawIn)) {
+
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+                        byte[] buf = new byte[4096];
+                        int n;
+
+                        while ((n = in.read(buf)) != -1) {
+                            out.write(buf, 0, n);
+                        }
+
+                        return Unpooled.wrappedBuffer(out.toByteArray());
+
+                    } catch (IOException e) {
+                        throw new DecoderException("Deflate decompress failed", e);
+                    }
+                },
+                (input, level) -> {
+                    byte[] src = ByteBufUtil.getBytes(input);
+
+                    Deflater deflater = new Deflater();
+                    deflater.setLevel(level);
+                    deflater.setInput(src);
+                    deflater.finish();
+
+                    byte[] buf = new byte[4096];
+                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+                    while (!deflater.finished()) {
+                        int index = deflater.deflate(buf);
+                        out.write(buf, 0, index);
+                    }
+
+                    deflater.end();
+
+                    return Unpooled.wrappedBuffer(out.toByteArray());
+
+                });
+
+        private final int id;
+        private final Function<ByteBuf, ByteBuf> decompressor;
+        private final BiFunction<ByteBuf, Integer, ByteBuf> compressor;
+
+        public ByteBuf decompress(ByteBuf buf) {
+            return decompressor.apply(buf);
+        }
+
+        public ByteBuf compress(ByteBuf buf, int level) {
+            return compressor.apply(buf, level);
+        }
+
+        private static Map<Integer, CompressionType> getCompressionTypeMap() {
+            return Map.copyOf(Arrays.stream(values()).collect(Collectors.toMap(
+                    CompressionType::getId,
+                    Function.identity()
+            )));
+        }
+
+        private static final Map<Integer, CompressionType> COMPRESSION_TYPE_MAP = getCompressionTypeMap();
+
+        public static CompressionType decode(ByteBuf buf) {
+            int id = buf.readByte();
+            CompressionType type = COMPRESSION_TYPE_MAP.get(id);
+            if (type == null) {
+                throw new DecoderException("Unknown CompressionType id: " + id);
+            }
+            return type;
+        }
+
+        @Override
+        public void encode(ByteBuf buf) {
+            buf.writeByte(id);
         }
     }
 }

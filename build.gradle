@@ -33,7 +33,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 group = 'top.rymc'
-version = '1.0.0-dev-20260420-02'
+version = '1.0.0-dev-20260502-01'
 
 repositories {
     mavenCentral()
@@ -43,10 +43,11 @@ repositories {
 
 dependencies {
     implementation project(':jphira-mp-logger')
-    implementation 'com.github.lRENyaaa:jphira-mp-protocol:2.2.0'
+    implementation 'com.github.lRENyaaa:jphira-mp-protocol:2.2.1'
 
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'commons-codec:commons-codec:1.16.0'
+    implementation 'com.github.luben:zstd-jni:1.5.6-6'
 
     implementation 'com.google.guava:guava:33.2.0-jre'
     implementation 'com.github.ben-manes.caffeine:caffeine:3.2.3'

@@ -13,6 +13,7 @@ import top.rymc.phira.main.event.player.PlayerDisconnectEvent;
 import top.rymc.phira.main.event.network.PacketReceiveEvent;
 import top.rymc.phira.main.event.network.PacketSendEvent;
 import top.rymc.phira.main.game.player.PlayerManager;
+import top.rymc.phira.main.util.ExecutorServiceManager;
 import top.rymc.phira.main.util.ThreadFactoryCompat;
 import top.rymc.phira.protocol.data.message.ChatMessage;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
@@ -52,9 +53,9 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
         this.channel = channel;
         this.remoteAddress = remoteAddress;
 
-        this.packetExecutor = Executors.newSingleThreadExecutor(
+        this.packetExecutor = ExecutorServiceManager.registerService(Executors.newSingleThreadExecutor(
                 ThreadFactoryCompat.THREAD_FACTORY_CREATOR.apply("LocalPlayer-Worker-" + getRemoteAddressAsString())
-        );
+        ));
     }
 
     public void onClose(Consumer<ChannelHandlerContext> handler) {

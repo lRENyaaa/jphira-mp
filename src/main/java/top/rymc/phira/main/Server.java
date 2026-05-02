@@ -21,6 +21,7 @@ import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.network.ServerChannelInitializer;
+import top.rymc.phira.main.util.ExecutorServiceManager;
 import top.rymc.phira.plugin.core.PluginManager;
 import top.rymc.phira.plugin.event.CancellableEvent;
 import top.rymc.phira.plugin.event.Event;
@@ -190,6 +191,7 @@ public class Server {
         postEvent(new ServerLifecycleEvent(ServerLifecycleEvent.State.STOPPED));
 
         LogManager.shutdown();
+        ExecutorServiceManager.shutdown();
         System.exit(0);
     }
 

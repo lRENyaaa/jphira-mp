@@ -107,6 +107,7 @@ public final class RoomPlaying extends RoomGameState {
 
                 PhiraRecord phiraRecord = new PhiraRecord(
                         record.getId(),
+                        record.getTime().toInstant().toEpochMilli(),
                         chart.getId(),
                         chart.getName(),
                         player.getId(),

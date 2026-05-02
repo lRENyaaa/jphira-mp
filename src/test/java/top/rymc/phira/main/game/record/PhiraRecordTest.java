@@ -54,7 +54,7 @@ class PhiraRecordTest {
     void shouldGenerateCorrectByteStreamWithFileHeaderWhenEncode() {
         List<TouchFrame> touchFrames = new ArrayList<>();
         List<JudgeEvent> judgeEvents = new ArrayList<>();
-        PhiraRecord record = new PhiraRecord(1, 100, "TestChart", 1, "Player1", touchFrames, judgeEvents);
+        PhiraRecord record = new PhiraRecord(1, System.currentTimeMillis(), 100, "TestChart", 1, "Player1", touchFrames, judgeEvents);
 
         ByteBuf buf = Unpooled.buffer();
         record.encode(buf);
@@ -73,7 +73,7 @@ class PhiraRecordTest {
     void shouldCorrectlyParseJPhiraRecFormatWhenDecode() throws Exception {
         List<TouchFrame> touchFrames = new ArrayList<>();
         List<JudgeEvent> judgeEvents = new ArrayList<>();
-        PhiraRecord original = new PhiraRecord(1, 100, "TestChart", 1, "Player1", touchFrames, judgeEvents);
+        PhiraRecord original = new PhiraRecord(1, System.currentTimeMillis(), 100, "TestChart", 1, "Player1", touchFrames, judgeEvents);
 
         ByteBuf buf = Unpooled.buffer();
         original.encode(buf);
@@ -110,7 +110,7 @@ class PhiraRecordTest {
     void shouldSaveRecordToCorrectPathWithCorrectFilename() {
         List<TouchFrame> touchFrames = new ArrayList<>();
         List<JudgeEvent> judgeEvents = new ArrayList<>();
-        PhiraRecord record = new PhiraRecord(12345, 100, "TestChart", 1, "Player1", touchFrames, judgeEvents);
+        PhiraRecord record = new PhiraRecord(12345, System.currentTimeMillis(), 100, "TestChart", 1, "Player1", touchFrames, judgeEvents);
 
         boolean success = PhiraRecord.saveAsFile(record, tempDir);
 
@@ -123,8 +123,8 @@ class PhiraRecordTest {
     void shouldReadAllPhirarecFilesFromDirectory() {
         List<TouchFrame> touchFrames = new ArrayList<>();
         List<JudgeEvent> judgeEvents = new ArrayList<>();
-        PhiraRecord record1 = new PhiraRecord(1, 100, "Chart1", 1, "Player1", touchFrames, judgeEvents);
-        PhiraRecord record2 = new PhiraRecord(2, 200, "Chart2", 2, "Player2", touchFrames, judgeEvents);
+        PhiraRecord record1 = new PhiraRecord(1, System.currentTimeMillis(), 100, "Chart1", 1, "Player1", touchFrames, judgeEvents);
+        PhiraRecord record2 = new PhiraRecord(2, System.currentTimeMillis(), 200, "Chart2", 2, "Player2", touchFrames, judgeEvents);
 
         PhiraRecord.saveAsFile(record1, tempDir);
         PhiraRecord.saveAsFile(record2, tempDir);
@@ -149,7 +149,7 @@ class PhiraRecordTest {
     void shouldFilterNonPhirarecFiles() throws IOException {
         List<TouchFrame> touchFrames = new ArrayList<>();
         List<JudgeEvent> judgeEvents = new ArrayList<>();
-        PhiraRecord record = new PhiraRecord(1, 100, "Chart1", 1, "Player1", touchFrames, judgeEvents);
+        PhiraRecord record = new PhiraRecord(1, System.currentTimeMillis(), 100, "Chart1", 1, "Player1", touchFrames, judgeEvents);
         PhiraRecord.saveAsFile(record, tempDir);
 
         Files.createFile(tempDir.resolve("not-a-record.txt"));
