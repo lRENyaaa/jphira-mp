@@ -80,8 +80,11 @@ public class LocalRoom implements Room {
     @SuppressWarnings("InnerClassMayBeStatic")
     public class PlayerManager {
 
-        @Getter
         private Player host;
+
+        public Optional<Player> getHost() {
+            return Optional.ofNullable(host);
+        }
 
         private final Set<Player> players = ConcurrentHashMap.newKeySet();
         private final Set<Player> monitors = ConcurrentHashMap.newKeySet();
@@ -348,7 +351,7 @@ public class LocalRoom implements Room {
                     setting.live,
                     setting.locked,
                     setting.cycle,
-                    setting.host ? playerManager.host.getId() : null,
+                    setting.host && playerManager.host != null ? playerManager.host.getId() : null,
                     playerManager.getPlayersCopy(),
                     playerManager.getMonitorsCopy()
             );
