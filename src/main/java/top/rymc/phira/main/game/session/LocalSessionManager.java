@@ -6,7 +6,6 @@ import lombok.Setter;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.event.session.PlayerSessionSuspendEvent;
 import top.rymc.phira.main.event.session.PlayerSessionTimeoutEvent;
-import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.room.Room;

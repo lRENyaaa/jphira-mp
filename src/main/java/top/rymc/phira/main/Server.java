@@ -3,9 +3,11 @@ package top.rymc.phira.main;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -54,8 +56,8 @@ public class Server {
     @Getter
     private PluginManager pluginManager;
 
-    private NioEventLoopGroup bossGroup;
-    private NioEventLoopGroup workerGroup;
+    private EventLoopGroup bossGroup;
+    private EventLoopGroup workerGroup;
     private Channel serverChannel;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicLong startTime = new AtomicLong(0);
@@ -110,8 +112,8 @@ public class Server {
 
         logger.info("Initializing network...");
 
-        bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory("Netty-Boss", true));
-        workerGroup = new NioEventLoopGroup(0, new DefaultThreadFactory("Netty-Worker", true));
+        bossGroup = new MultiThreadIoEventLoopGroup(1, new DefaultThreadFactory("Netty-Boss", true), NioIoHandler.newFactory());
+        workerGroup = new MultiThreadIoEventLoopGroup(0, new DefaultThreadFactory("Netty-Worker", true), NioIoHandler.newFactory());
 
         ServerBootstrap bootstrap = new ServerBootstrap();
         bootstrap.group(bossGroup, workerGroup)

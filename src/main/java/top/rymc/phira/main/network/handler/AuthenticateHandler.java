@@ -6,7 +6,6 @@ import top.rymc.phira.main.event.player.PlayerPostLoginEvent;
 import top.rymc.phira.main.event.player.PlayerPreAuthenticateEvent;
 import top.rymc.phira.main.event.player.PlayerPreLoginEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
-import top.rymc.phira.main.game.exception.session.SessionException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.i18n.I18nService;
