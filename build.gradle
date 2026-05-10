@@ -33,7 +33,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 group = 'top.rymc'
-version = '1.0.0-dev-20260510-01'
+version = '1.0.0-dev-20260510-02'
 
 repositories {
     mavenCentral()
@@ -63,7 +63,7 @@ dependencies {
     implementation 'org.apache.logging.log4j:log4j-jul:2.25.4'
 
     implementation 'net.minecrell:terminalconsoleappender:1.3.0'
-    implementation 'org.jline:jline-terminal-jansi:3.30.8'
+    implementation 'org.jline:jline-terminal-jni:4.1.0'
     implementation 'com.lmax:disruptor:4.0.0'
 
     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
