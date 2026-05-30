@@ -52,6 +52,8 @@ jphira-mp 在 [JitPack](https://jitpack.io/) 上可用
 
 **请注意: jphira-mp 的尚未稳定，当前插件API可能会频繁变更**
 
+**当前插件系统正在独立项目重构中，请查看 [PluginSystem-Prototype](https://github.com/lRENyaaa/PluginSystem-Prototype)**
+
 ## 📜 致谢
 jphira-mp 基于如下项目:
 * [jphira-mp-protocol](https://github.com/lRENyaaa/jphira-mp-protocol) - 基础协议实现
