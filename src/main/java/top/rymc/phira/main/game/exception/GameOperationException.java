@@ -52,6 +52,10 @@ public class GameOperationException extends RuntimeException {
         return new GameOperationException("error.record_not_found");
     }
 
+    public static GameOperationException recordSubmitFailed() {
+        return new GameOperationException("成绩提交失败，请稍后重试");
+    }
+
     public static GameOperationException alreadyInRoom() {
         return new GameOperationException("error.already_in_room");
     }

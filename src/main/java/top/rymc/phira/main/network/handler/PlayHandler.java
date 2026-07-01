@@ -18,6 +18,8 @@ import top.rymc.phira.protocol.packet.serverbound.ServerBoundJoinRoomPacket;
 
 public class PlayHandler extends SimpleServerBoundPacketHandler implements PlayerHolder {
 
+    private static final String ROOM_ID = "zenith";
+
     @Getter
     private final LocalPlayer player;
 
@@ -43,7 +45,11 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
         PlayerConnection connection = player.getConnection();
 
         try {
-            Room room = RoomManager.findRoom(packet.getRoomId());
+            if (!ROOM_ID.equals(packet.getRoomId())) {
+                throw GameOperationException.roomNotFound();
+            }
+
+            Room room = RoomManager.findRoom(ROOM_ID);
             if (room == null) {
                 throw GameOperationException.roomNotFound();
             }
@@ -56,7 +62,6 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
             connection.send(hack.buildJoinSuccessPacket());
 
             hack.fixClientRoomState(player, true);
-            hack.setHost(player, true);
 
         } catch (GameOperationException e) {
             connection.send(ClientBoundJoinRoomPacket.failed(I18nService.INSTANCE.getMessage(player, e.getMessageKey())));

@@ -13,7 +13,6 @@ import top.rymc.phira.main.game.room.RoomSnapshot;
 import top.rymc.phira.main.game.room.state.RoomGameState;
 import top.rymc.phira.main.game.room.state.RoomGameStateReference;
 import top.rymc.phira.main.game.room.state.RoomSelectChart;
-import top.rymc.phira.main.util.PhiraFetcher;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
 
@@ -22,7 +21,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.function.IntFunction;
 
 public class LocalRoom implements Room {
 
@@ -180,21 +178,12 @@ public class LocalRoom implements Room {
         }
 
         public void selectChart(Player player, int id) {
-            validateHost(player);
-
-            if (!(stateRef.get() instanceof RoomSelectChart)) {
-                throw GameOperationException.invalidState();
+            if (stateRef.get() instanceof RoomSelectChart state) {
+                state.vote(player, id);
+                return;
             }
 
-            IntFunction<ChartInfo> getInfoFunc = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
-                throw GameOperationException.chartNotFound();
-            });
-
-            ChartInfo info = getInfoFunc.apply(id);
-
-            stateRef.get().setChart(info);
-            playerManager.broadcast(operations -> operations.selectChart(info.getId(), info.getName(), player.getId()));
-
+            throw GameOperationException.invalidState();
         }
 
         public void chat(Player player, String message) {

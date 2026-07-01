@@ -21,6 +21,7 @@ import top.rymc.phira.main.config.ServerArgs;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.i18n.I18nService;
+import top.rymc.phira.main.game.room.chart.ChartPool;
 import top.rymc.phira.main.game.room.local.LocalRoomBuilder;
 import top.rymc.phira.main.network.ServerChannelInitializer;
 import top.rymc.phira.main.util.ExecutorServiceManager;
@@ -89,12 +90,24 @@ public class Server {
         I18nService.INSTANCE.setDefaultLanguage(args.getDefaultLanguage());
         logger.info("Default language: {}", args.getDefaultLanguage());
 
+        logger.info("Preloading chart pool...");
+        ChartPool.preload();
+        logger.info("Chart pool preloaded.");
+
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             Thread.currentThread().setName("ShutdownThread");
             if (isRunning()) {
                 shutdown();
             }
         }));
+
+        new LocalRoomBuilder()
+                .host(false)
+                .cycle(false)
+                .chat(false)
+                .autoDestroy(false)
+                .maxPlayer(1000)
+                .build("zenith");
 
         logger.info("Initializing network...");
 
@@ -116,15 +129,6 @@ public class Server {
 
         long totalTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - bootStart);
         logger.info("Done ({}s)!", String.format("%.3f", totalTime / 1000.0));
-
-        new LocalRoomBuilder()
-                .host(false)
-                .cycle(false)
-                .chat(false)
-                .autoDestroy(false)
-                .maxPlayer(1000)
-                .build("zenith");
-
 
     }
 

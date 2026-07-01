@@ -22,7 +22,7 @@ public final class PhiraFetcher {
     private static final String USER_AGENT = "JPhira/1";
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
-    private static final int MAX_RETRIES = 5;
+    private static final int MAX_RETRIES = 8;
     private static final long RETRY_DELAY_MS = 150;
 
     private static final Gson GSON = GsonUtil.getGson();

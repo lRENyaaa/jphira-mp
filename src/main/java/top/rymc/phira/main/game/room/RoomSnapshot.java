@@ -75,7 +75,7 @@ public class RoomSnapshot {
             );
         }
 
-        private static final Executor executor = CompletableFuture.delayedExecutor(2, TimeUnit.MILLISECONDS);
+        private static final Executor executor = CompletableFuture.delayedExecutor(10, TimeUnit.MILLISECONDS);
 
 
         public void fixClientRoomState(Player player, boolean delay) {
@@ -84,6 +84,8 @@ public class RoomSnapshot {
             if (state instanceof RoomWaitForReady) {
                 runTask(() -> player.operations().ifPresent(operations -> operations.enterState(new WaitForReady())), delay);
             }
+
+            setHost(player, true);
         }
         public void setHost(Player player, boolean delay) {
             runTask(() -> player.operations().ifPresent(operations -> operations.updateHostStatus(true)), delay);
