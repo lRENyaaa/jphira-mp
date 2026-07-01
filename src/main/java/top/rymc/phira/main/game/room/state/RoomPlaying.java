@@ -46,7 +46,6 @@ public final class RoomPlaying extends RoomGameState {
 
     @Override
     public void handleLeave(Player player) {
-
     }
 
     @Override
@@ -137,9 +136,6 @@ public final class RoomPlaying extends RoomGameState {
             RoomSelectChart state = new RoomSelectChart(room, stateUpdater, chart);
             updateGameState(state);
             broadcast(PlayerOperations::gameEnd);
-            if (room.getSetting().isCycle()) {
-                room.getPlayerManager().transferHostToNextPlayer();
-            }
         }
     }
 

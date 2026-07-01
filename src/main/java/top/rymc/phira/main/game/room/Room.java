@@ -18,8 +18,6 @@ public interface Room {
 
     RoomSnapshot getView();
 
-    boolean isHost(Player player);
-
     boolean containsPlayer(Player player);
 
     boolean containsMonitor(Player player);

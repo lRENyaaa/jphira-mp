@@ -18,9 +18,7 @@ import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
 import top.rymc.phira.protocol.data.monitor.touch.TouchFrame;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -71,12 +69,6 @@ public class LocalRoom implements Room {
     @SuppressWarnings("InnerClassMayBeStatic")
     public class PlayerManager {
 
-        private Player host;
-
-        public Optional<Player> getHost() {
-            return Optional.ofNullable(host);
-        }
-
         private final Set<Player> players = ConcurrentHashMap.newKeySet();
         private final Set<Player> monitors = ConcurrentHashMap.newKeySet();
 
@@ -104,39 +96,6 @@ public class LocalRoom implements Room {
             return monitors.contains(player);
         }
 
-        public void transferHostToNextPlayer() {
-            Player previousHost = host;
-
-            List<Player> sorted = players.stream()
-                    .sorted(Comparator.comparing(Player::getId))
-                    .toList();
-
-            Player nextHost = sorted.stream().findFirst().orElse(null);
-
-            if (previousHost != null) {
-                for (Player player : sorted) {
-                    if (player.getId() <= previousHost.getId()) {
-                        continue;
-                    }
-
-                    nextHost = player;
-                    break;
-                }
-            }
-
-            if (nextHost != null) {
-                host = nextHost;
-                if (previousHost != null) {
-                    previousHost.operations().ifPresent((o) -> o.updateHostStatus(false));
-                }
-                nextHost.operations().ifPresent((o) -> o.updateHostStatus(true));
-
-                return;
-            }
-
-            host = null;
-        }
-
         public void broadcast(Consumer<PlayerOperations> action) {
             players.forEach(p -> p.operations().ifPresent(action));
             monitors.forEach(p -> p.operations().ifPresent(action));
@@ -155,13 +114,7 @@ public class LocalRoom implements Room {
         return playerManager.containsMonitor(player);
     }
 
-    public boolean isHost(Player player) {
-        return playerManager.host != null && setting.host && player.getId() == playerManager.host.getId();
-    }
-
     public void join(Player player, boolean isMonitor) {
-        boolean shouldBroadcastJoin = false;
-
         synchronized (lifecycleLock) {
             if (!isMonitor && playerManager.players.size() >= setting.maxPlayer) {
                 throw GameOperationException.roomFull();
@@ -176,18 +129,9 @@ public class LocalRoom implements Room {
             if (!added) {
                 return;
             }
-
-            if (!isMonitor && playerManager.players.size() == 1 && setting.host) {
-                playerManager.host = player;
-            } else {
-                shouldBroadcastJoin = true;
-            }
         }
 
-        if (shouldBroadcastJoin) {
-            playerManager.broadcast(op -> op.memberJoined(player.getId(), player.getName(), isMonitor));
-        }
-
+        playerManager.broadcast(op -> op.memberJoined(player.getId(), player.getName(), isMonitor));
         stateRef.get().handleJoin(player);
     }
 
@@ -201,10 +145,6 @@ public class LocalRoom implements Room {
 
             if (playerManager.players.isEmpty() && playerManager.monitors.isEmpty()) {
                 shouldDestroy = setting.autoDestroy;
-            }
-
-            if (setting.host && player.equals(playerManager.host)) {
-                playerManager.transferHostToNextPlayer();
             }
         }
 
@@ -222,9 +162,7 @@ public class LocalRoom implements Room {
     public class LocalOperation implements Operation {
 
         private void validateHost(Player player) {
-            if (!isHost(player)) {
-                throw GameOperationException.permissionDenied();
-            }
+            throw GameOperationException.permissionDenied();
         }
 
         public void lockRoom(Player player) {
@@ -307,7 +245,7 @@ public class LocalRoom implements Room {
                     setting.live,
                     setting.locked,
                     setting.cycle,
-                    setting.host && playerManager.host != null ? playerManager.host.getId() : null,
+                    null,
                     playerManager.getPlayersCopy(),
                     playerManager.getMonitorsCopy()
             );

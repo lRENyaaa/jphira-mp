@@ -1,15 +1,13 @@
 package top.rymc.phira.main.network.handler;
 
 import lombok.Getter;
-import top.rymc.phira.main.Server;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.player.holder.PlayerHolder;
-import top.rymc.phira.main.game.room.local.LocalRoom;
-import top.rymc.phira.main.game.room.local.LocalRoomBuilder;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.RoomManager;
 import top.rymc.phira.main.game.i18n.I18nService;
+import top.rymc.phira.main.game.room.RoomSnapshot;
 import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.protocol.handler.server.SimpleServerBoundPacketHandler;
 import top.rymc.phira.protocol.packet.ClientBoundPacket;
@@ -37,23 +35,7 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
 
     @Override
     public void handle(ServerBoundCreateRoomPacket packet) {
-        try {
-            Room room = new LocalRoomBuilder().build(packet.getRoomId());
-
-            room.join(player, false);
-
-            RoomHandler roomHandler = new RoomHandler(player, room, this);
-            player.getConnection().setPacketHandler(roomHandler);
-
-            player.getConnection().send(ClientBoundCreateRoomPacket.success());
-
-            room.getView().getProtocolHack().forceSyncInfo(player, false);
-
-        } catch (GameOperationException e) {
-            player.getConnection().send(ClientBoundCreateRoomPacket.failed(I18nService.INSTANCE.getMessage(player, e.getMessageKey())));
-        } catch (Exception e) {
-            player.getConnection().send(ClientBoundCreateRoomPacket.failed(e.getMessage()));
-        }
+        player.getConnection().send(ClientBoundCreateRoomPacket.failed("当前不支持此操作"));
     }
 
     @Override
@@ -70,10 +52,11 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
             RoomHandler roomHandler = new RoomHandler(player, room, this);
             connection.setPacketHandler(roomHandler);
 
-            connection.send(room.getView().getProtocolHack().buildJoinSuccessPacket());
+            RoomSnapshot.ProtocolHack hack = room.getView().getProtocolHack();
+            connection.send(hack.buildJoinSuccessPacket());
 
-            room.getView().getProtocolHack().fixClientRoomState(player, true);
-            room.getView().getProtocolHack().forceSyncHost(player, true);
+            hack.fixClientRoomState(player, true);
+            hack.setHost(player, true);
 
         } catch (GameOperationException e) {
             connection.send(ClientBoundJoinRoomPacket.failed(I18nService.INSTANCE.getMessage(player, e.getMessageKey())));

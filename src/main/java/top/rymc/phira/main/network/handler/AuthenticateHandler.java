@@ -6,6 +6,7 @@ import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.i18n.I18nService;
+import top.rymc.phira.main.game.room.RoomSnapshot;
 import top.rymc.phira.main.game.session.LocalSessionManager;
 import top.rymc.phira.main.game.exception.session.ResumeFailedException;
 import top.rymc.phira.main.game.exception.session.SuspendFailedException;
@@ -64,13 +65,18 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
             );
 
             LocalPlayer player = result.player();
-            RoomInfo roomInfo = player.getRoomInfo().orElse(null);
+            RoomSnapshot view = player.getRoomView().orElse(null);
+            RoomInfo roomInfo = view == null ? null : view.asProtocolConvertible(player).toProtocol();
 
             if (result.type() == PlayerManager.ResolveResult.Type.Create) {
                 connection.setPacketHandler(PlayHandler.create(result.player()));
             }
 
             connection.send(ClientBoundAuthenticatePacket.success(new FullUserProfile(userInfo.getId(), userInfo.getName(), false), roomInfo));
+
+            if (view != null) {
+                view.getProtocolHack().fixClientRoomState(player, true);
+            }
 
             Server.getLogger().info("{} has logged in as [{}] {}", connection.getRemoteAddressAsString(), userInfo.getId(), userInfo.getName());
 

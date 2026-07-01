@@ -58,12 +58,7 @@ public final class RoomWaitForReady extends RoomGameState {
 
     @Override
     public void cancelReady(Player player) {
-        boolean remove = readyPlayers.remove(player);
-
-        if (!remove) {
-            room.getView().getProtocolHack().fixClientRoomState(player, true);
-        }
-
+        readyPlayers.remove(player);
         broadcast(op -> op.memberCancelReady(player.getId()));
     }
 

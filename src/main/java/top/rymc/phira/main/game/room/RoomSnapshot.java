@@ -12,6 +12,7 @@ import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.protocol.data.RoomInfo;
 import top.rymc.phira.protocol.data.state.GameState;
 import top.rymc.phira.protocol.data.state.SelectChart;
+import top.rymc.phira.protocol.data.state.WaitForReady;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundJoinRoomPacket;
 
 import java.util.Set;
@@ -34,10 +35,10 @@ public class RoomSnapshot {
     public ProtocolConvertible<RoomInfo> asProtocolConvertible(Player viewer) {
         return () -> new RoomInfo(
                 roomId,
-                state.toProtocol(),
+                state instanceof RoomWaitForReady ? new SelectChart(state.getChart().getId()) : state.toProtocol(),
                 live, locked, cycle,
-                isHost(viewer),
-                state instanceof RoomWaitForReady,
+                true,
+                false,
                 players.stream().map(Player::toProtocol).toList(),
                 monitors.stream().map(Player::toProtocol).toList()
         );
@@ -76,57 +77,16 @@ public class RoomSnapshot {
 
         private static final Executor executor = CompletableFuture.delayedExecutor(2, TimeUnit.MILLISECONDS);
 
-        public void forceSyncHost(Player player, boolean delay) {
-            if (isNotInSnapshot(player)) return;
-
-            Runnable task = () -> player.operations().ifPresent(operations -> operations.updateHostStatus(isHost(player)));
-
-            runTask(task, delay);
-        }
-
-        public void forceSyncInfo(Player player, boolean delay) {
-            if (isNotInSnapshot(player)) return;
-
-            Runnable task = () -> {
-                if (!isHost(player)) {
-                    player.operations().ifPresent(operations -> operations.updateHostStatus(false));
-                }
-
-                if (live) {
-                    String name = I18nService.INSTANCE.getMessage(player, "system.live_recorder_name");
-                    player.operations().ifPresent(operations -> {
-                        operations.memberJoined(-1, name, true);
-                        runTask(() -> operations.memberLeft(-1, name),true);
-                    });
-                }
-
-                if (!(state instanceof RoomSelectChart && state.getChart() == null)) {
-                    fixClientRoomState0(player);
-                }
-            };
-
-            runTask(task, delay);
-        }
 
         public void fixClientRoomState(Player player, boolean delay) {
             if (isNotInSnapshot(player)) return;
 
-            if (!(state instanceof RoomSelectChart) && state.getChart() != null) {
-                runTask(() -> fixClientRoomState0(player), delay);
+            if (state instanceof RoomWaitForReady) {
+                runTask(() -> player.operations().ifPresent(operations -> operations.enterState(new WaitForReady())), delay);
             }
         }
-
-        private void fixClientRoomState0(Player player) {
-            ChartInfo chart = state.getChart();
-            if (chart != null) {
-                player.operations().ifPresent(operations -> operations.enterState(new SelectChart(chart.getId())));
-            }
-
-            if (state instanceof RoomSelectChart) {
-                return;
-            }
-
-            runTask(() -> player.operations().ifPresent(operations -> operations.enterState(state.toProtocol())), true);
+        public void setHost(Player player, boolean delay) {
+            runTask(() -> player.operations().ifPresent(operations -> operations.updateHostStatus(true)), delay);
         }
 
         private void runTask(Runnable task, boolean delay) {

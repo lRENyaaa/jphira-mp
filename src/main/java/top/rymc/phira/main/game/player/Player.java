@@ -4,6 +4,7 @@ import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
 import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.RoomSnapshot;
 import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.protocol.data.RoomInfo;
 import top.rymc.phira.protocol.data.UserProfile;
@@ -14,8 +15,8 @@ public interface Player extends ProtocolConvertible<UserProfile> {
 
     Optional<Room> getRoom();
 
-    default Optional<RoomInfo> getRoomInfo() {
-        return getRoom().map(r -> r.getView().asProtocolConvertible(this).toProtocol());
+    default Optional<RoomSnapshot> getRoomView() {
+        return getRoom().map(Room::getView);
     }
 
     void kick();
