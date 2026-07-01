@@ -1,9 +1,6 @@
 package top.rymc.phira.main.game.room.state;
 
-import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
-import top.rymc.phira.main.event.game.GameRequireStartEvent;
-import top.rymc.phira.main.event.game.GameStartEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.room.local.LocalRoom;
@@ -40,15 +37,6 @@ public final class RoomSelectChart extends RoomGameState {
         Set<Player> players = room.getPlayerManager().getPlayers();
         Set<Player> monitors = room.getPlayerManager().getMonitors();
         int totalPlayers = players.size() + monitors.size();
-
-        GameRequireStartEvent event = new GameRequireStartEvent(room, player, chart);
-        Server.postEvent(event);
-        if (event.isCancelled()) {
-            return;
-        }
-
-        GameStartEvent startEvent = new GameStartEvent(room, player, chart, Set.copyOf(players), Set.copyOf(monitors));
-        Server.postEvent(startEvent);
 
         if (totalPlayers == 1) {
             RoomPlaying state = new RoomPlaying(room, stateUpdater, chart);

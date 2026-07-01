@@ -6,13 +6,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.timeout.ReadTimeoutException;
 import lombok.Getter;
+import lombok.Setter;
 import org.apache.logging.log4j.Logger;
 import top.rymc.phira.main.Server;
-import top.rymc.phira.main.event.network.PlayerSwitchPacketHandlerEvent;
-import top.rymc.phira.main.event.player.PlayerDisconnectEvent;
-import top.rymc.phira.main.event.network.PacketReceiveEvent;
-import top.rymc.phira.main.event.network.PacketSendEvent;
-import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.util.ExecutorServiceManager;
 import top.rymc.phira.main.util.ThreadFactoryCompat;
 import top.rymc.phira.protocol.data.message.ChatMessage;
@@ -38,14 +34,9 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
     private final Channel channel;
     private final InetSocketAddress remoteAddress;
 
+    @Setter
     private volatile ServerBoundPacketHandler packetHandler;
     private volatile ConnectState connectState = ConnectState.ACTIVE;
-
-    public void setPacketHandler(ServerBoundPacketHandler packetHandler) {
-        PlayerSwitchPacketHandlerEvent event = new PlayerSwitchPacketHandlerEvent(this, this.packetHandler, packetHandler);
-        Server.postEvent(event);
-        this.packetHandler = event.getNewHandler();
-    }
 
     private final List<Consumer<ChannelHandlerContext>> closeHandlers = new CopyOnWriteArrayList<>();
 
@@ -74,12 +65,6 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
         }
 
         ServerBoundPacket packet = (ServerBoundPacket) msg;
-
-        PacketReceiveEvent event = new PacketReceiveEvent(this, packet);
-
-        if (Server.postEvent(event)) {
-            return;
-        }
 
         packetExecutor.execute(() -> handle(ctx, packet));
     }
@@ -121,11 +106,6 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
 
         Server.getLogger().info("Client disconnected: {}", getRemoteAddressAsString());
 
-        PlayerManager.getPlayer(this).ifPresent(player -> {
-            PlayerDisconnectEvent event = new PlayerDisconnectEvent(player, determineDisconnectReason());
-            Server.postEvent(event);
-        });
-
         for (Consumer<ChannelHandlerContext> handler : closeHandlers) {
             try {
                 handler.accept(ctx);
@@ -137,23 +117,8 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
         super.channelInactive(ctx);
     }
 
-    private PlayerDisconnectEvent.DisconnectReason determineDisconnectReason() {
-        return switch (connectState) {
-            case ACTIVE -> PlayerDisconnectEvent.DisconnectReason.QUIT;
-            case KICK -> PlayerDisconnectEvent.DisconnectReason.KICK;
-            case TIMEOUT -> PlayerDisconnectEvent.DisconnectReason.TIMEOUT;
-            case DUPLICATE -> PlayerDisconnectEvent.DisconnectReason.DUPLICATE;
-            case ERROR -> PlayerDisconnectEvent.DisconnectReason.ERROR;
-        };
-    }
-
     public Optional<ChannelFuture> send(ClientBoundPacket packet) {
         if (this.isClosed()) {
-            return Optional.empty();
-        }
-
-        PacketSendEvent event = new PacketSendEvent(this, packet);
-        if (Server.postEvent(event)) {
             return Optional.empty();
         }
 

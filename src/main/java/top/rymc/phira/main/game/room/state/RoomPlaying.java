@@ -1,11 +1,7 @@
 package top.rymc.phira.main.game.room.state;
 
-import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.data.GameRecord;
-import top.rymc.phira.main.event.game.GameAbortEvent;
-import top.rymc.phira.main.event.game.GameEndEvent;
-import top.rymc.phira.main.event.game.PlayerPlayedEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
@@ -86,9 +82,6 @@ public final class RoomPlaying extends RoomGameState {
 
         try {
             broadcast(op -> op.gameAbort(player.getId()));
-
-            GameAbortEvent event = new GameAbortEvent(room, player, chart);
-            Server.postEvent(event);
         } finally {
             updateState(player);
         }
@@ -132,9 +125,6 @@ public final class RoomPlaying extends RoomGameState {
             boolean fullCombo = record.isFullCombo();
 
             broadcast(op -> op.gamePlayed(id, score, accuracy, fullCombo));
-
-            PlayerPlayedEvent event = new PlayerPlayedEvent(player, room, recordId, score, accuracy, fullCombo);
-            Server.postEvent(event);
         } finally {
             updateState(player);
         }
@@ -144,9 +134,6 @@ public final class RoomPlaying extends RoomGameState {
         donePlayers.add(player);
 
         if (isAllOnlinePlayersDone()) {
-            GameEndEvent event = new GameEndEvent(room, chart, Map.copyOf(gameRecords), Map.copyOf(playerRecords));
-            Server.postEvent(event);
-
             RoomSelectChart state = new RoomSelectChart(room, stateUpdater, chart);
             updateGameState(state);
             broadcast(PlayerOperations::gameEnd);

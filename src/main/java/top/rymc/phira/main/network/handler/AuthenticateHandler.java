@@ -2,9 +2,6 @@ package top.rymc.phira.main.network.handler;
 
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
-import top.rymc.phira.main.event.player.PlayerPostLoginEvent;
-import top.rymc.phira.main.event.player.PlayerPreAuthenticateEvent;
-import top.rymc.phira.main.event.player.PlayerPreLoginEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.player.PlayerManager;
@@ -46,26 +43,7 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
             String token = packet.getToken();
             Server.getLogger().info("{} sent his token [{}]", connection.getRemoteAddressAsString(), token);
 
-            PlayerPreAuthenticateEvent preAuthEvent = new PlayerPreAuthenticateEvent(connection, token);
-            Server.postEvent(preAuthEvent);
-
-            String preAuthCancelReason = preAuthEvent.getCancelReason();
-            if (preAuthCancelReason != null) {
-                connection.send(ClientBoundAuthenticatePacket.failed(preAuthCancelReason));
-                connection.close();
-                return;
-            }
-            UserInfo eventUserInfo = preAuthEvent.getUserInfo();
-            UserInfo userInfo = eventUserInfo != null ? eventUserInfo : PhiraFetcher.GET_USER_INFO.apply(token);
-
-            PlayerPreLoginEvent preLoginEvent = new PlayerPreLoginEvent(userInfo);
-            Server.postEvent(preLoginEvent);
-            String preLoginCancelReason = preLoginEvent.getCancelReason();
-            if (preLoginCancelReason != null) {
-                connection.send(ClientBoundAuthenticatePacket.failed(preLoginCancelReason));
-                connection.close();
-                return;
-            }
+            UserInfo userInfo = PhiraFetcher.GET_USER_INFO.apply(token);
 
             PlayerManager.ResolveResult<LocalPlayer> result = PlayerManager.resolvePlayer(
                     userInfo.getId(),
@@ -96,8 +74,6 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
 
             Server.getLogger().info("{} has logged in as [{}] {}", connection.getRemoteAddressAsString(), userInfo.getId(), userInfo.getName());
 
-            PlayerPostLoginEvent postLoginEvent = new PlayerPostLoginEvent(result);
-            Server.postEvent(postLoginEvent);
         } catch (GameOperationException e) {
             connection.send(ClientBoundAuthenticatePacket.failed(I18nService.INSTANCE.getMessage(e.getMessageKey())));
             connection.close();

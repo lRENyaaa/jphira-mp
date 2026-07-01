@@ -2,14 +2,10 @@ package top.rymc.phira.main.network.handler;
 
 import lombok.Getter;
 import top.rymc.phira.main.Server;
-import top.rymc.phira.main.event.room.PlayerPostJoinRoomEvent;
-import top.rymc.phira.main.event.room.PlayerPreJoinRoomEvent;
-import top.rymc.phira.main.event.room.PlayerJoinRoomSuccessEvent;
-import top.rymc.phira.main.event.room.RoomPreCreateEvent;
-import top.rymc.phira.main.event.room.RoomPostCreateEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.player.holder.PlayerHolder;
+import top.rymc.phira.main.game.room.local.LocalRoom;
 import top.rymc.phira.main.game.room.local.LocalRoomBuilder;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.RoomManager;
@@ -42,22 +38,9 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
     @Override
     public void handle(ServerBoundCreateRoomPacket packet) {
         try {
-            RoomPreCreateEvent createEvent = new RoomPreCreateEvent(player, packet.getRoomId(), new LocalRoomBuilder().buildSetting());
-            Server.postEvent(createEvent);
-            String cancelReason = createEvent.getCancelReason();
-            if (cancelReason != null) {
-                player.getConnection().send(ClientBoundCreateRoomPacket.failed(cancelReason));
-                return;
-            }
-
-            Room room = new LocalRoomBuilder()
-                    .setting(createEvent.getSetting())
-                    .build(packet.getRoomId());
+            Room room = new LocalRoomBuilder().build(packet.getRoomId());
 
             room.join(player, false);
-
-            RoomPostCreateEvent createdEvent = new RoomPostCreateEvent(room, player);
-            Server.postEvent(createdEvent);
 
             RoomHandler roomHandler = new RoomHandler(player, room, this);
             player.getConnection().setPacketHandler(roomHandler);
@@ -78,25 +61,9 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
         PlayerConnection connection = player.getConnection();
 
         try {
-            PlayerPreJoinRoomEvent preJoinRoomEvent = new PlayerPreJoinRoomEvent(player, packet.getRoomId(), packet.isMonitor());
-            Server.postEvent(preJoinRoomEvent);
-            String preJoinCancelMessage = preJoinRoomEvent.getCancelReason();
-            if (preJoinCancelMessage != null) {
-                connection.send(ClientBoundJoinRoomPacket.failed(preJoinCancelMessage));
-                return;
-            }
-
             Room room = RoomManager.findRoom(packet.getRoomId());
             if (room == null) {
                 throw GameOperationException.roomNotFound();
-            }
-
-            PlayerPostJoinRoomEvent postJoinRoomEvent = new PlayerPostJoinRoomEvent(player, room, packet.isMonitor());
-            Server.postEvent(postJoinRoomEvent);
-            String postJoinCancelMessage = postJoinRoomEvent.getCancelReason();
-            if (postJoinCancelMessage != null) {
-                connection.send(ClientBoundJoinRoomPacket.failed(postJoinCancelMessage));
-                return;
             }
 
             room.join(player, packet.isMonitor());
@@ -104,9 +71,6 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
             connection.setPacketHandler(roomHandler);
 
             connection.send(room.getView().getProtocolHack().buildJoinSuccessPacket());
-
-            PlayerJoinRoomSuccessEvent successEvent = new PlayerJoinRoomSuccessEvent(player, room, packet.isMonitor());
-            Server.postEvent(successEvent);
 
             room.getView().getProtocolHack().fixClientRoomState(player, true);
             room.getView().getProtocolHack().forceSyncHost(player, true);

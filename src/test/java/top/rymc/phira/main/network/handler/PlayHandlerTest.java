@@ -49,7 +49,6 @@ class PlayHandlerTest {
         playHandler = PlayHandler.create(player);
 
         mockedServer = mockStatic(Server.class);
-        mockedServer.when(() -> Server.postEvent(any())).thenReturn(false);
 
         Field roomsField = RoomManager.class.getDeclaredField("ROOMS");
         roomsField.setAccessible(true);
@@ -70,8 +69,6 @@ class PlayHandlerTest {
     @Test
     @DisplayName("should send failed packet when handleCreateRoom with pre create event cancelled")
     void shouldSendFailedPacketWhenHandleCreateRoomWithPreCreateEventCancelled() {
-        mockedServer.when(() -> Server.postEvent(any())).thenReturn(true);
-
         playHandler.handle((top.rymc.phira.protocol.packet.serverbound.ServerBoundCreateRoomPacket) null);
 
         verify(connection).send(any(ClientBoundCreateRoomPacket.class));
@@ -88,8 +85,6 @@ class PlayHandlerTest {
     @Test
     @DisplayName("should send failed packet when handleJoinRoom with pre join event cancelled")
     void shouldSendFailedPacketWhenHandleJoinRoomWithPreJoinEventCancelled() {
-        mockedServer.when(() -> Server.postEvent(any())).thenReturn(true);
-
         playHandler.handle((top.rymc.phira.protocol.packet.serverbound.ServerBoundJoinRoomPacket) null);
 
         verify(connection).send(any(ClientBoundJoinRoomPacket.class));
@@ -98,8 +93,6 @@ class PlayHandlerTest {
     @Test
     @DisplayName("should not create room when handleCreateRoom with event cancelled")
     void shouldNotCreateRoomWhenHandleCreateRoomWithEventCancelled() {
-        mockedServer.when(() -> Server.postEvent(any())).thenReturn(true);
-
         playHandler.handle((top.rymc.phira.protocol.packet.serverbound.ServerBoundCreateRoomPacket) null);
 
         assertThat(RoomManager.getAllRooms()).isEmpty();
@@ -108,8 +101,6 @@ class PlayHandlerTest {
     @Test
     @DisplayName("should not join room when handleJoinRoom with pre join event cancelled")
     void shouldNotJoinRoomWhenHandleJoinRoomWithPreJoinEventCancelled() {
-        mockedServer.when(() -> Server.postEvent(any())).thenReturn(true);
-
         playHandler.handle((top.rymc.phira.protocol.packet.serverbound.ServerBoundJoinRoomPacket) null);
 
         verify(connection, never()).setPacketHandler(any(RoomHandler.class));

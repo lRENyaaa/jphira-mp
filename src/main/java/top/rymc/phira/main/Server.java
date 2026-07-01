@@ -18,15 +18,11 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.io.IoBuilder;
 import top.rymc.phira.main.command.CommandService;
 import top.rymc.phira.main.config.ServerArgs;
-import top.rymc.phira.main.event.server.ServerLifecycleEvent;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.network.ServerChannelInitializer;
 import top.rymc.phira.main.util.ExecutorServiceManager;
-import top.rymc.phira.plugin.core.PluginManager;
-import top.rymc.phira.plugin.event.CancellableEvent;
-import top.rymc.phira.plugin.event.Event;
 
 import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
@@ -53,8 +49,6 @@ public class Server {
     private static final Logger logger = LogManager.getLogger("Server");
     @Getter
     private final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-    @Getter
-    private PluginManager pluginManager;
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -101,15 +95,6 @@ public class Server {
             }
         }));
 
-        logger.info("Loading plugins from: {}", args.getPluginsDir());
-        pluginManager = new PluginManager(logger, args.getPluginsDir());
-        try {
-            pluginManager.loadAll();
-        } catch (Throwable e) {
-            logger.error("Plugin loading encountered errors, continuing startup", e);
-        }
-        logger.info("Loaded {} plugin(s)", pluginManager.getPluginCount());
-
         logger.info("Initializing network...");
 
         bossGroup = new MultiThreadIoEventLoopGroup(1, new DefaultThreadFactory("Netty-Boss", true), NioIoHandler.newFactory());
@@ -127,8 +112,6 @@ public class Server {
         logger.info("Listening on {}:{}", args.getHost(), args.getPort());
 
         new CommandService(logger).start();
-
-        postEvent(new ServerLifecycleEvent(ServerLifecycleEvent.State.STARTED));
 
         long totalTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - bootStart);
         logger.info("Done ({}s)!", String.format("%.3f", totalTime / 1000.0));
@@ -149,8 +132,6 @@ public class Server {
     public void shutdown() {
         if (!running.compareAndSet(true, false)) return;
 
-        postEvent(new ServerLifecycleEvent(ServerLifecycleEvent.State.STOPPING));
-
         long shutdownStart = System.nanoTime();
         int onlineCount = PlayerManager.getOnlinePlayers().size();
         int channelCount = allChannels.size();
@@ -160,11 +141,6 @@ public class Server {
         if (onlineCount > 0) {
             logger.info("Kicking {} player(s)...", onlineCount);
             PlayerManager.getOnlinePlayers().forEach(Player::kick);
-        }
-
-        if (pluginManager != null) {
-            logger.info("Disabling {} plugin(s)...", pluginManager.getPluginCount());
-            pluginManager.disableAll();
         }
 
         if (channelCount > 0) {
@@ -190,8 +166,6 @@ public class Server {
                 TimeUnit.MILLISECONDS.toSeconds(uptime) % 60);
         logger.info("Shutdown completed in {}ms. Goodbye!", shutdownTime);
 
-        postEvent(new ServerLifecycleEvent(ServerLifecycleEvent.State.STOPPED));
-
         LogManager.shutdown();
         ExecutorServiceManager.shutdown();
         System.exit(0);
@@ -201,11 +175,4 @@ public class Server {
         return running.get();
     }
 
-    public static void postEvent(Event event) {
-        getInstance().pluginManager.getEventBus().post(event);
-    }
-
-    public static boolean postEvent(CancellableEvent event) {
-        return getInstance().pluginManager.getEventBus().post(event).isCancelled();
-    }
 }

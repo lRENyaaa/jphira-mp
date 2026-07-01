@@ -1,10 +1,6 @@
 package top.rymc.phira.main.game.room.state;
 
-import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
-import top.rymc.phira.main.event.game.PlayerReadyEvent;
-import top.rymc.phira.main.event.game.GamePlayingStartEvent;
-import top.rymc.phira.main.event.game.PlayerCancelReadyEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
@@ -58,9 +54,6 @@ public final class RoomWaitForReady extends RoomGameState {
         readyPlayers.add(player);
         broadcast(op -> op.memberReady(player.getId()));
         updateState();
-
-        PlayerReadyEvent event = new PlayerReadyEvent(player, room);
-        Server.postEvent(event);
     }
 
     @Override
@@ -72,9 +65,6 @@ public final class RoomWaitForReady extends RoomGameState {
         }
 
         broadcast(op -> op.memberCancelReady(player.getId()));
-
-        PlayerCancelReadyEvent event = new PlayerCancelReadyEvent(player, room);
-        Server.postEvent(event);
     }
 
     @Override
@@ -99,11 +89,6 @@ public final class RoomWaitForReady extends RoomGameState {
 
     private void updateState() {
         if (isAllOnlinePlayersDone()) {
-            Set<Player> players = room.getPlayerManager().getPlayers();
-            Set<Player> monitors = room.getPlayerManager().getMonitors();
-            GamePlayingStartEvent event = new GamePlayingStartEvent(room, chart, Set.copyOf(players), Set.copyOf(monitors));
-            Server.postEvent(event);
-
             RoomPlaying state = new RoomPlaying(room, stateUpdater, chart);
             updateGameState(state);
             broadcast(PlayerOperations::gameStartPlaying);

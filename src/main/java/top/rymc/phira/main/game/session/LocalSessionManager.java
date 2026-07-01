@@ -4,8 +4,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import top.rymc.phira.main.Server;
-import top.rymc.phira.main.event.session.PlayerSessionSuspendEvent;
-import top.rymc.phira.main.event.session.PlayerSessionTimeoutEvent;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.room.Room;
@@ -90,12 +88,6 @@ public class LocalSessionManager {
             throw new SuspendFailedException();
         }
 
-        PlayerSessionSuspendEvent suspendEvent = new PlayerSessionSuspendEvent(player, room);
-        Server.postEvent(suspendEvent);
-        if (suspendEvent.isCancelled()) {
-            throw new SuspendFailedException();
-        }
-
         SUSPENDED.compute(player.getId(), (id, oldSession) -> {
 
             RoomGameState state = room.getView().getState();
@@ -131,9 +123,6 @@ public class LocalSessionManager {
 
         session.player.getRoom().ifPresent((room) -> {
             if (room.containsPlayer(session.player)) {
-                PlayerSessionTimeoutEvent event = new PlayerSessionTimeoutEvent(session.player, room);
-                Server.postEvent(event);
-
                 room.leave(session.player);
             }
         });

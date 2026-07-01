@@ -4,16 +4,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
-import top.rymc.phira.main.event.operation.RoomChatEvent;
-import top.rymc.phira.main.event.operation.RoomCycleChangeEvent;
-import top.rymc.phira.main.event.operation.RoomLockChangeEvent;
-import top.rymc.phira.main.event.operation.RoomPostSelectChartEvent;
-import top.rymc.phira.main.event.operation.RoomPreSelectChartEvent;
-import top.rymc.phira.main.event.room.PlayerLeaveRoomEvent;
-import top.rymc.phira.main.event.room.RoomDestroyEvent;
-import top.rymc.phira.main.event.room.RoomHostChangeEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
@@ -140,15 +131,7 @@ public class LocalRoom implements Room {
                 }
                 nextHost.operations().ifPresent((o) -> o.updateHostStatus(true));
 
-                RoomHostChangeEvent event = new RoomHostChangeEvent(LocalRoom.this, previousHost, host);
-                Server.postEvent(event);
-
                 return;
-            }
-
-            if (host != null) {
-                RoomHostChangeEvent event = new RoomHostChangeEvent(LocalRoom.this, host, null);
-                Server.postEvent(event);
             }
 
             host = null;
@@ -228,9 +211,6 @@ public class LocalRoom implements Room {
         playerManager.broadcast(op -> op.memberLeft(player.getId(), player.getName()));
         stateRef.get().handleLeave(player);
 
-        PlayerLeaveRoomEvent event = new PlayerLeaveRoomEvent(player, this);
-        Server.postEvent(event);
-
         if (shouldDestroy) {
             destroyRoom();
         }
@@ -250,24 +230,14 @@ public class LocalRoom implements Room {
         public void lockRoom(Player player) {
             validateHost(player);
 
-            boolean newLockState = !setting.locked;
-
-            RoomLockChangeEvent event = new RoomLockChangeEvent(LocalRoom.this, player, newLockState);
-            Server.postEvent(event);
-
-            setting.locked = newLockState;
+            setting.locked = !setting.locked;
             playerManager.broadcast(op -> op.lockRoom(setting.locked));
         }
 
         public void cycleRoom(Player player) {
             validateHost(player);
 
-            boolean newCycleState = !setting.cycle;
-
-            RoomCycleChangeEvent event = new RoomCycleChangeEvent(LocalRoom.this, player, newCycleState);
-            Server.postEvent(event);
-
-            setting.cycle = newCycleState;
+            setting.cycle = !setting.cycle;
             playerManager.broadcast(op -> op.cycleRoom(setting.cycle));
         }
 
@@ -278,24 +248,15 @@ public class LocalRoom implements Room {
                 throw GameOperationException.invalidState();
             }
 
-            RoomPreSelectChartEvent preEvent = new RoomPreSelectChartEvent(LocalRoom.this, player, id);
-            Server.postEvent(preEvent);
-            if (preEvent.isCancelled()) {
-                throw new GameOperationException(preEvent.getCancelReason());
-            }
-
             IntFunction<ChartInfo> getInfoFunc = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
                 throw GameOperationException.chartNotFound();
             });
 
-            ChartInfo eventChartInfo = preEvent.getChartInfo();
-            ChartInfo info = eventChartInfo != null ? eventChartInfo : getInfoFunc.apply(id);
+            ChartInfo info = getInfoFunc.apply(id);
 
             stateRef.get().setChart(info);
             playerManager.broadcast(operations -> operations.selectChart(info.getId(), info.getName(), player.getId()));
 
-            RoomPostSelectChartEvent postEvent = new RoomPostSelectChartEvent(LocalRoom.this, player, info);
-            Server.postEvent(postEvent);
         }
 
         public void chat(Player player, String message) {
@@ -303,12 +264,7 @@ public class LocalRoom implements Room {
                 throw GameOperationException.chatNotEnabled();
             }
 
-            RoomChatEvent event = new RoomChatEvent(player, LocalRoom.this, message);
-            if (Server.postEvent(event)) {
-                return;
-            }
-
-            playerManager.broadcast(operations -> operations.receiveChat(player.getId(), event.getMessage()));
+            playerManager.broadcast(operations -> operations.receiveChat(player.getId(), message));
         }
 
         public void touchSend(Player player, List<TouchFrame> touchFrames) {
@@ -359,12 +315,6 @@ public class LocalRoom implements Room {
     }
 
     private void destroyRoom() {
-        RoomDestroyEvent event = new RoomDestroyEvent(
-                this,
-                playerManager.getPlayersCopy(),
-                playerManager.getMonitorsCopy()
-        );
-        Server.postEvent(event);
         onDestroy.run();
     }
 }
