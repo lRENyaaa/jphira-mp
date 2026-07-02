@@ -165,8 +165,13 @@ public final class RoomPlaying extends RoomGameState {
         forceFinishTasks.add(TIMER.schedule(this::forceFinishGame, FORCE_FINISH_SECONDS, TimeUnit.SECONDS));
     }
 
+    public void forceFinishByServer() {
+        forceFinishGame();
+    }
+
     private void forceFinishGame() {
         RoomSelectChart state = new RoomSelectChart(room, stateUpdater, chart);
+        forceFinishTasks.forEach(task -> task.cancel(false));
         forceFinishTasks.clear();
         activePlayers.stream()
                 .filter(Player::isOnline)
