@@ -5,6 +5,7 @@ import net.minecrell.terminalconsole.SimpleTerminalConsole;
 import org.apache.logging.log4j.Logger;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
+import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.RoomManager;
 import top.rymc.phira.main.game.room.chart.ChartPool;
@@ -41,6 +42,12 @@ public class CommandService extends SimpleTerminalConsole {
 
         if (commandName.toLowerCase().startsWith("pool ")) {
             handlePoolCommand(commandName.split("\\s+"));
+            return;
+        }
+
+        if (commandName.toLowerCase().startsWith("say ")) {
+            String trim = commandName.substring(4).trim();
+            PlayerManager.getOnlinePlayers().forEach(player -> player.operations().ifPresent(op -> op.receiveChat(-1, trim)));
             return;
         }
 

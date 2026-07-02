@@ -60,7 +60,7 @@ public final class RoomPlaying extends RoomGameState {
 
     @Override
     public void handleJoin(Player player) {
-        player.operations().ifPresent(op -> op.enterState(new SelectChart(chart.getId())));
+        player.operations().ifPresent(op -> op.receiveChat(SYSTEM_PLAYER_ID, "房间当前正在游戏中，请静待游戏结束"));
     }
 
     @Override

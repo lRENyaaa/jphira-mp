@@ -6,11 +6,13 @@ import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.room.state.RoomGameState;
+import top.rymc.phira.main.game.room.state.RoomPlaying;
 import top.rymc.phira.main.game.room.state.RoomSelectChart;
 import top.rymc.phira.main.game.room.state.RoomWaitForReady;
 import top.rymc.phira.main.network.ProtocolConvertible;
 import top.rymc.phira.protocol.data.RoomInfo;
 import top.rymc.phira.protocol.data.state.GameState;
+import top.rymc.phira.protocol.data.state.Playing;
 import top.rymc.phira.protocol.data.state.SelectChart;
 import top.rymc.phira.protocol.data.state.WaitForReady;
 import top.rymc.phira.protocol.packet.clientbound.ClientBoundJoinRoomPacket;
@@ -35,7 +37,7 @@ public class RoomSnapshot {
     public ProtocolConvertible<RoomInfo> asProtocolConvertible(Player viewer) {
         return () -> new RoomInfo(
                 roomId,
-                state instanceof RoomWaitForReady ? new SelectChart(state.getChart().getId()) : state.toProtocol(),
+                state instanceof RoomPlaying ? new SelectChart() : state instanceof RoomWaitForReady ? new SelectChart(state.getChart().getId()) : state.toProtocol(),
                 live, locked, cycle,
                 true,
                 false,
@@ -61,7 +63,9 @@ public class RoomSnapshot {
 
             GameState protocolState;
             ChartInfo chart = state.getChart();
-            if (!(state instanceof RoomSelectChart) && chart != null) {
+            if (state instanceof RoomPlaying) {
+                protocolState = new SelectChart();
+            } else if (!(state instanceof RoomSelectChart) && chart != null) {
                 protocolState = new SelectChart(chart.getId());
             } else {
                 protocolState = state.toProtocol();
