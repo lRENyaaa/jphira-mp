@@ -229,7 +229,7 @@ public final class RoomPlaying extends RoomGameState {
                 .forEach(player -> player.operations().ifPresent(op -> op.updateHostStatus(true)));
         broadcast(PlayerOperations::gameEnd);
         updateGameState(state);
-        state.broadcastVoteBoard();
+        state.broadcastVoteBoardHint();
         state.activate();
     }
 

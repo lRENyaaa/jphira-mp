@@ -56,6 +56,10 @@ public class GameOperationException extends RuntimeException {
         return new GameOperationException("成绩提交失败，请稍后重试");
     }
 
+    public static GameOperationException chartPoolUnavailable() {
+        return new GameOperationException("当前不在投票阶段，无法查看谱池状态。");
+    }
+
     public static GameOperationException alreadyInRoom() {
         return new GameOperationException("error.already_in_room");
     }

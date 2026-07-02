@@ -88,6 +88,12 @@ public class CommandService extends SimpleTerminalConsole {
                 return;
             }
 
+            if (args.length == 3 && args[1].equalsIgnoreCase("countdown")) {
+                ChartPool.setSelectChartCountdownSeconds(parseInt(args[2]));
+                logger.info("Set select chart countdown to {} second(s). It will take effect next round.", args[2]);
+                return;
+            }
+
             if (args.length == 4 && args[1].equalsIgnoreCase("favorite")) {
                 setFavorite(parseInt(args[2]), args[3]);
                 return;
@@ -120,7 +126,7 @@ public class CommandService extends SimpleTerminalConsole {
                 return;
             }
 
-            logger.warn("Usage: pool list | pool switch <id> | pool interval <rounds> | pool favorite <poolId> <favoriteId|none> | pool current favorite <favoriteId|none> | pool add <id> <chartIds...> | pool remove <id> | pool chart add <poolId> <chartId> | pool chart remove <poolId> <chartId>");
+            logger.warn("Usage: pool list | pool switch <id> | pool interval <rounds> | pool countdown <seconds> | pool favorite <poolId> <favoriteId|none> | pool current favorite <favoriteId|none> | pool add <id> <chartIds...> | pool remove <id> | pool chart add <poolId> <chartId> | pool chart remove <poolId> <chartId>");
         } catch (Exception e) {
             logger.warn("Pool command failed: {}", e.getMessage());
         }
@@ -128,8 +134,8 @@ public class CommandService extends SimpleTerminalConsole {
 
     private void listPools() {
         ChartPool.PoolStatus status = ChartPool.getStatus();
-        logger.info("Current pool: {}, pending pool: {}, refresh: {}/{} round(s)",
-                status.currentPoolId(), status.pendingPoolId(), status.finishedRoundsSinceRefresh(), status.refreshIntervalRounds());
+        logger.info("Current pool: {}, pending pool: {}, refresh: {}/{} round(s), countdown: {} second(s)",
+                status.currentPoolId(), status.pendingPoolId(), status.finishedRoundsSinceRefresh(), status.refreshIntervalRounds(), status.selectChartCountdownSeconds());
         for (ChartPool.PoolSnapshot pool : ChartPool.listPools()) {
             if (pool.favoriteId() == null) {
                 logger.info("Pool {}:", pool.id());

@@ -102,7 +102,7 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
         connection.sendChat("请加入房间 zenith 参与活动。服务器只有这一个活动房间。");
         connection.sendChat("玩法说明：在选谱阶段使用选谱操作为谱池内歌曲投票。");
         connection.sendChat("投票仅限当前谱池，重复投票会改票，观战者不能投票。");
-        connection.sendChat("普通玩家达到 2 人后开始 90 秒倒计时，随后进入准备阶段。");
+        connection.sendChat("普通玩家达到 2 人后开始投票倒计时，随后进入准备阶段。");
         connection.sendChat("准备阶段限时 60 秒，未准备的玩家会跳过本轮。");
         connection.sendChat("————————————————————————————————————————");
     }

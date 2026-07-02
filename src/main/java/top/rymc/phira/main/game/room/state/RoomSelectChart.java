@@ -3,6 +3,7 @@ package top.rymc.phira.main.game.room.state;
 import top.rymc.phira.main.data.ChartInfo;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.point.PlayerPointService;
 import top.rymc.phira.main.game.room.chart.ChartPool;
 import top.rymc.phira.main.game.room.local.LocalRoom;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
@@ -24,14 +25,14 @@ import java.util.stream.Collectors;
 
 public final class RoomSelectChart extends RoomGameState {
 
-    private static final int COUNTDOWN_SECONDS = 90;
-    private static final List<Integer> NOTICE_SECONDS = List.of(90, 60, 30, 10, 5, 3, 2, 1);
+    private static final List<Integer> NOTICE_SECONDS = List.of(150, 120, 90, 60, 30, 10, 5, 3, 2, 1);
     private static final Random RANDOM = new Random();
 
     private final Map<Player, Integer> voteByPlayer = new ConcurrentHashMap<>();
     private final Set<ScheduledFuture<?>> countdownTasks = ConcurrentHashMap.newKeySet();
     private final ChartPool.PoolSnapshot currentPoolInfo;
     private final List<ChartInfo> currentPool;
+    private final int countdownSeconds;
     private volatile boolean countdownRunning;
     private volatile ChartInfo lockedChart;
 
@@ -45,18 +46,19 @@ public final class RoomSelectChart extends RoomGameState {
         this.currentPool = currentPoolInfo.chartIds().stream()
                 .map(ChartPool::getChartInfo)
                 .toList();
+        this.countdownSeconds = ChartPool.getSelectChartCountdownSeconds();
     }
 
     @Override
     public void handleJoin(Player player) {
-        sendVoteBoard(player);
+        sendVoteBoardHint(player);
         updateCountdownState();
     }
 
     @Override
     public void handleLeave(Player player) {
         voteByPlayer.remove(player);
-        broadcastVoteBoard();
+        broadcastVoteBoardHint();
         updateCountdownState();
     }
 
@@ -112,7 +114,7 @@ public final class RoomSelectChart extends RoomGameState {
         ChartInfo chart = ChartPool.getChartInfo(chartId);
         voteByPlayer.put(player, chartId);
         broadcastSystemMessage(player.getName() + " 已投票：" + formatChartName(chart));
-        broadcastVoteBoard();
+        broadcastVoteBoardHint();
     }
 
     public void broadcastVoteBoard() {
@@ -131,8 +133,10 @@ public final class RoomSelectChart extends RoomGameState {
         });
     }
 
-    private void sendVoteBoard(Player player) {
+    public void sendVoteBoard(Player player) {
+        PlayerPointService.PointSummary point = PlayerPointService.getSummary(player);
         sendSystemMessage(player, MESSAGE_SEPARATOR);
+        sendSystemMessage(player, "当前积分：" + point.points() + "，积分排名：#" + point.rank());
         sendSystemMessage(player, "zenith 本轮谱池 #" + currentPoolInfo.id());
         if (currentPoolInfo.favoriteId() != null) {
             sendSystemMessage(player, "谱面收藏夹 ID：" + currentPoolInfo.favoriteId());
@@ -143,6 +147,14 @@ public final class RoomSelectChart extends RoomGameState {
             sendSystemMessage(player, line);
         }
         sendSystemMessage(player, MESSAGE_SEPARATOR);
+    }
+
+    public void broadcastVoteBoardHint() {
+        broadcast(op -> op.receiveChat(SYSTEM_PLAYER_ID, "点击锁定房间按钮查看当前谱池状态。"));
+    }
+
+    private void sendVoteBoardHint(Player player) {
+        sendSystemMessage(player, "点击锁定房间按钮查看当前谱池状态。");
     }
 
     private List<String> buildVoteBoardLines() {
@@ -177,12 +189,16 @@ public final class RoomSelectChart extends RoomGameState {
         }
 
         countdownRunning = true;
-        broadcastSystemMessage("已达到开局人数，90 秒后锁定投票并进入准备阶段。人数不足会取消倒计时。");
+        broadcastSystemMessage("已达到开局人数，" + countdownSeconds + " 秒后锁定投票并进入准备阶段。人数不足会取消倒计时。");
 
-        for (int seconds : NOTICE_SECONDS) {
-            countdownTasks.add(TIMER.schedule(() -> noticeCountdown(seconds), COUNTDOWN_SECONDS - seconds, TimeUnit.SECONDS));
-        }
-        countdownTasks.add(TIMER.schedule(this::finishCountdown, COUNTDOWN_SECONDS, TimeUnit.SECONDS));
+        NOTICE_SECONDS.stream()
+                .filter(seconds -> seconds <= countdownSeconds)
+                .forEach(seconds -> countdownTasks.add(TIMER.schedule(
+                        () -> noticeCountdown(seconds),
+                        countdownSeconds - seconds,
+                        TimeUnit.SECONDS
+                )));
+        countdownTasks.add(TIMER.schedule(this::finishCountdown, countdownSeconds, TimeUnit.SECONDS));
     }
 
     private void cancelCountdown() {
@@ -198,7 +214,7 @@ public final class RoomSelectChart extends RoomGameState {
 
     private void noticeCountdown(int seconds) {
         if (countdownRunning && countOnlinePlayers() >= MIN_PLAYER) {
-            broadcastSystemMessage("投票锁定倒计时：" + seconds + " 秒。可继续改票。");
+            broadcastSystemMessage("投票锁定倒计时：" + seconds + " 秒");
             if (seconds == 1) {
                 lockedChart = selectWinningChart();
                 broadcastSystemMessage("本轮曲目已锁定，无法继续改票。");

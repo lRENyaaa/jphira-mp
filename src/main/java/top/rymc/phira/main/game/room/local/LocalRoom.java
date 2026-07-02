@@ -164,10 +164,12 @@ public class LocalRoom implements Room {
         }
 
         public void lockRoom(Player player) {
-            validateHost(player);
+            if (stateRef.get() instanceof RoomSelectChart state) {
+                state.sendVoteBoard(player);
+                return;
+            }
 
-            setting.locked = !setting.locked;
-            playerManager.broadcast(op -> op.lockRoom(setting.locked));
+            throw GameOperationException.chartPoolUnavailable();
         }
 
         public void cycleRoom(Player player) {

@@ -24,6 +24,7 @@ public final class ChartPool {
     private static final Path POOL_FILE = Path.of("data", "chart-pools.json");
     private static final Path CACHE_FILE = Path.of("data", "chart-info-cache.json");
     private static final int DEFAULT_REFRESH_INTERVAL_ROUNDS = 5;
+    private static final int DEFAULT_SELECT_CHART_COUNTDOWN_SECONDS = 150;
     private static final int[][] DEFAULT_POOL_CHART_IDS = {
             {30474, 42058},
             {33530, 52087}
@@ -66,7 +67,8 @@ public final class ChartPool {
                 config.currentPool.id,
                 config.pendingPoolId,
                 config.refreshIntervalRounds,
-                config.finishedRoundsSinceRefresh
+                config.finishedRoundsSinceRefresh,
+                config.selectChartCountdownSeconds
         );
     }
 
@@ -83,6 +85,19 @@ public final class ChartPool {
         }
 
         config.refreshIntervalRounds = rounds;
+        saveConfigUnchecked();
+    }
+
+    public static synchronized int getSelectChartCountdownSeconds() {
+        return config.selectChartCountdownSeconds;
+    }
+
+    public static synchronized void setSelectChartCountdownSeconds(int seconds) {
+        if (seconds < 10) {
+            throw new IllegalArgumentException("Countdown seconds must be at least 10");
+        }
+
+        config.selectChartCountdownSeconds = seconds;
         saveConfigUnchecked();
     }
 
@@ -204,6 +219,7 @@ public final class ChartPool {
 
         config = new PoolConfig();
         config.refreshIntervalRounds = DEFAULT_REFRESH_INTERVAL_ROUNDS;
+        config.selectChartCountdownSeconds = DEFAULT_SELECT_CHART_COUNTDOWN_SECONDS;
         config.finishedRoundsSinceRefresh = 0;
         for (int i = 0; i < DEFAULT_POOL_CHART_IDS.length; i++) {
             List<Integer> chartIds = new ArrayList<>();
@@ -278,6 +294,9 @@ public final class ChartPool {
         }
         if (config.refreshIntervalRounds <= 0) {
             config.refreshIntervalRounds = DEFAULT_REFRESH_INTERVAL_ROUNDS;
+        }
+        if (config.selectChartCountdownSeconds < 10) {
+            config.selectChartCountdownSeconds = DEFAULT_SELECT_CHART_COUNTDOWN_SECONDS;
         }
         if (config.finishedRoundsSinceRefresh < 0) {
             config.finishedRoundsSinceRefresh = 0;
@@ -373,7 +392,7 @@ public final class ChartPool {
     public record PoolSnapshot(int id, Integer favoriteId, List<Integer> chartIds) {
     }
 
-    public record PoolStatus(int currentPoolId, Integer pendingPoolId, int refreshIntervalRounds, int finishedRoundsSinceRefresh) {
+    public record PoolStatus(int currentPoolId, Integer pendingPoolId, int refreshIntervalRounds, int finishedRoundsSinceRefresh, int selectChartCountdownSeconds) {
     }
 
     private static final class PoolConfig {
@@ -381,6 +400,7 @@ public final class ChartPool {
         private Integer pendingPoolId;
         private int refreshIntervalRounds;
         private int finishedRoundsSinceRefresh;
+        private int selectChartCountdownSeconds;
         private List<PoolDefinition> pools = new ArrayList<>();
     }
 
