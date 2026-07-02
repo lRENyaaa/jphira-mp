@@ -30,6 +30,7 @@ public final class RoomSelectChart extends RoomGameState {
 
     private final Map<Player, Integer> voteByPlayer = new ConcurrentHashMap<>();
     private final Set<ScheduledFuture<?>> countdownTasks = ConcurrentHashMap.newKeySet();
+    private final ChartPool.PoolSnapshot currentPoolInfo;
     private final List<ChartInfo> currentPool;
     private volatile boolean countdownRunning;
     private volatile ChartInfo lockedChart;
@@ -40,7 +41,10 @@ public final class RoomSelectChart extends RoomGameState {
 
     public RoomSelectChart(LocalRoom room, Consumer<RoomGameState> stateUpdater, ChartInfo chart) {
         super(room, stateUpdater, chart);
-        this.currentPool = ChartPool.getCurrentPool();
+        this.currentPoolInfo = ChartPool.getCurrentPoolSnapshot();
+        this.currentPool = currentPoolInfo.chartIds().stream()
+                .map(ChartPool::getChartInfo)
+                .toList();
     }
 
     @Override
@@ -114,7 +118,11 @@ public final class RoomSelectChart extends RoomGameState {
     public void broadcastVoteBoard() {
         broadcast(op -> {
             op.receiveChat(SYSTEM_PLAYER_ID, MESSAGE_SEPARATOR);
-            op.receiveChat(SYSTEM_PLAYER_ID, "zenith 本轮谱池");
+            op.receiveChat(SYSTEM_PLAYER_ID, "zenith 本轮谱池 #" + currentPoolInfo.id());
+            if (currentPoolInfo.favoriteId() != null) {
+                op.receiveChat(SYSTEM_PLAYER_ID, "谱面收藏夹 ID：" + currentPoolInfo.favoriteId());
+                op.receiveChat(SYSTEM_PLAYER_ID, "你可以通过导入收藏夹来一键导入谱池");
+            }
             op.receiveChat(SYSTEM_PLAYER_ID, "使用选谱操作投票，只能选择下列歌曲。票数最高者开局。");
             for (String line : buildVoteBoardLines()) {
                 op.receiveChat(SYSTEM_PLAYER_ID, line);
@@ -125,7 +133,11 @@ public final class RoomSelectChart extends RoomGameState {
 
     private void sendVoteBoard(Player player) {
         sendSystemMessage(player, MESSAGE_SEPARATOR);
-        sendSystemMessage(player, "zenith 本轮谱池");
+        sendSystemMessage(player, "zenith 本轮谱池 #" + currentPoolInfo.id());
+        if (currentPoolInfo.favoriteId() != null) {
+            sendSystemMessage(player, "谱面收藏夹 ID：" + currentPoolInfo.favoriteId());
+            sendSystemMessage(player, "你可以通过导入收藏夹来一键导入谱池");
+        }
         sendSystemMessage(player, "使用选谱操作投票，只能选择下列歌曲。票数最高者开局。");
         for (String line : buildVoteBoardLines()) {
             sendSystemMessage(player, line);
@@ -190,6 +202,7 @@ public final class RoomSelectChart extends RoomGameState {
             if (seconds == 1) {
                 lockedChart = selectWinningChart();
                 broadcastSystemMessage("本轮曲目已锁定，无法继续改票。");
+                broadcastSystemMessage(MESSAGE_SEPARATOR);
                 broadcastSelectedChartState(lockedChart);
             }
         }

@@ -4,6 +4,7 @@ import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
+import top.rymc.phira.main.game.point.PlayerPointService;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.room.RoomSnapshot;
@@ -73,7 +74,7 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
             }
 
             connection.send(ClientBoundAuthenticatePacket.success(new FullUserProfile(userInfo.getId(), userInfo.getName(), false), roomInfo));
-            sendWelcomeMessages();
+            sendWelcomeMessages(player);
 
             if (view != null) {
                 view.getProtocolHack().fixClientRoomState(player, true);
@@ -93,9 +94,11 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
         }
     }
 
-    private void sendWelcomeMessages() {
+    private void sendWelcomeMessages(LocalPlayer player) {
+        PlayerPointService.PointSummary point = PlayerPointService.getSummary(player);
         connection.sendChat("————————————————————————————————————————");
         connection.sendChat("欢迎来到 zenith战队活动服务器");
+        connection.sendChat("当前积分：" + point.points() + "，积分排名：#" + point.rank());
         connection.sendChat("请加入房间 zenith 参与活动。服务器只有这一个活动房间。");
         connection.sendChat("玩法说明：在选谱阶段使用选谱操作为谱池内歌曲投票。");
         connection.sendChat("投票仅限当前谱池，重复投票会改票，观战者不能投票。");

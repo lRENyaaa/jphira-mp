@@ -5,7 +5,9 @@ import top.rymc.phira.main.data.GameRecord;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
+import top.rymc.phira.main.game.point.PlayerPointService;
 import top.rymc.phira.main.game.record.PhiraRecord;
+import top.rymc.phira.main.game.room.chart.ChartPool;
 import top.rymc.phira.main.game.room.local.LocalRoom;
 import top.rymc.phira.main.util.PhiraFetcher;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
@@ -14,6 +16,7 @@ import top.rymc.phira.protocol.data.state.GameState;
 import top.rymc.phira.protocol.data.state.Playing;
 import top.rymc.phira.protocol.data.state.SelectChart;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -38,6 +42,7 @@ public final class RoomPlaying extends RoomGameState {
     private final Map<Player, List<TouchFrame>> touchFrames = new ConcurrentHashMap<>();
     private final Map<Player, List<JudgeEvent>> judgeEvents = new ConcurrentHashMap<>();
     private final Set<ScheduledFuture<?>> forceFinishTasks = ConcurrentHashMap.newKeySet();
+    private final AtomicBoolean roundFinished = new AtomicBoolean(false);
     private volatile boolean forceFinishCountdownStarted;
 
     public RoomPlaying(LocalRoom room, Consumer<RoomGameState> stateUpdater) {
@@ -117,7 +122,24 @@ public final class RoomPlaying extends RoomGameState {
             gameRecords.put(player, record);
             savePhiraRecord(player, record);
 
-            broadcast(op -> op.gamePlayed(player.getId(), record.getScore(), record.getAccuracy(), record.isFullCombo()));
+            String message = String.format(
+                    """
+                    [%s] %s 的分数: %s, 准度: %s%%, 误差: ±%sms, 无暇度分数: %s
+                        Perfect: %s, Good: %s, Bad: %s, Miss: %s
+                    """,
+                    player.getId(),
+                    player.getName(),
+                    record.getScore(),
+                    record.getAccuracy() * 100,
+                    record.getStd() * 1000,
+                    record.getStdScore(),
+                    record.getPerfect(),
+                    record.getGood(),
+                    record.getBad(),
+                    record.getMiss()
+            );
+
+            broadcastSystemMessage(message);
             startForceFinishCountdown();
         } catch (GameOperationException e) {
             player.operations().ifPresent(op -> op.receiveChat(SYSTEM_PLAYER_ID, "网络错误导致成绩提交失败，本轮将视为放弃。"));
@@ -170,16 +192,7 @@ public final class RoomPlaying extends RoomGameState {
     }
 
     private void forceFinishGame() {
-        RoomSelectChart state = new RoomSelectChart(room, stateUpdater, chart);
-        forceFinishTasks.forEach(task -> task.cancel(false));
-        forceFinishTasks.clear();
-        activePlayers.stream()
-                .filter(Player::isOnline)
-                .forEach(player -> player.operations().ifPresent(op -> op.updateHostStatus(true)));
-        broadcast(PlayerOperations::gameEnd);
-        updateGameState(state);
-        state.broadcastVoteBoard();
-        state.activate();
+        finishRound();
     }
 
     private void cancelForceFinishCountdown() {
@@ -198,13 +211,84 @@ public final class RoomPlaying extends RoomGameState {
         }
 
         if (isAllOnlineActivePlayersDone()) {
-            cancelForceFinishCountdown();
-            RoomSelectChart state = new RoomSelectChart(room, stateUpdater, chart);
-            broadcast(PlayerOperations::gameEnd);
-            updateGameState(state);
-            state.broadcastVoteBoard();
-            state.activate();
+            finishRound();
         }
+    }
+
+    private void finishRound() {
+        if (!roundFinished.compareAndSet(false, true)) {
+            return;
+        }
+
+        ChartPool.finishPlayingRound();
+        cancelForceFinishCountdown();
+        broadcastRanking();
+        RoomSelectChart state = new RoomSelectChart(room, stateUpdater, chart);
+        activePlayers.stream()
+                .filter(Player::isOnline)
+                .forEach(player -> player.operations().ifPresent(op -> op.updateHostStatus(true)));
+        broadcast(PlayerOperations::gameEnd);
+        updateGameState(state);
+        state.broadcastVoteBoard();
+        state.activate();
+    }
+
+    private void broadcastRanking() {
+        if (gameRecords.isEmpty()) {
+            return;
+        }
+
+        List<Map.Entry<Player, GameRecord>> ranking = gameRecords.entrySet().stream()
+                .sorted(Map.Entry.<Player, GameRecord>comparingByValue(
+                        Comparator.comparingInt(GameRecord::getScore).reversed()
+                                .thenComparing(Comparator.comparingDouble(GameRecord::getAccuracy).reversed())
+                                .thenComparingDouble(GameRecord::getStd)
+                ))
+                .toList();
+
+        broadcastSystemMessage(MESSAGE_SEPARATOR);
+        broadcastSystemMessage("本轮排名");
+        int rank = 0;
+        GameRecord previous = null;
+        for (int i = 0; i < ranking.size(); i++) {
+            Map.Entry<Player, GameRecord> entry = ranking.get(i);
+            Player player = entry.getKey();
+            GameRecord record = entry.getValue();
+            if (previous == null || compareRecord(record, previous) != 0) {
+                rank = i + 1;
+            }
+            int gainedPoints = getPointsByRank(rank);
+            int totalPoints = PlayerPointService.addPoints(player, gainedPoints);
+            broadcastSystemMessage(String.format(
+                    "%d. %s - 分数: %s, 准度: %s%%, 误差: ±%sms, 积分: +%s, 总积分: %s",
+                    rank,
+                    player.getName(),
+                    record.getScore(),
+                    record.getAccuracy() * 100,
+                    record.getStd() * 1000,
+                    gainedPoints,
+                    totalPoints
+            ));
+            previous = record;
+        }
+        broadcastSystemMessage(MESSAGE_SEPARATOR);
+    }
+
+    private int compareRecord(GameRecord a, GameRecord b) {
+        return Comparator.comparingInt(GameRecord::getScore).reversed()
+                .thenComparing(Comparator.comparingDouble(GameRecord::getAccuracy).reversed())
+                .thenComparingDouble(GameRecord::getStd)
+                .compare(a, b);
+    }
+
+    private int getPointsByRank(int rank) {
+        return switch (rank) {
+            case 1 -> 100;
+            case 2 -> 75;
+            case 3 -> 50;
+            case 4 -> 25;
+            default -> 10;
+        };
     }
 
     private boolean isAllOnlineActivePlayersDone() {

@@ -75,7 +75,7 @@ public class RoomSnapshot {
             );
         }
 
-        private static final Executor executor = CompletableFuture.delayedExecutor(10, TimeUnit.MILLISECONDS);
+        private static final Executor executor = CompletableFuture.delayedExecutor(100, TimeUnit.MILLISECONDS);
 
 
         public void fixClientRoomState(Player player, boolean delay) {

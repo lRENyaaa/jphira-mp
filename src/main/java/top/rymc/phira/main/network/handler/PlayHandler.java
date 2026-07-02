@@ -3,6 +3,7 @@ package top.rymc.phira.main.network.handler;
 import lombok.Getter;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
+import top.rymc.phira.main.game.point.PlayerPointService;
 import top.rymc.phira.main.game.player.holder.PlayerHolder;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.RoomManager;
@@ -62,12 +63,18 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
             connection.send(hack.buildJoinSuccessPacket());
 
             hack.fixClientRoomState(player, true);
+            sendPointSummary();
 
         } catch (GameOperationException e) {
             connection.send(ClientBoundJoinRoomPacket.failed(I18nService.INSTANCE.getMessage(player, e.getMessageKey())));
         } catch (Exception e) {
             connection.send(ClientBoundJoinRoomPacket.failed(e.getMessage()));
         }
+    }
+
+    private void sendPointSummary() {
+        PlayerPointService.PointSummary point = PlayerPointService.getSummary(player);
+        player.getConnection().sendChat("当前积分：" + point.points() + "，积分排名：#" + point.rank());
     }
 
     @Override
