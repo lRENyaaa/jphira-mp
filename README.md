@@ -1,10 +1,22 @@
+# 关于该分支
+
+该分支用于 zenith 战队活动服务器的定制化改造。
+
+它将原本的通用多人房间服务端改造为单一固定房间模式，房间 id 固定为 `zenith`，玩家只能加入该房间参与活动。房间不再依赖房主推进流程，而是由服务端自动完成投票、倒计时、准备、开局、结算和下一轮检查。
+
+核心玩法围绕谱池投票展开：玩家在 `SelectChart` 阶段通过选谱操作为当前谱池内曲目投票，达到开局人数后进入可配置倒计时，倒计时结束后锁定票数最高的曲目。谱池、当前池快照、刷新轮次、收藏夹 id 和 ChartInfo 缓存均通过 `data` 目录下的 JSON 文件持久化。
+
+该分支还增加了活动运营相关能力，包括控制台强制结束当前局、控制台管理谱池、通过锁房按钮查看当前谱池状态、积分系统、结算排名和通过创建 `rank` 房间查看积分排行榜。
+
+这些改造面向固定活动服场景，不再以完整兼容原始通用房间逻辑为目标。
+
 # jphira-mp
 Java 实现的 [phira-mp](https://github.com/TeamFlos/phira-mp) 服务端，为性能与扩展性的平衡而生
 
 ## ⚙️ 特性
 * Java 实现
 * 基于 [netty](https://github.com/netty/netty)
-* 拥有可扩展的插件系统
+* 拥有可扩展的插件系统（当前分支不支持）
 * 正确实现原始逻辑
 
 ## 🚀 使用方法
@@ -29,7 +41,7 @@ java -jar jphira-mp-<version>.jar --port 12346
 
 关闭 jphira-mp 同样与 Minecraft 服务端类似，在控制台输入 `stop` 命令即可关闭服务器。
 
-## 🔌 插件开发
+## 🔌 插件开发（当前分支不支持）
 [![](https://jitpack.io/v/lRENyaaa/jphira-mp.svg)](https://jitpack.io/#lRENyaaa/jphira-mp)  
 jphira-mp 在 [JitPack](https://jitpack.io/) 上可用
 
