@@ -38,6 +38,12 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
 
     @Override
     public void handle(ServerBoundCreateRoomPacket packet) {
+        if ("rank".equals(packet.getRoomId())) {
+            player.getConnection().send(ClientBoundCreateRoomPacket.failed("排行榜已发送"));
+            sendPointRanking();
+            return;
+        }
+
         player.getConnection().send(ClientBoundCreateRoomPacket.failed("当前不支持此操作"));
     }
 
@@ -75,6 +81,18 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
     private void sendPointSummary() {
         PlayerPointService.PointSummary point = PlayerPointService.getSummary(player);
         player.getConnection().sendChat("当前积分：" + point.points() + "，积分排名：#" + point.rank());
+    }
+
+    private void sendPointRanking() {
+        PlayerPointService.PointSummary point = PlayerPointService.getSummary(player);
+        player.getConnection().sendChat("————————————————————————————————————————");
+        player.getConnection().sendChat("积分排行榜 TOP 10");
+        player.getConnection().sendChat("排行榜每一分钟刷新一次，可能有滞后。");
+        for (String line : PlayerPointService.getTopRankingLines(10)) {
+            player.getConnection().sendChat(line);
+        }
+        player.getConnection().sendChat("你的积分：" + point.points() + "，积分排名：#" + point.rank());
+        player.getConnection().sendChat("————————————————————————————————————————");
     }
 
     @Override

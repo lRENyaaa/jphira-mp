@@ -19,9 +19,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class PlayerPointService {
 
     private static final Path POINT_FILE = Path.of("data", "player-points.json");
+    private static final long RANKING_CACHE_MILLIS = 60_000;
     private static final Type POINT_DATA_TYPE = new TypeToken<Map<Integer, PointData>>() {
     }.getType();
     private static final Map<Integer, PointData> POINTS = new ConcurrentHashMap<>();
+    private static volatile long rankingCacheTime;
+    private static volatile List<String> rankingCache = List.of();
 
     static {
         load();
@@ -39,8 +42,24 @@ public final class PlayerPointService {
     public static synchronized int addPoints(Player player, int points) {
         PointData data = touch(player);
         data.points = Math.max(0, data.points + points);
+        rankingCacheTime = 0;
         saveUnchecked();
         return data.points;
+    }
+
+    public static synchronized List<String> getTopRankingLines(int limit) {
+        long now = System.currentTimeMillis();
+        if (now - rankingCacheTime <= RANKING_CACHE_MILLIS) {
+            return rankingCache;
+        }
+
+        List<String> lines = getRanking().stream()
+                .limit(limit)
+                .map(entry -> String.format("#%d %s：%d 分", getRank(entry.getKey()), entry.getValue().name, entry.getValue().points))
+                .toList();
+        rankingCache = lines;
+        rankingCacheTime = now;
+        return lines;
     }
 
     private static PointData touch(Player player) {
@@ -50,11 +69,7 @@ public final class PlayerPointService {
     }
 
     private static int getRank(int playerId) {
-        List<Map.Entry<Integer, PointData>> ranking = POINTS.entrySet().stream()
-                .sorted(Map.Entry.<Integer, PointData>comparingByValue(
-                        Comparator.comparingInt(PointData::getPoints).reversed()
-                ).thenComparingInt(Map.Entry::getKey))
-                .toList();
+        List<Map.Entry<Integer, PointData>> ranking = getRanking();
 
         for (int i = 0; i < ranking.size(); i++) {
             if (ranking.get(i).getKey() == playerId) {
@@ -62,6 +77,14 @@ public final class PlayerPointService {
             }
         }
         return ranking.size() + 1;
+    }
+
+    private static List<Map.Entry<Integer, PointData>> getRanking() {
+        return POINTS.entrySet().stream()
+                .sorted(Map.Entry.<Integer, PointData>comparingByValue(
+                        Comparator.comparingInt(PointData::getPoints).reversed()
+                ).thenComparingInt(Map.Entry::getKey))
+                .toList();
     }
 
     private static void load() {
