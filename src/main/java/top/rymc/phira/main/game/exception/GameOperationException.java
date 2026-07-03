@@ -6,10 +6,12 @@ import lombok.Getter;
 public class GameOperationException extends RuntimeException {
 
     private final String messageKey;
+    private final Object[] args;
 
-    public GameOperationException(String messageKey) {
+    public GameOperationException(String messageKey, Object... args) {
         super(messageKey);
         this.messageKey = messageKey;
+        this.args = args;
     }
 
     public static GameOperationException invalidState() {
@@ -74,5 +76,17 @@ public class GameOperationException extends RuntimeException {
 
     public static GameOperationException authenticationFailed() {
         return new GameOperationException("error.authentication_failed");
+    }
+
+    public static GameOperationException playerAlreadyOnline(String time) {
+        return new GameOperationException("error.player_already_online", time);
+    }
+
+    public static GameOperationException playAlreadyDone() {
+        return new GameOperationException("error.play_already_done");
+    }
+
+    public static GameOperationException recordFetchFailed(int recordId) {
+        return new GameOperationException("error.record_fetch_failed", recordId);
     }
 }

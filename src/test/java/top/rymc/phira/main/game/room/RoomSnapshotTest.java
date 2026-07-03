@@ -146,7 +146,8 @@ class RoomSnapshotTest {
             Set.of()
         );
 
-        ClientBoundJoinRoomPacket packet = roomSnapshot.getProtocolHack().buildJoinSuccessPacket();
+        when(room.getView()).thenReturn(roomSnapshot);
+        ClientBoundJoinRoomPacket packet = ProtocolHackService.buildJoinSuccessPacket(room);
 
         assertThat(packet).isNotNull();
     }

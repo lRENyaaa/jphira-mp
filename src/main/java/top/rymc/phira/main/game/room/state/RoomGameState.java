@@ -47,15 +47,19 @@ public abstract sealed class RoomGameState implements ProtocolConvertible<GameSt
 
     public abstract void handleLeave(Player player);
 
-    public abstract void requireStart(Player player);
+    public abstract void requestStart(Player player);
+
+    public abstract void forceRequestStart();
+
+    public abstract void forceStart();
 
     public abstract void ready(Player player);
 
     public abstract void cancelReady(Player player);
 
-    public abstract void touchSend(Player player, List<TouchFrame> touchFrames);
+    public abstract boolean touchSend(Player player, List<TouchFrame> touchFrames);
 
-    public abstract void judgeSend(Player player, List<JudgeEvent> judgeEvents);
+    public abstract boolean judgeSend(Player player, List<JudgeEvent> judgeEvents);
 
     public abstract void abort(Player player);
 

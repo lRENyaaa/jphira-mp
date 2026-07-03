@@ -16,6 +16,8 @@
   "error.session_expired": "Session expired",
   "error.authentication_failed": "Authentication failed",
   "error.logged_in_elsewhere": "Account logged in from another location",
-  "error.player_already_online": "Player is already online",
+  "error.player_already_online": "Player is already online\n\nTime %s",
+  "error.play_already_done": "You did not participate in this round, or you have already aborted/completed it.",
+  "error.record_fetch_failed": "Phira API network error, failed to upload your score. Your record ID is: %s",
   "system.live_recorder_name": "Live Recorder (Please ignore this account)"
 }

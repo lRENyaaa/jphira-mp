@@ -1,11 +1,12 @@
 package top.rymc.phira.main.game.player;
 
-import top.rymc.phira.function.throwable.ThrowableConsumer;
+import top.rymc.phira.function.throwable.ThrowableBiConsumer;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.event.player.PlayerCreateEvent;
 import top.rymc.phira.main.game.exception.session.PlayerTypeMismatchException;
 import top.rymc.phira.main.game.exception.session.ResumeFailedException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
+import top.rymc.phira.main.game.session.LocalSessionManager;
 import top.rymc.phira.main.network.PlayerConnection;
 
 import java.util.ArrayList;
@@ -13,8 +14,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 public class PlayerManager {
@@ -32,8 +35,8 @@ public class PlayerManager {
             int userId,
             Class<T> clazz,
             Supplier<T> constructor,
-            ThrowableConsumer<T, ResumeFailedException> resumer,
-            BiConsumer<Runnable, T> closeBinder
+            ThrowableBiConsumer<T, BooleanSupplier, ResumeFailedException> resumer,
+            BiConsumer<BooleanSupplier, T> closeBinder
     ) throws ResumeFailedException {
 
         AtomicReference<ResolveResult<T>> reference = new AtomicReference<>();
@@ -58,11 +61,24 @@ public class PlayerManager {
 
             T castedExisting = clazz.cast(existing);
 
+            AtomicBoolean removed = new AtomicBoolean(false);
+            BooleanSupplier remover = () -> {
+                boolean success = PLAYERS.remove(userId, castedExisting);
+                removed.set(success);
+                return success;
+            };
+
             try {
-                resumer.accept(castedExisting);
+                resumer.accept(castedExisting, remover);
             } catch (ResumeFailedException exception) {
                 exceptionReference.set(exception);
                 return existing;
+            }
+
+            if (removed.get()) {
+                T player = constructor.get();
+                reference.set(new ResolveResult<>(player, ResolveResult.Type.Create));
+                return player;
             }
 
             reference.set(new ResolveResult<>(castedExisting, ResolveResult.Type.Resume));
@@ -81,7 +97,7 @@ public class PlayerManager {
             throw new AssertionError();
         }
 
-        closeBinder.accept(() -> PLAYERS.remove(userId), result.player);
+        closeBinder.accept(() -> PLAYERS.remove(userId, result.player), result.player);
 
         return result;
     }

@@ -1,9 +1,6 @@
 package top.rymc.phira.main.game.room.state;
 
-import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
-import top.rymc.phira.main.event.game.GameRequireStartEvent;
-import top.rymc.phira.main.event.game.GameStartEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.room.local.LocalRoom;
@@ -13,7 +10,6 @@ import top.rymc.phira.protocol.data.state.GameState;
 import top.rymc.phira.protocol.data.state.SelectChart;
 
 import java.util.List;
-import java.util.Set;
 import java.util.function.Consumer;
 
 public final class RoomSelectChart extends RoomGameState {
@@ -21,43 +17,55 @@ public final class RoomSelectChart extends RoomGameState {
         super(room, stateUpdater);
     }
 
-    public RoomSelectChart(LocalRoom room, Consumer<RoomGameState> stateUpdater, ChartInfo chart){
+    public RoomSelectChart(LocalRoom room, Consumer<RoomGameState> stateUpdater, ChartInfo chart) {
         super(room, stateUpdater, chart);
     }
 
     @Override
     public void handleJoin(Player player) {
-
     }
 
     @Override
     public void handleLeave(Player player) {
-
     }
 
     @Override
-    public void requireStart(Player player) {
-        Set<Player> players = room.getPlayerManager().getPlayers();
-        Set<Player> monitors = room.getPlayerManager().getMonitors();
-        int totalPlayers = players.size() + monitors.size();
+    public void requestStart(Player player) {
+        requestStart(player, true);
+    }
 
-        GameRequireStartEvent event = new GameRequireStartEvent(room, player, chart);
-        Server.postEvent(event);
-        if (event.isCancelled()) {
+    @Override
+    public void forceRequestStart() {
+        requestStart(null, false);
+    }
+
+    private void requestStart(Player initiator, boolean sendStartMessage) {
+        if (sendStartMessage && initiator != null) {
+            broadcast(op -> op.gameRequireStart(initiator.getId()));
+        }
+
+        long onlinePlayers = room.getPlayerManager().getPlayers().stream()
+                .filter(Player::isOnline)
+                .count();
+        long onlineMonitors = room.getPlayerManager().getMonitors().stream()
+                .filter(Player::isOnline)
+                .count();
+
+        if (sendStartMessage && onlinePlayers == 1 && onlineMonitors == 0) {
+            RoomPlaying state = RoomPlaying.create(room, stateUpdater, chart, room.getPlayerManager().getPlayers(), room.getPlayerManager().getMonitors());
+            updateGameState(state);
+            room.getPlayerManager().broadcast(op -> op.gameStartPlaying());
             return;
         }
 
-        GameStartEvent startEvent = new GameStartEvent(room, player, chart, Set.copyOf(players), Set.copyOf(monitors));
-        Server.postEvent(startEvent);
+        Player autoReady = initiator != null ? initiator : room.getPlayerManager().getHost().orElse(null);
+        RoomWaitForReady state = new RoomWaitForReady(room, stateUpdater, chart, autoReady);
+        updateGameState(state);
+    }
 
-        if (totalPlayers == 1) {
-            RoomPlaying state = new RoomPlaying(room, stateUpdater, chart);
-            updateGameState(state);
-        } else {
-            RoomWaitForReady state = new RoomWaitForReady(room, stateUpdater, chart, player);
-            updateGameState(state);
-            broadcast(op -> op.gameRequireStart(player.getId()));
-        }
+    @Override
+    public void forceStart() {
+        throw GameOperationException.invalidState();
     }
 
     @Override
@@ -71,13 +79,13 @@ public final class RoomSelectChart extends RoomGameState {
     }
 
     @Override
-    public void touchSend(Player player, List<TouchFrame> touchFrames) {
-
+    public boolean touchSend(Player player, List<TouchFrame> touchFrames) {
+        return false;
     }
 
     @Override
-    public void judgeSend(Player player, List<JudgeEvent> judgeEvents) {
-
+    public boolean judgeSend(Player player, List<JudgeEvent> judgeEvents) {
+        return false;
     }
 
     @Override

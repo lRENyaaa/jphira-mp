@@ -11,14 +11,14 @@ import top.rymc.phira.main.event.operation.RoomCycleChangeEvent;
 import top.rymc.phira.main.event.operation.RoomLockChangeEvent;
 import top.rymc.phira.main.event.operation.RoomPostSelectChartEvent;
 import top.rymc.phira.main.event.operation.RoomPreSelectChartEvent;
-import top.rymc.phira.main.event.room.PlayerLeaveRoomEvent;
 import top.rymc.phira.main.event.room.RoomDestroyEvent;
-import top.rymc.phira.main.event.room.RoomHostChangeEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
+import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.RoomSnapshot;
+import top.rymc.phira.main.game.session.LocalSessionManager;
 import top.rymc.phira.main.game.room.state.RoomGameState;
 import top.rymc.phira.main.game.room.state.RoomGameStateReference;
 import top.rymc.phira.main.game.room.state.RoomSelectChart;
@@ -115,43 +115,38 @@ public class LocalRoom implements Room {
 
         public void transferHostToNextPlayer() {
             Player previousHost = host;
+            Player nextHost = findNextHost(previousHost, true);
+            if (nextHost == null) {
+                nextHost = findNextHost(previousHost, false);
+            }
 
+            host = nextHost;
+            if (previousHost != null) {
+                previousHost.operations().ifPresent((o) -> o.updateHostStatus(false));
+            }
+            if (nextHost != null) {
+                nextHost.operations().ifPresent((o) -> o.updateHostStatus(true));
+            }
+        }
+
+        private Player findNextHost(Player previousHost, boolean onlineOnly) {
             List<Player> sorted = players.stream()
+                    .filter(player -> !onlineOnly || player.isOnline())
                     .sorted(Comparator.comparing(Player::getId))
                     .toList();
 
-            Player nextHost = sorted.stream().findFirst().orElse(null);
-
-            if (previousHost != null) {
-                for (Player player : sorted) {
-                    if (player.getId() <= previousHost.getId()) {
-                        continue;
-                    }
-
-                    nextHost = player;
-                    break;
-                }
+            if (sorted.isEmpty()) {
+                return null;
             }
 
-            if (nextHost != null) {
-                host = nextHost;
-                if (previousHost != null) {
-                    previousHost.operations().ifPresent((o) -> o.updateHostStatus(false));
-                }
-                nextHost.operations().ifPresent((o) -> o.updateHostStatus(true));
-
-                RoomHostChangeEvent event = new RoomHostChangeEvent(LocalRoom.this, previousHost, host);
-                Server.postEvent(event);
-
-                return;
+            if (previousHost == null) {
+                return sorted.get(0);
             }
 
-            if (host != null) {
-                RoomHostChangeEvent event = new RoomHostChangeEvent(LocalRoom.this, host, null);
-                Server.postEvent(event);
-            }
-
-            host = null;
+            return sorted.stream()
+                    .filter(player -> player.getId() > previousHost.getId())
+                    .findFirst()
+                    .orElse(sorted.get(0));
         }
 
         public void broadcast(Consumer<PlayerOperations> action) {
@@ -194,10 +189,14 @@ public class LocalRoom implements Room {
                 return;
             }
 
-            if (!isMonitor && playerManager.players.size() == 1 && setting.host) {
+            if (!isMonitor && playerManager.host == null && setting.host) {
                 playerManager.host = player;
             } else {
                 shouldBroadcastJoin = true;
+            }
+
+            if (isMonitor && !setting.live) {
+                setting.live = true;
             }
         }
 
@@ -208,32 +207,55 @@ public class LocalRoom implements Room {
         stateRef.get().handleJoin(player);
     }
 
-    public void leave(Player player) {
-        boolean shouldDestroy = false;
+    public boolean leave(Player player) {
+        boolean success = true;
+        boolean removedPlayer;
+        boolean removedMonitor;
+        boolean shouldDestroy;
+
+        try {
+            stateRef.get().handleLeave(player);
+        } catch (Exception e) {
+            success = false;
+            Server.getLogger().error("Failed to handle leave, player {}, room {}", player.getId(), roomId, e);
+        }
 
         synchronized (lifecycleLock) {
-            if (!playerManager.players.remove(player) && !playerManager.monitors.remove(player)) {
-                return;
+            removedPlayer = playerManager.players.remove(player);
+            removedMonitor = playerManager.monitors.remove(player);
+            if (!removedPlayer && !removedMonitor) {
+                return false;
             }
 
-            if (playerManager.players.isEmpty() && playerManager.monitors.isEmpty()) {
-                shouldDestroy = setting.autoDestroy;
+            if (setting.host && removedPlayer && player.equals(playerManager.host)) {
+                try {
+                    playerManager.transferHostToNextPlayer();
+                } catch (Exception e) {
+                    success = false;
+                    Server.getLogger().error("Failed to transfer host, player {}, room {}", player.getId(), roomId, e);
+                }
             }
 
-            if (setting.host && player.equals(playerManager.host)) {
-                playerManager.transferHostToNextPlayer();
-            }
+            shouldDestroy = setting.autoDestroy && playerManager.players.isEmpty() && playerManager.monitors.isEmpty();
         }
 
-        playerManager.broadcast(op -> op.memberLeft(player.getId(), player.getName()));
-        stateRef.get().handleLeave(player);
-
-        PlayerLeaveRoomEvent event = new PlayerLeaveRoomEvent(player, this);
-        Server.postEvent(event);
+        try {
+            playerManager.broadcast(op -> op.memberLeft(player.getId(), player.getName()));
+        } catch (Exception e) {
+            success = false;
+            Server.getLogger().error("Failed to broadcast member leave, player {}, room {}", player.getId(), roomId, e);
+        }
 
         if (shouldDestroy) {
-            destroyRoom();
+            try {
+                destroyRoom();
+            } catch (Exception e) {
+                success = false;
+                Server.getLogger().error("Failed to destroy room {} after leave", roomId, e);
+            }
         }
+
+        return success;
     }
 
     @Getter
@@ -311,19 +333,33 @@ public class LocalRoom implements Room {
             playerManager.broadcast(operations -> operations.receiveChat(player.getId(), event.getMessage()));
         }
 
-        public void touchSend(Player player, List<TouchFrame> touchFrames) {
-            stateRef.get().touchSend(player, touchFrames);
-            playerManager.broadcastToMonitors(operations -> operations.receiveTouchStream(player.getId(), touchFrames));
+        public boolean touchSend(Player player, List<TouchFrame> touchFrames) {
+            boolean accepted = stateRef.get().touchSend(player, touchFrames);
+            if (accepted) {
+                playerManager.broadcastToMonitors(operations -> operations.receiveTouchStream(player.getId(), touchFrames));
+            }
+            return accepted;
         }
 
-        public void judgeSend(Player player, List<JudgeEvent> judgeEvents) {
-            stateRef.get().judgeSend(player, judgeEvents);
-            playerManager.broadcastToMonitors(operations -> operations.receiveJudgeStream(player.getId(), judgeEvents));
+        public boolean judgeSend(Player player, List<JudgeEvent> judgeEvents) {
+            boolean accepted = stateRef.get().judgeSend(player, judgeEvents);
+            if (accepted) {
+                playerManager.broadcastToMonitors(operations -> operations.receiveJudgeStream(player.getId(), judgeEvents));
+            }
+            return accepted;
         }
 
-        public void requireStart(Player player) {
+        public void requestStart(Player player) {
             validateHost(player);
-            stateRef.get().requireStart(player);
+            stateRef.get().requestStart(player);
+        }
+
+        public void forceRequestStart() {
+            stateRef.get().forceRequestStart();
+        }
+
+        public void forceStart() {
+            stateRef.get().forceStart();
         }
 
         public void ready(Player player) {
@@ -359,10 +395,34 @@ public class LocalRoom implements Room {
     }
 
     private void destroyRoom() {
+        Set<Player> remainingPlayers = playerManager.getPlayersCopy();
+        Set<Player> remainingMonitors = playerManager.getMonitorsCopy();
+        int cleanedSessions = 0;
+        if (!remainingPlayers.isEmpty() || !remainingMonitors.isEmpty()) {
+            Set<Player> remainingMembers = ConcurrentHashMap.newKeySet();
+            remainingMembers.addAll(remainingPlayers);
+            remainingMembers.addAll(remainingMonitors);
+            for (Player player : remainingMembers) {
+                if (player instanceof LocalPlayer localPlayer) {
+                    LocalSessionManager.removeSuspendedSession(localPlayer);
+                    cleanedSessions++;
+                }
+                try {
+                    player.kick();
+                } catch (Exception e) {
+                    Server.getLogger().error("Failed to cleanup player {} while destroying room {}", player.getId(), roomId, e);
+                }
+            }
+            Server.getLogger().error(
+                    "Destroying room {} with remaining players {}, monitors {}, cleanedSessions {}",
+                    roomId, remainingPlayers.size(), remainingMonitors.size(), cleanedSessions
+            );
+        }
+
         RoomDestroyEvent event = new RoomDestroyEvent(
                 this,
-                playerManager.getPlayersCopy(),
-                playerManager.getMonitorsCopy()
+                remainingPlayers,
+                remainingMonitors
         );
         Server.postEvent(event);
         onDestroy.run();

@@ -30,19 +30,23 @@ public class I18nService {
         this.serverDefaultLanguage = language != null ? language : DEFAULT_LANGUAGE;
     }
 
-    public String getMessage(String key) {
-        return getMessage(serverDefaultLanguage, key);
+    public String getMessage(String key, Object... args) {
+        return getMessage(serverDefaultLanguage, key, args);
     }
 
-    public String getMessage(Player player, String key) {
+    public String getMessage(Player player, String key, Object... args) {
         String language = player != null ? player.getLanguage() : serverDefaultLanguage;
-        return getMessage(language, key);
+        return getMessage(language, key, args);
     }
 
-    public String getMessage(String language, String key) {
+    public String getMessage(String language, String key, Object... args) {
         Map<String, String> langMap = loadLanguage(language);
         String message = langMap.get(key);
-        return message != null ? message : key;
+        if (message == null) {
+            return key;
+        }
+
+        return args.length == 0 ? message : message.formatted(args);
     }
 
     private Map<String, String> loadLanguage(String language) {

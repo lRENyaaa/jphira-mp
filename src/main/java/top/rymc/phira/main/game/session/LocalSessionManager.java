@@ -4,14 +4,12 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import top.rymc.phira.main.Server;
-import top.rymc.phira.main.event.session.PlayerSessionSuspendEvent;
-import top.rymc.phira.main.event.session.PlayerSessionTimeoutEvent;
-import top.rymc.phira.main.game.i18n.I18nService;
-import top.rymc.phira.main.game.player.local.LocalPlayer;
-import top.rymc.phira.main.game.room.Room;
-import top.rymc.phira.main.game.room.holder.SuspendableRoomHolder;
 import top.rymc.phira.main.game.exception.session.ResumeFailedException;
 import top.rymc.phira.main.game.exception.session.SuspendFailedException;
+import top.rymc.phira.main.game.player.local.LocalPlayer;
+import top.rymc.phira.main.game.room.ProtocolHackService;
+import top.rymc.phira.main.game.room.Room;
+import top.rymc.phira.main.game.room.holder.SuspendableRoomHolder;
 import top.rymc.phira.main.game.room.state.RoomGameState;
 import top.rymc.phira.main.game.room.state.RoomPlaying;
 import top.rymc.phira.main.game.room.state.RoomWaitForReady;
@@ -19,17 +17,28 @@ import top.rymc.phira.main.network.PlayerConnection;
 import top.rymc.phira.protocol.handler.server.ServerBoundPacketHandler;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BooleanSupplier;
 
 public class LocalSessionManager {
 
     private static final Map<Integer, SuspendedRoomSession> SUSPENDED = new ConcurrentHashMap<>();
+    private static final AtomicLong SESSION_VERSION = new AtomicLong();
+    private static final Lock[] LOCKS = new Lock[64];
     private static final ScheduledExecutorService TIMER = Executors.newScheduledThreadPool(1);
+
+    static {
+        for (int i = 0; i < LOCKS.length; i++) {
+            LOCKS[i] = new ReentrantLock();
+        }
+    }
 
     @Getter
     @Setter
@@ -40,63 +49,76 @@ public class LocalSessionManager {
     }
 
     public static void resume(LocalPlayer player, PlayerConnection newConn) throws ResumeFailedException {
-        SuspendedRoomSession session = SUSPENDED.remove(player.getId());
-        if (session == null) {
-            if (player.isOnline()) {
-                postResume(player, newConn);
-                return;
+        Lock lock = lockFor(player.getId());
+        lock.lock();
+        try {
+            SuspendedRoomSession session = SUSPENDED.get(player.getId());
+            if (session == null) {
+                throw new ResumeFailedException();
             }
 
-            throw new ResumeFailedException();
-        }
+            if (!removeSession(player.getId(), session)) {
+                throw new ResumeFailedException();
+            }
 
-        ScheduledFuture<?> timeout = session.timeout;
-        if (timeout != null) {
-            timeout.cancel(false);
-        }
+            ScheduledFuture<?> timeout = session.timeout;
+            if (timeout != null) {
+                timeout.cancel(false);
+            }
 
-        Optional<Room> optionalRoom = player.getRoom();
-        if (optionalRoom.isPresent()) {
-            Room room = optionalRoom.get();
+            Room room = session.room;
             if (!room.containsPlayer(player)) {
                 throw new ResumeFailedException();
             }
-        }
 
-        postResume(player, newConn);
+            ServerBoundPacketHandler handler = session.oldConnection.getPacketHandler();
+            newConn.setPacketHandler(handler);
+
+            if (!player.getConnectionRef().swap(session.oldConnection, newConn)) {
+                Server.getLogger().error(
+                        "Failed to resume player {}, session {}, oldConnection {}, newConnection {}, actualConnection {}",
+                        player.getId(), session.version, session.oldConnection, newConn, player.getConnection()
+                );
+                newConn.close();
+                throw new ResumeFailedException();
+            }
+
+            if (!session.oldConnection.isClosed()) {
+                Server.getLogger().error(
+                        "Old connection still active after resume, player {}, session {}, oldConnection {}",
+                        player.getId(), session.version, session.oldConnection
+                );
+                session.oldConnection.markDuplicateLogin();
+            }
+
+            ProtocolHackService.reconnect(room, player);
+        } finally {
+            lock.unlock();
+        }
     }
 
-    private static void postResume(LocalPlayer player, PlayerConnection newConn) {
-        ServerBoundPacketHandler handler = player.getConnection().getPacketHandler();
-        newConn.setPacketHandler(handler);
+    public static void suspend(LocalPlayer player, PlayerConnection oldConn, BooleanSupplier remover) throws SuspendFailedException {
+        Lock lock = lockFor(player.getId());
+        lock.lock();
+        try {
+            if (player.getConnection() != oldConn) {
+                throw new SuspendFailedException();
+            }
 
-        player.getConnectionRef().resume(newConn, (oldConn) ->
-                oldConn.sendChat(I18nService.INSTANCE.getMessage(player.getLanguage(), "error.logged_in_elsewhere"))
-        );
-    }
+            ServerBoundPacketHandler handler = oldConn.getPacketHandler();
+            if (!(handler instanceof SuspendableRoomHolder roomHolder)) {
+                throw new SuspendFailedException();
+            }
 
-    public static void suspend(LocalPlayer player, Runnable remover) throws SuspendFailedException {
-        ServerBoundPacketHandler handler = player.getConnection().getPacketHandler();
-        if (!(handler instanceof SuspendableRoomHolder roomHolder)) {
-            throw new SuspendFailedException();
-        }
+            Room room = roomHolder.getRoom();
+            if (room.containsMonitor(player)) {
+                room.leave(player);
+                throw new SuspendFailedException();
+            }
 
-        Room room = roomHolder.getRoom();
-        if (room.containsMonitor(player)) {
-            room.leave(player);
-        }
-
-        if (!room.containsPlayer(player)) {
-            throw new SuspendFailedException();
-        }
-
-        PlayerSessionSuspendEvent suspendEvent = new PlayerSessionSuspendEvent(player, room);
-        Server.postEvent(suspendEvent);
-        if (suspendEvent.isCancelled()) {
-            throw new SuspendFailedException();
-        }
-
-        SUSPENDED.compute(player.getId(), (id, oldSession) -> {
+            if (!room.containsPlayer(player)) {
+                throw new SuspendFailedException();
+            }
 
             RoomGameState state = room.getView().getState();
             if (state instanceof RoomWaitForReady) {
@@ -105,44 +127,80 @@ public class LocalSessionManager {
                 room.getOperation().abort(player);
             }
 
+            SuspendedRoomSession oldSession = SUSPENDED.remove(player.getId());
             if (oldSession != null && oldSession.timeout != null) {
                 Server.getLogger().warn("Player {} already has a suspended session, cancelling old timeout", player.getId());
                 oldSession.timeout.cancel(false);
             }
 
-            SuspendedRoomSession newSession = new SuspendedRoomSession(player);
+            SuspendedRoomSession session = new SuspendedRoomSession(
+                    SESSION_VERSION.incrementAndGet(),
+                    player,
+                    room,
+                    state.getClass(),
+                    oldConn,
+                    System.currentTimeMillis(),
+                    remover
+            );
 
-            newSession.timeout = TIMER.schedule(
-                    () -> forceLeave(id, newSession, remover),
+            SUSPENDED.put(player.getId(), session);
+            session.timeout = TIMER.schedule(
+                    () -> forceLeave(player.getId(), session),
                     suspendTimeoutMillis,
                     TimeUnit.MILLISECONDS
             );
-
-            return newSession;
-        });
+        } finally {
+            lock.unlock();
+        }
     }
 
-    private static void forceLeave(int playerId, SuspendedRoomSession session, Runnable remover) {
-        remover.run();
+    public static boolean hasSuspendedSession(int playerId) {
+        return SUSPENDED.containsKey(playerId);
+    }
 
-        if (!SUSPENDED.remove(playerId, session)) {
+    public static void removeSuspendedSession(LocalPlayer player) {
+        SuspendedRoomSession session = SUSPENDED.remove(player.getId());
+        if (session != null && session.timeout != null) {
+            session.timeout.cancel(false);
+        }
+    }
+
+    private static void forceLeave(int playerId, SuspendedRoomSession session) {
+        if (!removeSession(playerId, session)) {
             return;
         }
 
-        session.player.getRoom().ifPresent((room) -> {
-            if (room.containsPlayer(session.player)) {
-                PlayerSessionTimeoutEvent event = new PlayerSessionTimeoutEvent(session.player, room);
-                Server.postEvent(event);
+        boolean left = true;
+        if (session.room.containsPlayer(session.player)) {
+            left = session.room.leave(session.player);
+        }
 
-                room.leave(session.player);
-            }
-        });
+        boolean removed = session.remover.getAsBoolean();
+        if (!left || !removed) {
+            Server.getLogger().error(
+                    "Failed to timeout suspended session, player {}, session {}, leave {}, remove {}",
+                    playerId, session.version, left, removed
+            );
+        }
+    }
 
+    private static boolean removeSession(int playerId, SuspendedRoomSession expected) {
+        return SUSPENDED.remove(playerId, expected);
+    }
+
+    private static Lock lockFor(int playerId) {
+        return LOCKS[Math.floorMod(playerId, LOCKS.length)];
     }
 
     @RequiredArgsConstructor
     private static final class SuspendedRoomSession {
+        private final long version;
         private final LocalPlayer player;
+        private final Room room;
+        private final Class<? extends RoomGameState> stateType;
+        private final PlayerConnection oldConnection;
+        private final long createdAtMillis;
+        private final BooleanSupplier remover;
         private volatile ScheduledFuture<?> timeout;
     }
 }

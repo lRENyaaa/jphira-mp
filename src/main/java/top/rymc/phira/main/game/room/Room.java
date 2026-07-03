@@ -12,7 +12,7 @@ public interface Room {
 
     void join(Player player, boolean isMonitor);
 
-    void leave(Player player);
+    boolean leave(Player player);
 
     Operation getOperation();
 
@@ -34,11 +34,15 @@ public interface Room {
 
         void chat(Player player, String message);
 
-        void touchSend(Player player, List<TouchFrame> touchFrames);
+        boolean touchSend(Player player, List<TouchFrame> touchFrames);
 
-        void judgeSend(Player player, List<JudgeEvent> judgeEvents);
+        boolean judgeSend(Player player, List<JudgeEvent> judgeEvents);
 
-        void requireStart(Player player);
+        void requestStart(Player player);
+
+        void forceRequestStart();
+
+        void forceStart();
 
         void ready(Player player);
 

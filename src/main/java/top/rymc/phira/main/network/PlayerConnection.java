@@ -39,7 +39,7 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
     private final InetSocketAddress remoteAddress;
 
     private volatile ServerBoundPacketHandler packetHandler;
-    private volatile ConnectState connectState = ConnectState.ACTIVE;
+    private volatile DisconnectReason disconnectReason = DisconnectReason.ACTIVE;
 
     public void setPacketHandler(ServerBoundPacketHandler packetHandler) {
         PlayerSwitchPacketHandlerEvent event = new PlayerSwitchPacketHandlerEvent(this, this.packetHandler, packetHandler);
@@ -103,13 +103,13 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
 
         if (cause instanceof ReadTimeoutException) {
             logger.error("{}: read timed out", getRemoteAddressAsString());
-            connectState = ConnectState.TIMEOUT;
+            disconnectReason = DisconnectReason.TIMEOUT;
         } else if (cause instanceof SocketException) {
             logger.info("{}: {}", getRemoteAddressAsString(), cause.getMessage());
-            connectState = ConnectState.ERROR;
+            disconnectReason = DisconnectReason.ERROR;
         } else {
             logger.atError().withThrowable(cause).log("{}: exception encountered", getRemoteAddressAsString());
-            connectState = ConnectState.ERROR;
+            disconnectReason = DisconnectReason.ERROR;
         }
 
         ctx.close();
@@ -137,8 +137,12 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
         super.channelInactive(ctx);
     }
 
+    public DisconnectReason getDisconnectReason() {
+        return disconnectReason;
+    }
+
     private PlayerDisconnectEvent.DisconnectReason determineDisconnectReason() {
-        return switch (connectState) {
+        return switch (disconnectReason) {
             case ACTIVE -> PlayerDisconnectEvent.DisconnectReason.QUIT;
             case KICK -> PlayerDisconnectEvent.DisconnectReason.KICK;
             case TIMEOUT -> PlayerDisconnectEvent.DisconnectReason.TIMEOUT;
@@ -179,16 +183,16 @@ public class PlayerConnection extends ChannelInboundHandlerAdapter {
     }
 
     public void markDuplicateLogin() {
-        this.connectState = ConnectState.DUPLICATE;
+        this.disconnectReason = DisconnectReason.DUPLICATE;
         this.close();
     }
 
     public void markAsKicked() {
-        this.connectState = ConnectState.KICK;
+        this.disconnectReason = DisconnectReason.KICK;
         this.close();
     }
 
-    private enum ConnectState {
+    public enum DisconnectReason {
         ACTIVE,
         KICK,
         TIMEOUT,

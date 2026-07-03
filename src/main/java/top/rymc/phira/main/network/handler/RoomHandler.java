@@ -38,14 +38,12 @@ public class RoomHandler extends ServerBoundPacketHandler implements Suspendable
 
     @Override
     public void handle(ServerBoundLeaveRoomPacket packet) {
-        handleWithException(
-            () -> {
-                room.leave(player);
-                player.getConnection().setPacketHandler(fallback);
-            },
-            ClientBoundLeaveRoomPacket::success,
-            ClientBoundLeaveRoomPacket::failed
-        );
+        try {
+            boolean success = room.leave(player);
+            player.getConnection().send(success ? ClientBoundLeaveRoomPacket.success() : ClientBoundLeaveRoomPacket.failed("leave failed"));
+        } finally {
+            player.getConnection().setPacketHandler(fallback);
+        }
     }
 
     @Override
@@ -96,7 +94,7 @@ public class RoomHandler extends ServerBoundPacketHandler implements Suspendable
     @Override
     public void handle(ServerBoundRequestStartPacket packet) {
         handleWithException(
-            () -> room.getOperation().requireStart(player),
+            () -> room.getOperation().requestStart(player),
             ClientBoundRequestStartPacket::success,
             ClientBoundRequestStartPacket::failed
         );
@@ -132,12 +130,18 @@ public class RoomHandler extends ServerBoundPacketHandler implements Suspendable
 
     @Override
     public void handle(ServerBoundTouchesPacket packet) {
-        room.getOperation().touchSend(player, packet.getFrames());
+        try {
+            room.getOperation().touchSend(player, packet.getFrames());
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
     public void handle(ServerBoundJudgesPacket packet) {
-        room.getOperation().judgeSend(player, packet.getJudges());
+        try {
+            room.getOperation().judgeSend(player, packet.getJudges());
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
@@ -162,7 +166,7 @@ public class RoomHandler extends ServerBoundPacketHandler implements Suspendable
             action.run();
             player.getConnection().send(successPacket.get());
         } catch (GameOperationException e) {
-            player.getConnection().send(failedPacket.apply(I18nService.INSTANCE.getMessage(player, e.getMessageKey())));
+            player.getConnection().send(failedPacket.apply(I18nService.INSTANCE.getMessage(player, e.getMessageKey(), e.getArgs())));
         } catch (Exception e) {
             player.getConnection().send(failedPacket.apply(e.getMessage()));
         }
