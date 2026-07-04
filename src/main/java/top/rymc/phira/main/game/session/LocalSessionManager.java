@@ -54,10 +54,12 @@ public class LocalSessionManager {
         try {
             SuspendedRoomSession session = SUSPENDED.get(player.getId());
             if (session == null) {
+                Server.logPluginSensitiveIssue("Resume failed without suspended session, player {}", player.getId());
                 throw new ResumeFailedException();
             }
 
             if (!removeSession(player.getId(), session)) {
+                Server.logPluginSensitiveIssue("Resume session CAS failed, player {}, session {}", player.getId(), session.version);
                 throw new ResumeFailedException();
             }
 
@@ -68,6 +70,7 @@ public class LocalSessionManager {
 
             Room room = session.room;
             if (!room.containsPlayer(player)) {
+                Server.logPluginSensitiveIssue("Resume failed because player is not in room, player {}, room {}, session {}", player.getId(), room.getRoomId(), session.version);
                 throw new ResumeFailedException();
             }
 
@@ -102,21 +105,27 @@ public class LocalSessionManager {
         lock.lock();
         try {
             if (player.getConnection() != oldConn) {
+                Server.logPluginSensitiveIssue("Suspend failed because connection changed, player {}, oldConnection {}, actualConnection {}", player.getId(), oldConn, player.getConnection());
                 throw new SuspendFailedException();
             }
 
             ServerBoundPacketHandler handler = oldConn.getPacketHandler();
             if (!(handler instanceof SuspendableRoomHolder roomHolder)) {
+                Server.logPluginSensitiveIssue("Suspend failed because handler is not room holder, player {}, handler {}", player.getId(), handler);
                 throw new SuspendFailedException();
             }
 
             Room room = roomHolder.getRoom();
             if (room.containsMonitor(player)) {
-                room.leave(player);
+                boolean left = room.leave(player);
+                if (!left) {
+                    Server.logPluginSensitiveIssue("Monitor leave failed during suspend, player {}, room {}", player.getId(), room.getRoomId());
+                }
                 throw new SuspendFailedException();
             }
 
             if (!room.containsPlayer(player)) {
+                Server.logPluginSensitiveIssue("Suspend failed because player is not in players, player {}, room {}", player.getId(), room.getRoomId());
                 throw new SuspendFailedException();
             }
 
@@ -177,7 +186,7 @@ public class LocalSessionManager {
 
         boolean removed = session.remover.getAsBoolean();
         if (!left || !removed) {
-            Server.getLogger().error(
+            Server.logPluginSensitiveIssue(
                     "Failed to timeout suspended session, player {}, session {}, leave {}, remove {}",
                     playerId, session.version, left, removed
             );

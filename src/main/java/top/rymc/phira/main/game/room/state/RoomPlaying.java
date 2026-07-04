@@ -19,11 +19,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public final class RoomPlaying extends RoomGameState {
 
+    private final AtomicBoolean finished = new AtomicBoolean();
     private final Set<Player> donePlayers = ConcurrentHashMap.newKeySet();
     private final Set<Player> debugLoggedPlayers = ConcurrentHashMap.newKeySet();
 
@@ -119,7 +121,7 @@ public final class RoomPlaying extends RoomGameState {
 
     @Override
     public void abort(Player player) {
-        if (room.containsMonitor(player)) {
+        if (!room.containsPlayer(player) || room.containsMonitor(player)) {
             throw GameOperationException.invalidState();
         }
 
@@ -133,7 +135,7 @@ public final class RoomPlaying extends RoomGameState {
 
     @Override
     public void played(Player player, int recordId) {
-        if (room.containsMonitor(player)) {
+        if (!room.containsPlayer(player) || room.containsMonitor(player)) {
             throw GameOperationException.invalidState();
         }
 
@@ -219,13 +221,24 @@ public final class RoomPlaying extends RoomGameState {
     }
 
     private void finishGame() {
+        if (!finished.compareAndSet(false, true)) {
+            Server.logPluginSensitiveIssue("RoomPlaying finish repeated, room {}", room.getRoomId());
+            return;
+        }
+
         RoomSelectChart state = new RoomSelectChart(room, stateUpdater, chart);
-        stateUpdater.accept(state);
-        broadcast(PlayerOperations::gameEnd);
-        broadcast(operations -> operations.enterState(state.toProtocol()));
+        updateGameState(state);
         if (room.getSetting().isCycle()) {
             room.getPlayerManager().transferHostToNextPlayer();
         }
+    }
+
+    @Override
+    protected void updateGameState(RoomGameState newRoomGameState) {
+        if (newRoomGameState instanceof RoomSelectChart) {
+            broadcast(PlayerOperations::gameEnd);
+        }
+        super.updateGameState(newRoomGameState);
     }
 
     private boolean isAllOnlinePlayersDone() {

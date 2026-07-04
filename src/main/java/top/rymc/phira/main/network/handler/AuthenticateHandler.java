@@ -2,9 +2,6 @@ package top.rymc.phira.main.network.handler;
 
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.UserInfo;
-import top.rymc.phira.main.event.player.PlayerPostLoginEvent;
-import top.rymc.phira.main.event.player.PlayerPreAuthenticateEvent;
-import top.rymc.phira.main.event.player.PlayerPreLoginEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
 import top.rymc.phira.main.game.player.PlayerManager;
@@ -50,26 +47,7 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
             String token = packet.getToken();
             Server.getLogger().info("{} sent his token [{}]", connection.getRemoteAddressAsString(), token);
 
-            PlayerPreAuthenticateEvent preAuthEvent = new PlayerPreAuthenticateEvent(connection, token);
-            Server.postEvent(preAuthEvent);
-
-            String preAuthCancelReason = preAuthEvent.getCancelReason();
-            if (preAuthCancelReason != null) {
-                connection.send(ClientBoundAuthenticatePacket.failed(preAuthCancelReason));
-                connection.close();
-                return;
-            }
-            UserInfo eventUserInfo = preAuthEvent.getUserInfo();
-            UserInfo userInfo = eventUserInfo != null ? eventUserInfo : PhiraFetcher.GET_USER_INFO.apply(token);
-
-            PlayerPreLoginEvent preLoginEvent = new PlayerPreLoginEvent(userInfo);
-            Server.postEvent(preLoginEvent);
-            String preLoginCancelReason = preLoginEvent.getCancelReason();
-            if (preLoginCancelReason != null) {
-                connection.send(ClientBoundAuthenticatePacket.failed(preLoginCancelReason));
-                connection.close();
-                return;
-            }
+            UserInfo userInfo = PhiraFetcher.GET_USER_INFO.apply(token);
 
             PlayerManager.ResolveResult<LocalPlayer> result = PlayerManager.resolvePlayer(
                     userInfo.getId(),
@@ -89,11 +67,14 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
                             if (player.getRoom().filter(room -> room.containsPlayer(player)).isPresent()) {
                                 left = player.getRoom().map(room -> room.leave(player)).orElse(false);
                             }
-                            boolean removed = left && remover.getAsBoolean();
-                            if (!left || !removed) {
-                                Server.getLogger().error(
+                            boolean removed = remover.getAsBoolean();
+                            if (!left) {
+                                Server.logPluginSensitiveIssue("Dead player leave failed during recovery, player {}", player.getId());
+                            }
+                            if (!removed) {
+                                Server.logPluginSensitiveIssue(
                                         "Failed to recover dead player {}, leave {}, remove {}",
-                                        player.getId(), left, removed
+                                        player.getId(), left, false
                                 );
                                 throw new ResumeFailedException();
                             }
@@ -113,8 +94,13 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
                         }
 
                         if (reason == PlayerConnection.DisconnectReason.DUPLICATE) {
-                            Server.getLogger().error("Current player connection closed as duplicate, player {}", player.getId());
-                            player.getRoom().ifPresent(room -> room.leave(player));
+                            Server.logPluginSensitiveIssue("Current player connection closed as duplicate, player {}", player.getId());
+                            player.getRoom().ifPresent(room -> {
+                                boolean left = room.leave(player);
+                                if (!left) {
+                                    Server.logPluginSensitiveIssue("Duplicate close leave failed, player {}, room {}", player.getId(), room.getRoomId());
+                                }
+                            });
                             remover.getAsBoolean();
                             return;
                         }
@@ -126,7 +112,12 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
                         try {
                             LocalSessionManager.suspend(player, connection, remover);
                         } catch (SuspendFailedException e) {
-                            player.getRoom().ifPresent(room -> room.leave(player));
+                            player.getRoom().ifPresent(room -> {
+                                boolean left = room.leave(player);
+                                if (!left) {
+                                    Server.logPluginSensitiveIssue("Suspend failure cleanup leave failed, player {}, room {}", player.getId(), room.getRoomId());
+                                }
+                            });
                             remover.getAsBoolean();
                         }
                     })
@@ -147,9 +138,6 @@ public class AuthenticateHandler extends SimpleServerBoundPacketHandler {
             connection.send(ClientBoundAuthenticatePacket.success(new FullUserProfile(userInfo.getId(), userInfo.getName(), false), roomInfo));
 
             Server.getLogger().info("{} has logged in as [{}] {}", connection.getRemoteAddressAsString(), userInfo.getId(), userInfo.getName());
-
-            PlayerPostLoginEvent postLoginEvent = new PlayerPostLoginEvent(result);
-            Server.postEvent(postLoginEvent);
         } catch (GameOperationException e) {
             connection.send(ClientBoundAuthenticatePacket.failed(I18nService.INSTANCE.getMessage(e.getMessageKey(), e.getArgs())));
             connection.close();

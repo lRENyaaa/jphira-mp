@@ -18,15 +18,12 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.io.IoBuilder;
 import top.rymc.phira.main.command.CommandService;
 import top.rymc.phira.main.config.ServerArgs;
-import top.rymc.phira.main.event.server.ServerLifecycleEvent;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.network.ServerChannelInitializer;
 import top.rymc.phira.main.util.ExecutorServiceManager;
 import top.rymc.phira.plugin.core.PluginManager;
-import top.rymc.phira.plugin.event.CancellableEvent;
-import top.rymc.phira.plugin.event.Event;
 
 import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
@@ -128,8 +125,6 @@ public class Server {
 
         new CommandService(logger).start();
 
-        postEvent(new ServerLifecycleEvent(ServerLifecycleEvent.State.STARTED));
-
         long totalTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - bootStart);
         logger.info("Done ({}s)!", String.format("%.3f", totalTime / 1000.0));
     }
@@ -148,8 +143,6 @@ public class Server {
 
     public void shutdown() {
         if (!running.compareAndSet(true, false)) return;
-
-        postEvent(new ServerLifecycleEvent(ServerLifecycleEvent.State.STOPPING));
 
         long shutdownStart = System.nanoTime();
         int onlineCount = PlayerManager.getOnlinePlayers().size();
@@ -190,8 +183,6 @@ public class Server {
                 TimeUnit.MILLISECONDS.toSeconds(uptime) % 60);
         logger.info("Shutdown completed in {}ms. Goodbye!", shutdownTime);
 
-        postEvent(new ServerLifecycleEvent(ServerLifecycleEvent.State.STOPPED));
-
         LogManager.shutdown();
         ExecutorServiceManager.shutdown();
         System.exit(0);
@@ -201,11 +192,16 @@ public class Server {
         return running.get();
     }
 
-    public static void postEvent(Event event) {
-        getInstance().pluginManager.getEventBus().post(event);
+    public boolean hasPlugins() {
+        return pluginManager != null && pluginManager.hasPlugins();
     }
 
-    public static boolean postEvent(CancellableEvent event) {
-        return getInstance().pluginManager.getEventBus().post(event).isCancelled();
+    public static void logPluginSensitiveIssue(String message, Object... params) {
+        if (getInstance().hasPlugins()) {
+            logger.debug(message, params);
+        } else {
+            logger.fatal(message, params);
+        }
     }
+
 }

@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import net.minecrell.terminalconsole.SimpleTerminalConsole;
 import org.apache.logging.log4j.Logger;
 import top.rymc.phira.main.Server;
-import top.rymc.phira.main.event.server.CommandProcessEvent;
 
 @RequiredArgsConstructor
 public class CommandService extends SimpleTerminalConsole {
@@ -25,10 +24,7 @@ public class CommandService extends SimpleTerminalConsole {
             return;
         }
 
-        CommandProcessEvent event = new CommandProcessEvent(command);
-        if (!Server.postEvent(event)) {
-            logger.warn("Unknown command: {}", command);
-        }
+        logger.warn("Unknown command: {}", command);
     }
 
     @Override

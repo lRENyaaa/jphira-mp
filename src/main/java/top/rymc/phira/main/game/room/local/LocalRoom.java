@@ -6,12 +6,6 @@ import lombok.Getter;
 import lombok.Setter;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
-import top.rymc.phira.main.event.operation.RoomChatEvent;
-import top.rymc.phira.main.event.operation.RoomCycleChangeEvent;
-import top.rymc.phira.main.event.operation.RoomLockChangeEvent;
-import top.rymc.phira.main.event.operation.RoomPostSelectChartEvent;
-import top.rymc.phira.main.event.operation.RoomPreSelectChartEvent;
-import top.rymc.phira.main.event.room.RoomDestroyEvent;
 import top.rymc.phira.main.game.exception.GameOperationException;
 import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.local.LocalPlayer;
@@ -217,13 +211,14 @@ public class LocalRoom implements Room {
             stateRef.get().handleLeave(player);
         } catch (Exception e) {
             success = false;
-            Server.getLogger().error("Failed to handle leave, player {}, room {}", player.getId(), roomId, e);
+            Server.logPluginSensitiveIssue("Failed to handle leave, player {}, room {}", player.getId(), roomId, e);
         }
 
         synchronized (lifecycleLock) {
             removedPlayer = playerManager.players.remove(player);
             removedMonitor = playerManager.monitors.remove(player);
             if (!removedPlayer && !removedMonitor) {
+                Server.logPluginSensitiveIssue("Leave failed because player is not in room, player {}, room {}", player.getId(), roomId);
                 return false;
             }
 
@@ -232,7 +227,7 @@ public class LocalRoom implements Room {
                     playerManager.transferHostToNextPlayer();
                 } catch (Exception e) {
                     success = false;
-                    Server.getLogger().error("Failed to transfer host, player {}, room {}", player.getId(), roomId, e);
+                    Server.logPluginSensitiveIssue("Failed to transfer host, player {}, room {}", player.getId(), roomId, e);
                 }
             }
 
@@ -243,7 +238,7 @@ public class LocalRoom implements Room {
             playerManager.broadcast(op -> op.memberLeft(player.getId(), player.getName()));
         } catch (Exception e) {
             success = false;
-            Server.getLogger().error("Failed to broadcast member leave, player {}, room {}", player.getId(), roomId, e);
+            Server.logPluginSensitiveIssue("Failed to broadcast member leave, player {}, room {}", player.getId(), roomId, e);
         }
 
         if (shouldDestroy) {
@@ -251,10 +246,13 @@ public class LocalRoom implements Room {
                 destroyRoom();
             } catch (Exception e) {
                 success = false;
-                Server.getLogger().error("Failed to destroy room {} after leave", roomId, e);
+                Server.logPluginSensitiveIssue("Failed to destroy room {} after leave", roomId, e);
             }
         }
 
+        if (!success) {
+            Server.logPluginSensitiveIssue("Leave completed with failure, player {}, room {}", player.getId(), roomId);
+        }
         return success;
     }
 
@@ -274,9 +272,6 @@ public class LocalRoom implements Room {
 
             boolean newLockState = !setting.locked;
 
-            RoomLockChangeEvent event = new RoomLockChangeEvent(LocalRoom.this, player, newLockState);
-            Server.postEvent(event);
-
             setting.locked = newLockState;
             playerManager.broadcast(op -> op.lockRoom(setting.locked));
         }
@@ -285,9 +280,6 @@ public class LocalRoom implements Room {
             validateHost(player);
 
             boolean newCycleState = !setting.cycle;
-
-            RoomCycleChangeEvent event = new RoomCycleChangeEvent(LocalRoom.this, player, newCycleState);
-            Server.postEvent(event);
 
             setting.cycle = newCycleState;
             playerManager.broadcast(op -> op.cycleRoom(setting.cycle));
@@ -300,24 +292,14 @@ public class LocalRoom implements Room {
                 throw GameOperationException.invalidState();
             }
 
-            RoomPreSelectChartEvent preEvent = new RoomPreSelectChartEvent(LocalRoom.this, player, id);
-            Server.postEvent(preEvent);
-            if (preEvent.isCancelled()) {
-                throw new GameOperationException(preEvent.getCancelReason());
-            }
-
             IntFunction<ChartInfo> getInfoFunc = PhiraFetcher.GET_CHART_INFO.toIntFunction(e -> {
                 throw GameOperationException.chartNotFound();
             });
 
-            ChartInfo eventChartInfo = preEvent.getChartInfo();
-            ChartInfo info = eventChartInfo != null ? eventChartInfo : getInfoFunc.apply(id);
+            ChartInfo info = getInfoFunc.apply(id);
 
             stateRef.get().setChart(info);
             playerManager.broadcast(operations -> operations.selectChart(info.getId(), info.getName(), player.getId()));
-
-            RoomPostSelectChartEvent postEvent = new RoomPostSelectChartEvent(LocalRoom.this, player, info);
-            Server.postEvent(postEvent);
         }
 
         public void chat(Player player, String message) {
@@ -325,12 +307,7 @@ public class LocalRoom implements Room {
                 throw GameOperationException.chatNotEnabled();
             }
 
-            RoomChatEvent event = new RoomChatEvent(player, LocalRoom.this, message);
-            if (Server.postEvent(event)) {
-                return;
-            }
-
-            playerManager.broadcast(operations -> operations.receiveChat(player.getId(), event.getMessage()));
+            playerManager.broadcast(operations -> operations.receiveChat(player.getId(), message));
         }
 
         public boolean touchSend(Player player, List<TouchFrame> touchFrames) {
@@ -413,18 +390,12 @@ public class LocalRoom implements Room {
                     Server.getLogger().error("Failed to cleanup player {} while destroying room {}", player.getId(), roomId, e);
                 }
             }
-            Server.getLogger().error(
+            Server.logPluginSensitiveIssue(
                     "Destroying room {} with remaining players {}, monitors {}, cleanedSessions {}",
                     roomId, remainingPlayers.size(), remainingMonitors.size(), cleanedSessions
             );
         }
 
-        RoomDestroyEvent event = new RoomDestroyEvent(
-                this,
-                remainingPlayers,
-                remainingMonitors
-        );
-        Server.postEvent(event);
         onDestroy.run();
     }
 }

@@ -38,10 +38,9 @@ public class RoomHandler extends ServerBoundPacketHandler implements Suspendable
 
     @Override
     public void handle(ServerBoundLeaveRoomPacket packet) {
-        try {
-            boolean success = room.leave(player);
-            player.getConnection().send(success ? ClientBoundLeaveRoomPacket.success() : ClientBoundLeaveRoomPacket.failed("leave failed"));
-        } finally {
+        boolean success = room.leave(player);
+        player.getConnection().send(success ? ClientBoundLeaveRoomPacket.success() : ClientBoundLeaveRoomPacket.failed("leave failed"));
+        if (success) {
             player.getConnection().setPacketHandler(fallback);
         }
     }

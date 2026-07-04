@@ -1,6 +1,7 @@
 package top.rymc.phira.main.game.player.local;
 
 import lombok.Getter;
+import top.rymc.phira.main.Server;
 import lombok.RequiredArgsConstructor;
 import top.rymc.phira.main.data.UserInfo;
 import top.rymc.phira.main.game.player.Player;
@@ -31,7 +32,12 @@ public class LocalPlayer implements Player {
 
     @Override
     public void kick() {
-        getRoom().ifPresent(room -> room.leave(this));
+        getRoom().ifPresent(room -> {
+            boolean left = room.leave(this);
+            if (!left) {
+                Server.logPluginSensitiveIssue("Kick leave failed, player {}, room {}", getId(), room.getRoomId());
+            }
+        });
         getConnection().markAsKicked();
     }
 

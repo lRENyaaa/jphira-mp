@@ -310,6 +310,10 @@ public class PluginManager {
         return plugins.size();
     }
 
+    public boolean hasPlugins() {
+        return !plugins.isEmpty();
+    }
+
     private record PluginCandidate(
             Path jar,
             PluginClassLoader loader,
