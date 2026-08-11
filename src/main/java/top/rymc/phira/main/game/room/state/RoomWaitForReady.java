@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 
 public final class RoomWaitForReady extends RoomGameState {
 
-    private static final int COUNTDOWN_SECONDS = 60;
     private static final List<Integer> NOTICE_SECONDS = List.of(60, 30, 10, 5, 3, 2, 1);
 
     private final Set<Player> readyPlayers = ConcurrentHashMap.newKeySet();
@@ -100,12 +99,15 @@ public final class RoomWaitForReady extends RoomGameState {
         }
 
         countdownRunning = true;
-        broadcastSystemMessage("进入准备阶段：请在 60 秒内准备。未准备玩家将作为观战跳过本轮。");
+        int countdownSeconds = room.getSetting().getReadyCountdownSeconds();
+        broadcastSystemMessage("进入准备阶段：请在 " + countdownSeconds + " 秒内准备。未准备玩家将作为观战跳过本轮。");
 
         for (int seconds : NOTICE_SECONDS) {
-            countdownTasks.add(TIMER.schedule(() -> noticeCountdown(seconds), COUNTDOWN_SECONDS - seconds, TimeUnit.SECONDS));
+            if (seconds <= countdownSeconds) {
+                countdownTasks.add(TIMER.schedule(() -> noticeCountdown(seconds), countdownSeconds - seconds, TimeUnit.SECONDS));
+            }
         }
-        countdownTasks.add(TIMER.schedule(this::finishCountdown, COUNTDOWN_SECONDS, TimeUnit.SECONDS));
+        countdownTasks.add(TIMER.schedule(this::finishCountdown, countdownSeconds, TimeUnit.SECONDS));
     }
 
     private void noticeCountdown(int seconds) {

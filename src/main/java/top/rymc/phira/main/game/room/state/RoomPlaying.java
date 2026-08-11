@@ -7,7 +7,6 @@ import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
 import top.rymc.phira.main.game.point.PlayerPointService;
 import top.rymc.phira.main.game.record.PhiraRecord;
-import top.rymc.phira.main.game.room.chart.ChartPool;
 import top.rymc.phira.main.game.room.local.LocalRoom;
 import top.rymc.phira.main.util.PhiraFetcher;
 import top.rymc.phira.protocol.data.monitor.judge.JudgeEvent;
@@ -30,7 +29,6 @@ import java.util.stream.Collectors;
 
 public final class RoomPlaying extends RoomGameState {
 
-    private static final int FORCE_FINISH_SECONDS = 120;
     private static final int FORCE_FINISH_NOTICE_SECONDS = 10;
 
     private final Set<Player> activePlayers = ConcurrentHashMap.newKeySet();
@@ -179,12 +177,15 @@ public final class RoomPlaying extends RoomGameState {
         }
 
         forceFinishCountdownStarted = true;
-        forceFinishTasks.add(TIMER.schedule(
-                () -> broadcastSystemMessage("本轮游戏将在 10 秒后强制结束。"),
-                FORCE_FINISH_SECONDS - FORCE_FINISH_NOTICE_SECONDS,
-                TimeUnit.SECONDS
-        ));
-        forceFinishTasks.add(TIMER.schedule(this::forceFinishGame, FORCE_FINISH_SECONDS, TimeUnit.SECONDS));
+        int forceFinishSeconds = room.getSetting().getForceFinishSeconds();
+        if (forceFinishSeconds > FORCE_FINISH_NOTICE_SECONDS) {
+            forceFinishTasks.add(TIMER.schedule(
+                    () -> broadcastSystemMessage("本轮游戏将在 " + FORCE_FINISH_NOTICE_SECONDS + " 秒后强制结束。"),
+                    forceFinishSeconds - FORCE_FINISH_NOTICE_SECONDS,
+                    TimeUnit.SECONDS
+            ));
+        }
+        forceFinishTasks.add(TIMER.schedule(this::forceFinishGame, forceFinishSeconds, TimeUnit.SECONDS));
     }
 
     public void forceFinishByServer() {
@@ -220,7 +221,7 @@ public final class RoomPlaying extends RoomGameState {
             return;
         }
 
-        ChartPool.finishPlayingRound();
+        room.getChartPool().finishPlayingRound(room.getSetting().getRefreshIntervalRounds());
         cancelForceFinishCountdown();
         broadcastRanking();
         RoomSelectChart state = new RoomSelectChart(room, stateUpdater, chart);

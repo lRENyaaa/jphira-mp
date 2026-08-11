@@ -22,7 +22,6 @@ import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.room.chart.ChartPool;
-import top.rymc.phira.main.game.room.local.LocalRoomBuilder;
 import top.rymc.phira.main.network.ServerChannelInitializer;
 import top.rymc.phira.main.util.ExecutorServiceManager;
 
@@ -100,14 +99,6 @@ public class Server {
                 shutdown();
             }
         }));
-
-        new LocalRoomBuilder()
-                .host(false)
-                .cycle(false)
-                .chat(false)
-                .autoDestroy(false)
-                .maxPlayer(1000)
-                .build("zenith");
 
         logger.info("Initializing network...");
 

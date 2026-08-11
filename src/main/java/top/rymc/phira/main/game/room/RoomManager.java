@@ -36,6 +36,10 @@ public class RoomManager {
         return ROOMS.get(roomId);
     }
 
+    public static void removeRoom(String roomId) {
+        ROOMS.remove(roomId);
+    }
+
     public static List<Room> getAllRooms() {
         return new ArrayList<>(ROOMS.values());
     }

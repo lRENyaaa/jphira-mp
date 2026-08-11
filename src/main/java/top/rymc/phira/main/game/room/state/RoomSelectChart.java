@@ -42,11 +42,11 @@ public final class RoomSelectChart extends RoomGameState {
 
     public RoomSelectChart(LocalRoom room, Consumer<RoomGameState> stateUpdater, ChartInfo chart) {
         super(room, stateUpdater, chart);
-        this.currentPoolInfo = ChartPool.getCurrentPoolSnapshot();
+        this.currentPoolInfo = room.getChartPool().getCurrentPoolSnapshot();
         this.currentPool = currentPoolInfo.chartIds().stream()
                 .map(ChartPool::getChartInfo)
                 .toList();
-        this.countdownSeconds = ChartPool.getSelectChartCountdownSeconds();
+        this.countdownSeconds = room.getSetting().getSelectChartCountdownSeconds();
     }
 
     @Override
@@ -120,7 +120,7 @@ public final class RoomSelectChart extends RoomGameState {
     public void broadcastVoteBoard() {
         broadcast(op -> {
             op.receiveChat(SYSTEM_PLAYER_ID, MESSAGE_SEPARATOR);
-            op.receiveChat(SYSTEM_PLAYER_ID, "zenith 本轮谱池 #" + currentPoolInfo.id());
+            op.receiveChat(SYSTEM_PLAYER_ID, room.getRoomId() + " 本轮谱池 #" + currentPoolInfo.id());
             if (currentPoolInfo.favoriteId() != null) {
                 op.receiveChat(SYSTEM_PLAYER_ID, "谱面收藏夹 ID：" + currentPoolInfo.favoriteId());
                 op.receiveChat(SYSTEM_PLAYER_ID, "你可以通过导入收藏夹来一键导入谱池");
@@ -137,7 +137,7 @@ public final class RoomSelectChart extends RoomGameState {
         PlayerPointService.PointSummary point = PlayerPointService.getSummary(player);
         sendSystemMessage(player, MESSAGE_SEPARATOR);
         sendSystemMessage(player, "当前积分：" + point.points() + "，积分排名：#" + point.rank());
-        sendSystemMessage(player, "zenith 本轮谱池 #" + currentPoolInfo.id());
+        sendSystemMessage(player, room.getRoomId() + " 本轮谱池 #" + currentPoolInfo.id());
         if (currentPoolInfo.favoriteId() != null) {
             sendSystemMessage(player, "谱面收藏夹 ID：" + currentPoolInfo.favoriteId());
             sendSystemMessage(player, "你可以通过导入收藏夹来一键导入谱池");
@@ -176,7 +176,7 @@ public final class RoomSelectChart extends RoomGameState {
     }
 
     private void updateCountdownState() {
-        if (countOnlinePlayers() >= MIN_PLAYER) {
+        if (countOnlinePlayers() >= room.getSetting().getMinPlayer()) {
             startCountdown();
         } else {
             cancelCountdown();
@@ -213,7 +213,7 @@ public final class RoomSelectChart extends RoomGameState {
     }
 
     private void noticeCountdown(int seconds) {
-        if (countdownRunning && countOnlinePlayers() >= MIN_PLAYER) {
+        if (countdownRunning && countOnlinePlayers() >= room.getSetting().getMinPlayer()) {
             broadcastSystemMessage("投票锁定倒计时：" + seconds + " 秒");
             if (seconds == 1) {
                 lockedChart = selectWinningChart();
@@ -236,7 +236,7 @@ public final class RoomSelectChart extends RoomGameState {
 
         countdownRunning = false;
         countdownTasks.clear();
-        if (countOnlinePlayers() < MIN_PLAYER) {
+        if (countOnlinePlayers() < room.getSetting().getMinPlayer()) {
             broadcastSystemMessage("在线玩家不足，本轮取消。");
             return;
         }

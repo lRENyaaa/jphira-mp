@@ -1,6 +1,5 @@
 package top.rymc.phira.main.game.room.local;
 
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -10,6 +9,7 @@ import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.operations.PlayerOperations;
 import top.rymc.phira.main.game.room.Room;
 import top.rymc.phira.main.game.room.RoomSnapshot;
+import top.rymc.phira.main.game.room.chart.RoomChartPool;
 import top.rymc.phira.main.game.room.state.RoomGameState;
 import top.rymc.phira.main.game.room.state.RoomGameStateReference;
 import top.rymc.phira.main.game.room.state.RoomSelectChart;
@@ -33,22 +33,26 @@ public class LocalRoom implements Room {
 
     private final Runnable onDestroy;
     private final RoomGameStateReference stateRef;
+    @Getter
+    private final RoomChartPool chartPool;
 
     public LocalRoom(
             Runnable onDestroy,
             String roomId,
             RoomSetting setting,
             RoomGameState.Type state,
-            ChartInfo chart
+            ChartInfo chart,
+            RoomChartPool chartPool
     ) {
         this.roomId = roomId;
         this.onDestroy = onDestroy;
         this.setting = setting;
+        this.chartPool = chartPool;
         this.stateRef = new RoomGameStateReference(updater -> state.build(this, updater, chart));
     }
 
     @Getter
-    @Setter(AccessLevel.PRIVATE)
+    @Setter
     @AllArgsConstructor
     public static class RoomSetting {
         private boolean autoDestroy;
@@ -58,6 +62,11 @@ public class LocalRoom implements Room {
         private boolean cycle;
         private boolean live;
         private boolean chat;
+        private int minPlayer;
+        private int selectChartCountdownSeconds;
+        private int readyCountdownSeconds;
+        private int forceFinishSeconds;
+        private int refreshIntervalRounds;
 
     }
 

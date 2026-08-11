@@ -23,7 +23,6 @@ import java.util.function.Consumer;
 
 public abstract sealed class RoomGameState implements ProtocolConvertible<GameState> permits RoomPlaying, RoomWaitForReady, RoomSelectChart {
 
-    protected static final int MIN_PLAYER = 2;
     protected static final int SYSTEM_PLAYER_ID = -1;
     protected static final String MESSAGE_SEPARATOR = "————————————————————————————————————————";
     protected static final ScheduledExecutorService TIMER = initTimer();
