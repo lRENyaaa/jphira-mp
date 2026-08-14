@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 
 public class PlayHandler extends SimpleServerBoundPacketHandler implements PlayerHolder {
 
-    private static final Pattern ROOM_ID_PATTERN = Pattern.compile("[A-Za-z_-]{1,20}");
+    private static final Pattern ROOM_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,20}");
     private static final String RANK_ROOM_ID = "rank";
 
     @Getter

@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class CommandService extends SimpleTerminalConsole {
 
-    private static final Pattern ROOM_ID_PATTERN = Pattern.compile("[A-Za-z_-]{1,20}");
+    private static final Pattern ROOM_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,20}");
     private static final List<String> CONFIG_KEYS = List.of(
             "minPlayer", "maxPlayer", "selectCountdown", "readyCountdown", "forceFinish", "interval"
     );
