@@ -22,6 +22,7 @@ import top.rymc.phira.main.game.player.Player;
 import top.rymc.phira.main.game.player.PlayerManager;
 import top.rymc.phira.main.game.i18n.I18nService;
 import top.rymc.phira.main.game.room.chart.ChartPool;
+import top.rymc.phira.main.http.ApiServer;
 import top.rymc.phira.main.network.ServerChannelInitializer;
 import top.rymc.phira.main.util.ExecutorServiceManager;
 
@@ -92,6 +93,8 @@ public class Server {
         logger.info("Preloading chart pool...");
         ChartPool.preload();
         logger.info("Chart pool preloaded.");
+
+        ApiServer.start(args.getHttpHost(), args.getHttpPort());
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             Thread.currentThread().setName("ShutdownThread");

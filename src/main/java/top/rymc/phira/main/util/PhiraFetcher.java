@@ -3,6 +3,7 @@ package top.rymc.phira.main.util;
 import com.google.gson.Gson;
 import lombok.Getter;
 import lombok.Setter;
+import top.rymc.phira.function.throwable.ThrowableBiFunction;
 import top.rymc.phira.function.throwable.ThrowableFunction;
 import top.rymc.phira.function.throwable.ThrowableIntFunction;
 import top.rymc.phira.main.data.ChartInfo;
@@ -15,6 +16,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public final class PhiraFetcher {
@@ -57,6 +59,9 @@ public final class PhiraFetcher {
     public static ThrowableIntFunction<GameRecord, IOException> GET_RECORD_INFO =
             id -> recordCache.get(id, PhiraFetcher::fetchRecordById);
 
+    public static ThrowableBiFunction<String, String, LoginResult, IOException> POST_LOGIN =
+            PhiraFetcher::fetchLogin;
+
     private static HttpClient createHttpClient() {
         return HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_2)
@@ -89,6 +94,13 @@ public final class PhiraFetcher {
         return GSON.fromJson(response, GameRecord.class);
     }
 
+    private static LoginResult fetchLogin(String email, String password) throws IOException {
+        String body = GSON.toJson(Map.of("email", email, "password", password));
+        HttpRequest request = createPostRequest("login", body);
+        String response = executeWithRetry(request);
+        return GSON.fromJson(response, LoginResult.class);
+    }
+
     private static HttpRequest createRequest(String path) {
         return HttpRequest.newBuilder()
                 .uri(URI.create(host + path))
@@ -107,6 +119,17 @@ public final class PhiraFetcher {
                 .header("Accept", "application/json")
                 .header("Authorization", "Bearer " + token)
                 .GET()
+                .build();
+    }
+
+    private static HttpRequest createPostRequest(String path, String jsonBody) {
+        return HttpRequest.newBuilder()
+                .uri(URI.create(host + path))
+                .timeout(REQUEST_TIMEOUT)
+                .header("User-Agent", USER_AGENT)
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                 .build();
     }
 
@@ -158,5 +181,8 @@ public final class PhiraFetcher {
             Thread.currentThread().interrupt();
             throw new IOException("Retry interrupted", e);
         }
+    }
+
+    public record LoginResult(int id, String token, String refreshToken, String expireAt) {
     }
 }

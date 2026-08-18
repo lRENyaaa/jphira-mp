@@ -22,7 +22,22 @@ public final class GsonUtil {
             .setPrettyPrinting()
             .create();
 
+    /** HTTP API 专用：紧凑输出、保留 null 字段。 */
+    private static final Gson COMPACT_GSON = new GsonBuilder()
+            .registerTypeAdapter(OffsetDateTime.class,
+                    (JsonSerializer<OffsetDateTime>) (src, type, context) -> new JsonPrimitive(src.toString()))
+            .registerTypeAdapter(OffsetDateTime.class,
+                    (JsonDeserializer<OffsetDateTime>) (json, type, context) -> OffsetDateTime.parse(json.getAsString()))
+            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+            .setStrictness(Strictness.LENIENT)
+            .serializeNulls()
+            .create();
+
     public static Gson getGson() {
         return GSON;
+    }
+
+    public static Gson getCompactGson() {
+        return COMPACT_GSON;
     }
 }

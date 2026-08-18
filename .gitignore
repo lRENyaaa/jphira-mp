@@ -43,6 +43,9 @@ bin/
 
 ### jphira-mp ###
 logs/
+data/
+frontend/
+javalin/
 plugins/
 *.log
 *.log.gz

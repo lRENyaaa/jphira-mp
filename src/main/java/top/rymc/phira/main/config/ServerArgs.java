@@ -22,6 +22,8 @@ public class ServerArgs {
 
     private final int port;
     private final String host;
+    private final String httpHost;
+    private final int httpPort;
     private final Path pluginsDir;
     private final boolean proxyProtocol;
     private final String defaultLanguage;
@@ -54,6 +56,16 @@ public class ServerArgs {
                 .ofType(String.class)
                 .defaultsTo("zh-CN");
 
+        OptionSpec<String> httpHostSpec = parser.accepts("http-host", "HTTP API bind address")
+                .withRequiredArg()
+                .ofType(String.class)
+                .defaultsTo("0.0.0.0");
+
+        OptionSpec<Integer> httpPortSpec = parser.accepts("http-port", "HTTP API listening port")
+                .withRequiredArg()
+                .ofType(Integer.class)
+                .defaultsTo(8080);
+
         parser.accepts("help", "Show this help message").forHelp();
 
         OptionSet options;
@@ -76,6 +88,8 @@ public class ServerArgs {
 
         this.port = clampPort(options.valueOf(portSpec));
         this.host = options.valueOf(hostSpec);
+        this.httpHost = options.valueOf(httpHostSpec);
+        this.httpPort = clampPort(options.valueOf(httpPortSpec));
         this.pluginsDir = Paths.get(options.valueOf(pluginsSpec));
         this.proxyProtocol = options.valueOf(proxyProtocol);
         this.defaultLanguage = options.valueOf(languageSpec);
