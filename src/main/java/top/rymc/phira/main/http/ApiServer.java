@@ -2,10 +2,10 @@ package top.rymc.phira.main.http;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.annotations.SerializedName;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.HandlerType;
-import io.javalin.http.staticfiles.Location;
 import io.javalin.json.JavalinGson;
 import top.rymc.phira.main.Server;
 import top.rymc.phira.main.data.ChartInfo;
@@ -24,11 +24,16 @@ import top.rymc.phira.main.util.GsonUtil;
 import top.rymc.phira.main.util.PhiraFetcher;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import static java.util.Map.entry;
 
 /**
  * HTTP 控制面 API 服务器（Javalin）。
@@ -60,12 +65,6 @@ public final class ApiServer {
     private static void configure(io.javalin.config.JavalinConfig config) {
         config.jsonMapper(new JavalinGson(GsonUtil.getCompactGson(), false));
 
-        config.staticFiles.add(staticFiles -> {
-            staticFiles.hostedPath = "/";
-            staticFiles.directory = "./frontend/dist";
-            staticFiles.location = Location.EXTERNAL;
-        });
-
         config.routes.before("/api/v1/*", ApiServer::authenticate);
         config.routes.after("/api/v1/*", ApiServer::corsHeaders);
         config.routes.options("/api/v1/*", ctx -> ctx.status(204));
@@ -74,9 +73,10 @@ public final class ApiServer {
 
         config.routes.post("/api/v1/room/{id}/create", ApiServer::handleRoomCreate);
         config.routes.put("/api/v1/room/{id}/update", ApiServer::handleRoomUpdate);
+        // 具体路径必须先于参数路径注册（Javalin 按注册顺序匹配，避免 /room/list 被 /room/{id} 捕获）
+        config.routes.get("/api/v1/room/list", ApiServer::handleRoomList);
         config.routes.get("/api/v1/room/{id}/", ApiServer::handleRoomGet);
         config.routes.get("/api/v1/room/{id}", ApiServer::handleRoomGet);
-        config.routes.get("/api/v1/room/list", ApiServer::handleRoomList);
         config.routes.delete("/api/v1/room/{id}", ApiServer::handleRoomDelete);
         config.routes.post("/api/v1/room/{id}/end", ApiServer::handleRoomEnd);
         config.routes.get("/api/v1/room/{id}/pool", ApiServer::handleRoomPoolGet);
@@ -91,12 +91,95 @@ public final class ApiServer {
         config.routes.put("/api/v1/pool/{id}/favorite", ApiServer::handlePoolFavorite);
         config.routes.put("/api/v1/pool/{id}/default", ApiServer::handlePoolDefault);
 
+        // 前端静态资源与 SPA 路由 fallback（API 具体路由优先匹配，通配在此兜底）
+        config.routes.get("/", ApiServer::serveFrontend);
+        config.routes.get("/*", ApiServer::serveFrontend);
+
         config.routes.exception(ApiException.class, (e, ctx) ->
                 ctx.status(e.status).json(Map.of("ok", false, "reason", e.reason)));
         config.routes.exception(Exception.class, (e, ctx) -> {
             Server.getLogger().error("HTTP API error on {}", ctx.path(), e);
             ctx.status(500).json(Map.of("ok", false, "reason", "服务器内部错误"));
         });
+    }
+
+    // ===== 前端静态资源与 SPA fallback =====
+
+    private static final Path FRONTEND_DIR = Path.of("frontend", "dist").toAbsolutePath().normalize();
+
+    private static final Map<String, String> STATIC_MIME = Map.ofEntries(
+            entry("html", "text/html; charset=utf-8"),
+            entry("js", "application/javascript"),
+            entry("mjs", "application/javascript"),
+            entry("css", "text/css"),
+            entry("json", "application/json"),
+            entry("map", "application/json"),
+            entry("txt", "text/plain"),
+            entry("png", "image/png"),
+            entry("jpg", "image/jpeg"),
+            entry("jpeg", "image/jpeg"),
+            entry("gif", "image/gif"),
+            entry("svg", "image/svg+xml"),
+            entry("ico", "image/x-icon"),
+            entry("webp", "image/webp"),
+            entry("woff", "font/woff"),
+            entry("woff2", "font/woff2"),
+            entry("ttf", "font/ttf")
+    );
+
+    private static void serveFrontend(Context ctx) {
+        String path = ctx.path();
+        if (path.startsWith("/api/")) { // 未定义的 API 路径不参与前端 fallback
+            ctx.status(404).result("Not Found");
+            return;
+        }
+        String relative = path.startsWith("/") ? path.substring(1) : path;
+
+        Path file = FRONTEND_DIR.resolve(relative).normalize();
+        if (!file.startsWith(FRONTEND_DIR)) { // 路径穿越防护
+            ctx.status(400).result("Bad Request");
+            return;
+        }
+
+        if (Files.isRegularFile(file)) {
+            serveStaticFile(ctx, file, false);
+            return;
+        }
+
+        // 不存在的资源文件（含扩展名）直接 404，不 fallback 成 HTML
+        String lastSegment = relative.substring(relative.lastIndexOf('/') + 1);
+        if (lastSegment.contains(".")) {
+            ctx.status(404).result("Not Found");
+            return;
+        }
+
+        // 前端路由 fallback 到对应静态目录的 HTML
+        Path html;
+        if (relative.startsWith("room")) {
+            html = FRONTEND_DIR.resolve("room/__fallback__/index.html");
+        } else if (relative.startsWith("pool")) {
+            html = FRONTEND_DIR.resolve("pool/__fallback__/index.html");
+        } else {
+            html = FRONTEND_DIR.resolve("index.html");
+        }
+        serveStaticFile(ctx, html, true);
+    }
+
+    private static void serveStaticFile(Context ctx, Path file, boolean html) {
+        try {
+            String name = file.getFileName().toString();
+            int dot = name.lastIndexOf('.');
+            String ext = dot >= 0 ? name.substring(dot + 1) : "";
+            String contentType = html ? "text/html; charset=utf-8" : STATIC_MIME.getOrDefault(ext, "application/octet-stream");
+            ctx.contentType(contentType);
+            if (!html) {
+                ctx.header("Cache-Control", "public, max-age=31536000, immutable");
+            }
+            InputStream in = Files.newInputStream(file);
+            ctx.result(in);
+        } catch (IOException e) {
+            ctx.status(404).result("Not Found");
+        }
     }
 
     // ===== 鉴权 =====
@@ -598,6 +681,8 @@ public final class ApiServer {
     }
 
     // ===== DTO =====
+    // 注意：Gson 使用 LOWER_CASE_WITH_UNDERSCORES 命名策略，record 组件名会被转换为下划线键，
+    // 因此驼峰字段必须用 @SerializedName 显式声明文档约定的 JSON 键名。
 
     public record LoginBody(String email, String password) {
     }
@@ -606,22 +691,27 @@ public final class ApiServer {
     }
 
     public record UpdateRoomBody(
-            Boolean live, Boolean lock, Boolean chatEnable,
-            Integer minPlayer, Integer maxPlayer,
-            Integer selectCountdown, Integer readyCountdown, Integer forceFinish, Integer interval
+            Boolean live, Boolean lock,
+            @SerializedName("chatEnable") Boolean chatEnable,
+            @SerializedName("minPlayer") Integer minPlayer,
+            @SerializedName("maxPlayer") Integer maxPlayer,
+            @SerializedName("selectCountdown") Integer selectCountdown,
+            @SerializedName("readyCountdown") Integer readyCountdown,
+            @SerializedName("forceFinish") Integer forceFinish,
+            Integer interval
     ) {
     }
 
-    public record SwitchPoolBody(int poolId) {
+    public record SwitchPoolBody(@SerializedName("poolId") int poolId) {
     }
 
-    public record FavoriteBody(Integer favoriteId) {
+    public record FavoriteBody(@SerializedName("favoriteId") Integer favoriteId) {
     }
 
-    public record PoolCreateBody(int id, List<Integer> chartIds) {
+    public record PoolCreateBody(int id, @SerializedName("chartIds") List<Integer> chartIds) {
     }
 
-    public record ChartAddBody(int chartId) {
+    public record ChartAddBody(@SerializedName("chartId") int chartId) {
     }
 
     public record PoolDefaultBody(boolean enabled) {

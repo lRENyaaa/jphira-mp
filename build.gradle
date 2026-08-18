@@ -2,7 +2,6 @@ import com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCach
 
 plugins {
     id 'java'
-    id 'application'
     id 'maven-publish'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
@@ -28,22 +27,13 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
-application {
-    mainClass = 'top.rymc.phira.main.Server'
-}
-
-tasks.named('run') {
-    workingDir = projectDir
-    standardInput = System.in
-}
-
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.compilerArgs += ['-parameters']
 }
 
 group = 'top.rymc'
-version = '1.0.0-dev-20260702-05'
+version = '1.0.0-dev-20260819-06'
 
 repositories {
     mavenCentral()

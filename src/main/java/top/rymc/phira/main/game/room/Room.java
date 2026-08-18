@@ -10,7 +10,11 @@ public interface Room {
 
     String getRoomId();
 
-    void join(Player player, boolean isMonitor);
+    default void join(Player player, boolean isMonitor){
+        join(player, isMonitor, true);
+    }
+
+    void join(Player player, boolean isMonitor, boolean shouldBroadcastJoin);
 
     void leave(Player player);
 

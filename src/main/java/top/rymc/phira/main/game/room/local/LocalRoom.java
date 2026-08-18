@@ -121,7 +121,7 @@ public class LocalRoom implements Room {
         return playerManager.containsMonitor(player);
     }
 
-    public void join(Player player, boolean isMonitor) {
+    public void join(Player player, boolean isMonitor, boolean shouldBroadcastJoin) {
         synchronized (lifecycleLock) {
             if (!isMonitor && playerManager.players.size() >= setting.maxPlayer) {
                 throw GameOperationException.roomFull();
@@ -138,7 +138,10 @@ public class LocalRoom implements Room {
             }
         }
 
-        playerManager.broadcast(op -> op.memberJoined(player.getId(), player.getName(), isMonitor));
+        if (shouldBroadcastJoin) {
+            playerManager.broadcast(op -> op.memberJoined(player.getId(), player.getName(), isMonitor));
+        }
+
         stateRef.get().handleJoin(player);
     }
 

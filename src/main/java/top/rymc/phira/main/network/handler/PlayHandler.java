@@ -45,23 +45,27 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
     @Override
     public void handle(ServerBoundCreateRoomPacket packet) {
         String roomId = packet.getRoomId();
+        PlayerConnection connection = player.getConnection();
         if (RANK_ROOM_ID.equals(roomId)) {
-            player.getConnection().send(ClientBoundCreateRoomPacket.failed("排行榜已发送"));
+            connection.send(ClientBoundCreateRoomPacket.failed("排行榜已发送"));
             sendPointRanking();
             return;
         }
 
         try {
-            createRoom(roomId);
-            player.getConnection().send(ClientBoundCreateRoomPacket.success());
+            Room room = createRoom(roomId);
+            connection.send(ClientBoundCreateRoomPacket.success());
+            room.join(player, false, false);
+            RoomHandler roomHandler = new RoomHandler(player, room, this);
+            connection.setPacketHandler(roomHandler);
         } catch (GameOperationException e) {
-            player.getConnection().send(ClientBoundCreateRoomPacket.failed(I18nService.INSTANCE.getMessage(player, e.getMessageKey())));
+            connection.send(ClientBoundCreateRoomPacket.failed(I18nService.INSTANCE.getMessage(player, e.getMessageKey())));
         } catch (Exception e) {
-            player.getConnection().send(ClientBoundCreateRoomPacket.failed(e.getMessage()));
+            connection.send(ClientBoundCreateRoomPacket.failed(e.getMessage()));
         }
     }
 
-    private void createRoom(String roomId) {
+    private Room createRoom(String roomId) {
         if (!ROOM_ID_PATTERN.matcher(roomId).matches()) {
             throw new GameOperationException("房间名仅限字母、数字、-、_。");
         }
@@ -74,7 +78,7 @@ public class PlayHandler extends SimpleServerBoundPacketHandler implements Playe
             throw new GameOperationException("当前没有默认启用的谱池，无法创建房间。");
         }
 
-        new LocalRoomBuilder()
+        return new LocalRoomBuilder()
                 .host(false)
                 .cycle(false)
                 .chat(true)
