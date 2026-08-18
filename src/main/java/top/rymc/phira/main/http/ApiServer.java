@@ -252,7 +252,8 @@ public final class ApiServer {
             ctx.json(Map.of(
                     "ok", true,
                     "token", jwt,
-                    "isAdmin", isAdmin
+                    "isAdmin", isAdmin,
+                    "userId", result.id()
             ));
         } catch (IOException e) {
             throw new ApiException(400, "登录失败，请检查邮箱与密码");
