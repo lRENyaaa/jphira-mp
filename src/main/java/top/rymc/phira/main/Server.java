@@ -119,6 +119,8 @@ public class Server {
 
         logger.info("Listening on {}:{}", args.getHost(), args.getPort());
 
+        ApiServer.awaitStarted();
+
         new CommandService(logger).start();
 
         long totalTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - bootStart);

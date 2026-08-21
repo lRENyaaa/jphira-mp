@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.regex.Pattern;
 
 import static java.util.Map.entry;
@@ -45,6 +46,7 @@ import static java.util.Map.entry;
 public final class ApiServer {
 
     private static final Pattern ROOM_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,20}");
+    private static final CountDownLatch STARTED = new CountDownLatch(1);
 
     private ApiServer() {
     }
@@ -56,10 +58,23 @@ public final class ApiServer {
                 Server.getLogger().info("HTTP API server listening on {}:{}", host, port);
             } catch (Exception e) {
                 Server.getLogger().error("Failed to start HTTP API server", e);
+            } finally {
+                STARTED.countDown();
             }
         }, "Http-ApiServer");
         thread.setDaemon(true);
         thread.start();
+    }
+
+    /**
+     * 阻塞直到 HTTP API 服务器启动完成（或启动失败），确保服务端 "Done" 日志在最后输出。
+     */
+    public static void awaitStarted() {
+        try {
+            STARTED.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static void configure(io.javalin.config.JavalinConfig config) {
@@ -252,6 +267,7 @@ public final class ApiServer {
             ctx.json(Map.of(
                     "ok", true,
                     "token", jwt,
+                    "phira_token", result.token(),
                     "isAdmin", isAdmin,
                     "userId", result.id()
             ));

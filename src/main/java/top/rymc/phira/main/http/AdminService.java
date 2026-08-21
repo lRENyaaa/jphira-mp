@@ -7,6 +7,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -28,6 +29,26 @@ public final class AdminService {
 
     public static boolean isAdmin(int userId) {
         return ADMIN_IDS.contains(userId);
+    }
+
+    public static synchronized List<Integer> getAdmins() {
+        return ADMIN_IDS.stream().sorted().toList();
+    }
+
+    public static synchronized boolean addAdmin(int userId) {
+        boolean added = ADMIN_IDS.add(userId);
+        if (added) {
+            save();
+        }
+        return added;
+    }
+
+    public static synchronized boolean removeAdmin(int userId) {
+        boolean removed = ADMIN_IDS.remove(userId);
+        if (removed) {
+            save();
+        }
+        return removed;
     }
 
     private static synchronized void load() {

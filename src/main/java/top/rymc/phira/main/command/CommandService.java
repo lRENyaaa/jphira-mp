@@ -17,6 +17,7 @@ import top.rymc.phira.main.game.room.state.RoomGameState;
 import top.rymc.phira.main.game.room.state.RoomPlaying;
 import top.rymc.phira.main.game.room.state.RoomSelectChart;
 import top.rymc.phira.main.game.room.state.RoomWaitForReady;
+import top.rymc.phira.main.http.AdminService;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -56,6 +57,11 @@ public class CommandService extends SimpleTerminalConsole {
 
         if (commandName.toLowerCase().startsWith("pool ")) {
             handlePoolCommand(commandName.split("\\s+"));
+            return;
+        }
+
+        if (commandName.toLowerCase().startsWith("admin ")) {
+            handleAdminCommand(commandName.split("\\s+"));
             return;
         }
 
@@ -112,6 +118,44 @@ public class CommandService extends SimpleTerminalConsole {
             logger.warn("Usage: room list | room create <id> [poolId...] | room remove <id> | room <id> end | room <id> config <key> <value> | room <id> pool switch <poolId> | room <id> pool favorite <favoriteId|none>");
         } catch (Exception e) {
             logger.warn("Room command failed: {}", e.getMessage());
+        }
+    }
+
+    private void handleAdminCommand(String[] args) {
+        try {
+            if (args.length == 2 && args[1].equalsIgnoreCase("list")) {
+                List<Integer> admins = AdminService.getAdmins();
+                if (admins.isEmpty()) {
+                    logger.info("No admins");
+                } else {
+                    logger.info("Admins: {}", admins);
+                }
+                return;
+            }
+
+            if (args.length == 3 && args[1].equalsIgnoreCase("add")) {
+                int userId = parseInt(args[2]);
+                if (AdminService.addAdmin(userId)) {
+                    logger.info("Added admin {}", userId);
+                } else {
+                    logger.warn("User {} is already an admin", userId);
+                }
+                return;
+            }
+
+            if (args.length == 3 && args[1].equalsIgnoreCase("remove")) {
+                int userId = parseInt(args[2]);
+                if (AdminService.removeAdmin(userId)) {
+                    logger.info("Removed admin {}", userId);
+                } else {
+                    logger.warn("User {} is not an admin", userId);
+                }
+                return;
+            }
+
+            logger.warn("Usage: admin list | admin add <userId> | admin remove <userId>");
+        } catch (Exception e) {
+            logger.warn("Admin command failed: {}", e.getMessage());
         }
     }
 
